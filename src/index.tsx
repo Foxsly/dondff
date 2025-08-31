@@ -4,6 +4,7 @@ import './index.css';
 import App from './App';
 
 
+// @ts-expect-error -- TODO: Argument of type 'HTMLElement | null' is not assignable to parameter of type 'Container'.
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   

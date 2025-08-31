@@ -4,10 +4,35 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b33569a5-9a23-4aef-b23f-839075863726" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/codeStyles/codeStyleConfig.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="b33569a5-9a23-4aef-b23f-839075863726" name="Changes" comment="Ignore workspace.xml">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/App.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/App.test.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/__tests__/dashboard.test.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/__tests__/dashboard.test.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/__tests__/entries.test.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/__tests__/entries.test.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/__tests__/game.test.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/__tests__/game.test.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/__tests__/groupGame.test.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/__tests__/groupGame.test.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/accordion.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/accordion.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/breadcrumbs.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/breadcrumbs.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/cases.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/cases.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/entries.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/entries.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/error.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/error.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/footer.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/footer.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/game.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/game.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/groupGame.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/groupGame.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/home.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/home.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/league.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/league.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/navbar.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/navbar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/seasons.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/seasons.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/signIn.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/signIn.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/util.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/util.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/weeks.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/weeks.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/firebase-config.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/firebase-config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tailwind.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/tailwind.config.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -15,8 +40,25 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="typescript-upgrade" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "Foxsly"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/Foxsly/dondff.git",
+    "accountId": "23b7dd3c-518a-468a-be66-273b03a73a0d"
+  }
+}]]></component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 8
 }</component>
@@ -30,6 +72,7 @@
     "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "Jest.All Tests.executor": "Run",
     "Jest.Tests in __tests__/.executor": "Run",
+    "Jest.dashboard.test.tsx.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
@@ -43,12 +86,12 @@
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs.jest.jest_package": "/Users/belcheti/projects/dondff/node_modules/react-scripts",
     "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "preferences.sourceCode.JavaScript",
+    "settings.editor.selected.configurable": "reference.settings.ide.settings.notifications",
     "ts.external.directory.path": "/Users/belcheti/Applications/WebStorm.app/Contents/plugins/javascript-plugin/jsLanguageServicesImpl/external",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
-  <component name="RunManager" selected="Jest.All Tests">
+  <component name="RunManager" selected="Jest.Tests in __tests__/">
     <configuration name="All Tests" type="JavaScriptTestRunnerJest" temporary="true" nameIsGenerated="true">
       <node-interpreter value="project" />
       <jest-package value="$PROJECT_DIR$/node_modules/react-scripts" />
@@ -66,10 +109,22 @@
       <test-directory value="$PROJECT_DIR$/src/components/__tests__" />
       <method v="2" />
     </configuration>
+    <configuration name="dashboard.test.tsx" type="JavaScriptTestRunnerJest" temporary="true" nameIsGenerated="true">
+      <node-interpreter value="project" />
+      <jest-package value="$PROJECT_DIR$/node_modules/react-scripts" />
+      <working-dir value="$PROJECT_DIR$" />
+      <envs />
+      <scope-kind value="TEST_FILE" />
+      <test-file value="$PROJECT_DIR$/src/components/__tests__/dashboard.test.tsx" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Jest.Tests in __tests__/" />
+        <item itemvalue="Jest.dashboard.test.tsx" />
         <item itemvalue="Jest.All Tests" />
         <item itemvalue="Jest.Tests in __tests__/" />
+        <item itemvalue="Jest.All Tests" />
       </list>
     </recent_temporary>
   </component>
@@ -90,6 +145,15 @@
       <workItem from="1756583920253" duration="172000" />
       <workItem from="1756584101976" duration="3797000" />
     </task>
+    <task id="LOCAL-00001" summary="Ignore workspace.xml">
+      <option name="closed" value="true" />
+      <created>1756608216612</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1756608216612</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -106,7 +170,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="origin/main" />
+                        <option value="typescript-upgrade" />
                       </list>
                     </value>
                   </entry>
@@ -120,6 +184,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="stashing while I try to rebase" />
-    <option name="LAST_COMMIT_MESSAGE" value="stashing while I try to rebase" />
+    <MESSAGE value="Ignore workspace.xml" />
+    <option name="LAST_COMMIT_MESSAGE" value="Ignore workspace.xml" />
   </component>
 </project>

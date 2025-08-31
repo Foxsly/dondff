@@ -1,10 +1,13 @@
-  export const getPlayers = async (week, position, seasonYear, playerLimit, callback) => {
+import { SetStateAction } from "react";
+
+  export const getPlayers = async (week: string, position: string, seasonYear: string, playerLimit: string | number, callback: { (value: SetStateAction<never[]>): void; (value: SetStateAction<never[]>): void; (arg0: { name: string; points: any; status: any; opponent: any; team: any; playerId: any; }[]): void; }) => {
     console.log("calling getPlayers with " + week + " " + position + " " + seasonYear + " " + playerLimit)
-    let players = new Array();
+    let players: ({ name: string; points: any; status: any; opponent: any; team: any; playerId: any; })[] = new Array();
     try {
       const url = `https://api.sleeper.com/projections/nfl/${seasonYear}/${week}?season_type=regular&position=${position}&order_by=pts_ppr`
       const response = await fetch(url)
       const json = await response.json()
+// @ts-expect-error -- TODO: Operator '<' cannot be applied to types 'number' and 'string | number'.
       for (let i = 0; i < playerLimit; i++) {
         let playerJson = json[i];
         let player = {
@@ -24,7 +27,7 @@
     }
   }
 
-  export const generateCases = (poolArray, numberOfCasesToChoose) => {
+  export const generateCases = (poolArray: string | any[], numberOfCasesToChoose: number) => {
     var result = new Array(numberOfCasesToChoose),
         numberOfPlayersRemainingInPool = poolArray.length,
         taken = new Array(poolArray.length);

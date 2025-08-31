@@ -13,15 +13,19 @@ const Weeks = () => {
   const [leagueName, setLeagueName] = useState("");
   const user = auth.currentUser;
 
+// @ts-expect-error -- TODO: No overload matches this call.
   const leagueCollection = collection(db, "leagues", leagueId, "seasons", season, "weeks");
   const [docs, loading] = useCollectionData(leagueCollection);
 
+// @ts-expect-error -- TODO: No overload matches this call.
   const membersCollection = collection(db, "leagues", leagueId, "members");
+// @ts-expect-error -- TODO: Object literal may only specify known properties, and 'idField' does not exist in type 'Options & IDOptions<DocumentData> & InitialValueOptions<DocumentData[]>'.
   const [members] = useCollectionData(membersCollection, { idField: "id" });
   const currentMember = members?.find((m) => m.uid === user?.uid);
   const isAdmin = currentMember?.role === "admin";
 
   useEffect(() => {
+// @ts-expect-error -- TODO: No overload matches this call.
     const leagueRef = doc(db, "leagues", leagueId);
     const unsub = onSnapshot(leagueRef, (snap) => {
       setLeagueName(snap.data()?.name || "");
@@ -43,6 +47,7 @@ const Weeks = () => {
 
   const addWeek = async () => {
     try {
+// @ts-expect-error -- TODO: No overload matches this call.
       const docRef = doc(db, "leagues", leagueId, "seasons", season, "weeks", week);
       await setDoc(docRef, {
         week: week,

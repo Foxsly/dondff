@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DisplayGame from './cases';
 import { getPlayers } from './util';
+// @ts-expect-error -- TODO: Cannot find module './images/DOND.jpg' or its corresponding type declarations.
 import hero from './images/DOND.jpg';
 
 function Home() {
@@ -10,10 +11,11 @@ function Home() {
   const [pool, setPool] = useState([]);
   const navigate = useNavigate();
 
-  const handleStart = (event) => {
+  const handleStart = (event: { preventDefault: () => void; }) => {
     event.preventDefault();
     if (!week || !type) return;
     const limit = type === 'WR' ? 95 : 65;
+// @ts-expect-error -- TODO: Argument of type 'Dispatch<SetStateAction<never[]>>' is not assignable to parameter of type '{ (value: SetStateAction<never[]>): void; (value: SetStateAction<never[]>): void; (arg0: { name: string; points: any; status: any; opponent: any; team: any; playerId: any; }[]): void; }'.
     getPlayers(week, type, '2024', limit, setPool);
   };
 

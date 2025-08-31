@@ -1,17 +1,11 @@
 import React, { useEffect, useState, useCallback} from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { auth, db } from "../firebase-config";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import { getPlayers, generateCases } from './util';
+import { generateCases } from './util'
 
-// Game component that can accept a specific uid or default to the current user
-const Game = ({ uid, onComplete }) => {
+interface DisplayGameProps {
+pool: never[] | string | any[];
+}
 
-
-  const { leagueId, season, week } = useLocation().state
-  const navigate = useNavigate()
-  const currentUid = uid || auth.currentUser?.uid
-  const [currentName, setCurrentName] = useState(currentUid)
+const DisplayGame = ({pool}: DisplayGameProps) => {
 
   const [cases, setCases] = useState(null)
   const [caseSelected, setCaseSelected] = useState(null)
@@ -23,43 +17,18 @@ const Game = ({ uid, onComplete }) => {
   const [reset, setReset] = useState(false)
   const [leftovers, setLeftovers] = useState(null)
   const [displayCases, setDisplayCases] = useState(null)
-  const [finished, setFinished] = useState(false)
-  const [midway, setMidway] = useState(false)
-  const [type, setType] = useState("RB")
-  const [limit, setLimit] = useState(65)
-  const [pool, setPool] = useState([])
-  const [lineUp, setLineUp] = useState({
-    RB: { name: "awaiting game..." },
-    WR: { name: "awaiting game..." },
-  })
-  const [resetUsed, setResetUsed] = useState({ RB: false, WR: false })
 
-  useEffect(() => {
-    const fetchName = async () => {
-      if (!currentUid) return
-      if (uid) {
-        try {
-          const memberRef = doc(db, "leagues", leagueId, "members", currentUid)
-          const memberSnap = await getDoc(memberRef)
-          const data = memberSnap.data()
-          setCurrentName(data?.displayName || data?.name || data?.uid || currentUid)
-        } catch (e) {
-          setCurrentName(currentUid)
-        }
-      } else {
-        setCurrentName(auth.currentUser?.displayName || auth.currentUser?.email || currentUid)
-      }
-    }
-    fetchName()
-  }, [uid, currentUid, leagueId])
-
+  
+  
   const buildCases = useCallback(async () => {
-    setCases(generateCases(pool, 10))
-  }, [pool])
+// @ts-expect-error -- TODO: Argument of type '{ number: number; name: any; points: any; opened: boolean; status: any; opponent: any; team: any; playerId: any; }[]' is not assignable to parameter of type 'SetStateAction<null>'.
+    setCases(generateCases(pool, 10));
+  }, [])
 
   const buildDisplayCases = () => {
+// @ts-expect-error -- TODO: Type 'null' must have a '[Symbol.iterator]()' method that returns an iterator.
     let copy = [...cases]
-    function shuffle(array) {
+    function shuffle(array: string | any[]) {
       let currentIndex = array.length,  randomIndex;
     
       // While there remain elements to shuffle.
@@ -70,6 +39,7 @@ const Game = ({ uid, onComplete }) => {
         currentIndex--;
     
         // And swap it with the current element.
+// @ts-expect-error -- TODO: Index signature in type 'string | any[]' only permits reading. Index signature in type 'string | any[]' only permits reading.
         [array[currentIndex], array[randomIndex]] = [
           array[randomIndex], array[currentIndex]];
       }
@@ -77,10 +47,12 @@ const Game = ({ uid, onComplete }) => {
       return array;
     }
     shuffle(copy)
+// @ts-expect-error -- TODO: Argument of type 'any[]' is not assignable to parameter of type 'SetStateAction<null>'.
     setDisplayCases(copy)
   }
 
   const buildLeftovers = async () => {
+// @ts-expect-error -- TODO: Parameter 'arr' implicitly has an 'any' type.
     const genLeftovers = (arr) => {
       //console.log("genLeftovers fired, state is gonna set")
       let copyPool = [...pool]
@@ -98,82 +70,88 @@ const Game = ({ uid, onComplete }) => {
     }
     const realLeftovers = await genLeftovers(cases)
     //console.log("leftover cases generated: ", realLeftovers)
+// @ts-expect-error -- TODO: Argument of type 'any[]' is not assignable to parameter of type 'SetStateAction<null>'.
     setLeftovers(realLeftovers)
     
   }
 
-  const removeOfferFromLeftovers = (offer) => {
-    let offerToRemoveIndex = leftovers.findIndex(player => player.playerId == offer.playerId);
+  const removeOfferFromLeftovers = (offer: { playerId: any; } | null) => {
+// @ts-expect-error -- TODO: 'leftovers' is possibly 'null'. 'offer' is possibly 'null'.
+    let offerToRemoveIndex = leftovers.findIndex((player: { playerId: any; }) => player.playerId == offer.playerId);
     if (offerToRemoveIndex !== -1) {
+// @ts-expect-error -- TODO: 'leftovers' is possibly 'null'.
       leftovers.splice(offerToRemoveIndex, 1);
     }
   }
 
-  const resetGame = (consume = true) => {
-    if (consume && (caseSelected || resetUsed[type])) return
-    if (consume) {
-      resetUsed[type] = true;
-      setResetUsed(resetUsed);
-    }
+  const resetGame = () => {
     setReset(true)
-    setMidway(false)
-    setLineUp(prev => ({ ...prev, [type]: { name: "awaiting game..." } }))
   }
   
-  const removeCases = (arr, n) => {
+  const removeCases = (arr: string | any[] | null, n: number) => {
     var result = new Array(n),
+// @ts-expect-error -- TODO: 'arr' is possibly 'null'.
         len = arr.length,
         taken = new Array(len);
     if (n > len)
         throw new RangeError("getRandom: more elements taken than available");
     while (n--) {
         var x = Math.floor(Math.random() * len);
+// @ts-expect-error -- TODO: 'arr' is possibly 'null'.
         result[n] = arr[x in taken ? taken[x] : x];
         taken[x] = --len in taken ? taken[len] : len;
     }
     return result
   }
   
-  const selectCase = (box) => {
+  const selectCase = (box: React.SetStateAction<null>) => {
     setCaseSelected(box)
+// @ts-expect-error -- TODO: Type 'null' must have a '[Symbol.iterator]()' method that returns an iterator.
     const copy = [...cases]
     const index = copy.indexOf(box)
     copy.splice(index, 1)
+// @ts-expect-error -- TODO: Argument of type 'any[]' is not assignable to parameter of type 'SetStateAction<null>'.
     setGameCases(copy)
     setRound(1)
   }
 
-  const elimCases = useCallback(async (num) => {
+  const elimCases = useCallback(async (num: number) => {
     setThinking(true)
     const latestCases = gameCases
     const removed = removeCases(latestCases, num)
     setThinking(false)
     if (removedCases) {
       for (let item of removed) {
+// @ts-expect-error -- TODO: Argument of type '(removedCases: null) => any[]' is not assignable to parameter of type 'SetStateAction<null>'. Type 'null' must have a '[Symbol.iterator]()' method that returns an iterator.
         setRemovedCases(removedCases => [...removedCases, item])
       }
     } else {
+// @ts-expect-error -- TODO: Argument of type 'any[]' is not assignable to parameter of type 'SetStateAction<null>'.
       setRemovedCases(removed)
     }
     let copyOrigCases = cases
     let copyDisplayCases = displayCases
     for(let i= 0; i<removed.length; i++) {
       let copy = gameCases
+// @ts-expect-error -- TODO: 'copy' is possibly 'null'.
       let index = copy.indexOf(removed[i])
+// @ts-expect-error -- TODO: 'copy' is possibly 'null'.
       copy.splice(index, 1)
       //console.log("found item at index: ", index)
       await setGameCases(copy)
       //console.log("intercepting...new game cases are: ", gameCases)
 
       
-      copyOrigCases = copyOrigCases.map((box) => {
+// @ts-expect-error -- TODO: 'copyOrigCases' is possibly 'null'.
+      copyOrigCases = copyOrigCases.map((box: { name: any; }) => {
         if(box.name === removed[i].name) {
           return {...box, opened: true}
         }
         return box
       })
 
-      copyDisplayCases = copyDisplayCases.map((box) => {
+// @ts-expect-error -- TODO: 'copyDisplayCases' is possibly 'null'.
+      copyDisplayCases = copyDisplayCases.map((box: { name: any; }) => {
         if(box.name === removed[i].name) {
           return {...box, opened: true}
         }
@@ -191,6 +169,7 @@ const Game = ({ uid, onComplete }) => {
     }
   }, [gameCases, removedCases, round, cases, displayCases, caseSelected])
 
+// @ts-expect-error -- TODO: Parameter 'arr' implicitly has an 'any' type. Parameter 'toAdd' implicitly has an 'any' type.
   const buildOffer = async (arr, toAdd) => {
     const latestCases = [...arr, toAdd]
     const len = latestCases.length
@@ -203,8 +182,9 @@ const Game = ({ uid, onComplete }) => {
     console.log(offer)
     //console.log("leftovers to select offer from", leftovers)
 
-    const getClosestPoints = (data, target) => 
-      data.reduce((acc, obj) =>
+    const getClosestPoints = (data: any[] | null, target: number) => 
+// @ts-expect-error -- TODO: 'data' is possibly 'null'.
+      data.reduce((acc: { points: number; }, obj: { points: number; }) =>
         Math.abs(target - obj.points) < Math.abs(target - acc.points) ? obj : acc
     );
     const playerOffer = getClosestPoints(leftovers, offer)
@@ -214,18 +194,20 @@ const Game = ({ uid, onComplete }) => {
     setOffer(playerOffer)
   }
 
-  const cleanUpCaseDisplay = useCallback(async (lastRemaining) => {
+  const cleanUpCaseDisplay = useCallback(async (lastRemaining: { name: any; }) => {
     let copyCases = cases
     let copyDisplayCases = displayCases
     
-      copyCases = copyCases.map((box) => {
+// @ts-expect-error -- TODO: 'copyCases' is possibly 'null'.
+      copyCases = copyCases.map((box: { name: any; }) => {
         if(box.name === lastRemaining.name) {
             return {...box, opened: true}
         }
           return box
         })
 
-      copyDisplayCases = copyDisplayCases.map((box) => {
+// @ts-expect-error -- TODO: 'copyDisplayCases' is possibly 'null'.
+      copyDisplayCases = copyDisplayCases.map((box: { name: any; }) => {
         if(box.name === lastRemaining.name) {
           return {...box, opened: true}
         }
@@ -236,14 +218,17 @@ const Game = ({ uid, onComplete }) => {
     setDisplayCases(copyDisplayCases)
   }, [cases, displayCases])
 
+// @ts-expect-error -- TODO: Parameter 'lastRemaining' implicitly has an 'any' type.
   const cleanAllCases = useCallback(async (lastRemaining) => {
     let copyCases = cases
     let copyDisplayCases = displayCases
     
+// @ts-expect-error -- TODO: 'copyCases' is possibly 'null'. Parameter 'box' implicitly has an 'any' type.
       copyCases = copyCases.map((box) => {
             return {...box, opened: true}
         })
 
+// @ts-expect-error -- TODO: 'copyDisplayCases' is possibly 'null'. Parameter 'box' implicitly has an 'any' type.
         copyDisplayCases = copyDisplayCases.map((box) => {
           return {...box, opened: true}
         })
@@ -258,17 +243,22 @@ const Game = ({ uid, onComplete }) => {
   }
 
   const keep = useCallback(async () => {
+// @ts-expect-error -- TODO: 'gameCases' is possibly 'null'.
     const lastRemaining = gameCases[0]
+// @ts-expect-error -- TODO: Argument of type '(removedCases: null) => any[]' is not assignable to parameter of type 'SetStateAction<null>'. Type 'null' must have a '[Symbol.iterator]()' method that returns an iterator.
     setRemovedCases(removedCases => [...removedCases, lastRemaining])
     cleanUpCaseDisplay(lastRemaining)
     setRound(round + 1)
   }, [gameCases, round, cases])
 
   const swap = useCallback(async () => {
+// @ts-expect-error -- TODO: 'gameCases' is possibly 'null'.
     const lastRemaining = gameCases[0]
     const ogSelected = caseSelected
+// @ts-expect-error -- TODO: Argument of type '(removedCases: null) => any[]' is not assignable to parameter of type 'SetStateAction<null>'. Type 'null' must have a '[Symbol.iterator]()' method that returns an iterator.
     setRemovedCases(removedCases => [...removedCases, ogSelected])
     setCaseSelected(lastRemaining)
+// @ts-expect-error -- TODO: Argument of type 'null' is not assignable to parameter of type '{ name: any; }'.
     cleanUpCaseDisplay(ogSelected)
     setRound(round + 1)
   }, [gameCases, round, cases])
@@ -277,57 +267,17 @@ const Game = ({ uid, onComplete }) => {
     const accepted = offer
     setRemovedCases(cases)
     setCaseSelected(accepted)
+// @ts-expect-error -- TODO: Expected 1 arguments, but got 0.
     cleanAllCases()
     setRound(5)
   }
-  
-  const swapPosition = () => {
-    setPool([])
-    setType("WR")
-    setLimit(95)
-    resetGame(false)
-    setFinished(true)
-  }
-
-  const submitLineup = async () => {
-    const docRef = doc(db, "leagues", leagueId, "seasons", season, "weeks", week, "entries", currentUid)
-    await setDoc(docRef, {
-      name: currentName,
-      lineUp: lineUp
-    })
-    if(onComplete) {
-      onComplete()
-    } else {
-      navigate(-1)
-    }
-  }
 
 
   useEffect(() => {
-    if(type === "WR") {
-      setLimit(95)
-    }
-    if(type === "RB") {
-      setLimit(65)
-      console.log("position group is ", type)
-    }
-  }, [type])
-  
-
-
-  useEffect(() => {
-    if(limit) {
-      getPlayers(week, type, season, limit, setPool);
-    }
-  }, [limit])
-
-  useEffect(() => {
-    if(pool.length > 0 && !cases) {
-      console.log("pool when cases try to build", pool)
+    if(!cases) {
       buildCases()
-
     }
-  }, [cases, pool])
+  }, [cases])
 
   useEffect(() => {
     if(cases && leftovers === null) {
@@ -358,12 +308,7 @@ const Game = ({ uid, onComplete }) => {
       elimCases(1)
       //console.log("eliminating last fired")
     }
-
-    if(round === 5) {
-      setLineUp(prev => ({ ...prev, [type]: caseSelected }))
-      setMidway(true)
-    }
-  }, [round, caseSelected, type])
+  }, [round])
 
   useEffect(() => {
     if(reset) {
@@ -386,7 +331,9 @@ const Game = ({ uid, onComplete }) => {
     if(cases && caseSelected) {
       return(
         <>
-        { cases.map((box,index) => ( box.opened === true ? 
+// @ts-expect-error -- TODO: Property 'map' does not exist on type 'never'.
+        {cases.map((box: { opened: boolean; number: string | number | bigint | boolean | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; name: string | number | bigint | boolean | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; points: string | number | bigint | boolean | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; },index: React.Key | null | undefined) => (
+          box.opened === true ? 
           <div className="box opened" key={index}>
             {box.number}<br />
             {box.name}({box.points})
@@ -395,13 +342,17 @@ const Game = ({ uid, onComplete }) => {
           <div className="box" key={index}>
             <span className="num">{box.number}</span>
           </div>
-        ))}
+        )
+
+        )}
         </>
       )
     } else if(cases) {
       return(
         <>
-        { cases.map((box,index) => 
+// @ts-expect-error -- TODO: Property 'map' does not exist on type 'never'.
+        {cases.map((box: { number: string | number | bigint | boolean | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; },index: React.Key | null | undefined) => 
+// @ts-expect-error -- TODO: Type 'bigint' cannot be used as an index type. Type 'null' cannot be used as an index type. Type 'undefined' cannot be used as an index type.
           <div className="box" key={index} onClick={() => selectCase(cases[index])}>
             <span className="num">{box.number}</span>
           </div>
@@ -416,12 +367,13 @@ const Game = ({ uid, onComplete }) => {
       return (
         <div className="display-cases">
           Players in cases: 
-          {displayCases.map((item, index) => (
+// @ts-expect-error -- TODO: Property 'map' does not exist on type 'never'.
+          {displayCases.map((item: { opened: any; name: string | number | bigint | boolean | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; team: string | number | bigint | boolean | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; status: string | number | bigint | boolean | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; points: string | number | bigint | boolean | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; opponent: string | number | bigint | boolean | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown,string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; }, index: React.Key | null | undefined) => (
             item.opened? 
-            <div className="list-player eliminated">{item.name} <span className="status">{item.team} {item.status}</span><br />
+            <div className="list-player eliminated" key={index}>{item.name} <span className="status">{item.team} {item.status}</span><br />
             <span className="proj">Proj: {item.points} Opp: {item.opponent}</span></div> 
             :
-            <div className="list-player">{item.name} <span className="status">{item.team} {item.status}</span><br />
+            <div className="list-player" key={index}>{item.name} <span className="status">{item.team} {item.status}</span><br />
             <span className="proj">Proj: {item.points} Opp: {item.opponent}</span></div> 
           )
           )}
@@ -446,6 +398,7 @@ const Game = ({ uid, onComplete }) => {
       if(caseSelected) {
       return (
         <>
+// @ts-expect-error -- TODO: Property 'number' does not exist on type 'never'.
           <div className="case-selected-text">You have selected case #{caseSelected.number}</div>
           {thinking? <div>Eliminating Cases...</div> : <div></div>}
 
@@ -463,13 +416,15 @@ const Game = ({ uid, onComplete }) => {
       return (
         <div className="action-box">
           <div className="offer-box">The Banker offers you: 
+// @ts-expect-error -- TODO: Property 'name' does not exist on type 'never'. Property 'team' does not exist on type 'never'. Property 'status' does not exist on type 'never'.
             <div className="list-player">{offer.name} <span className="status">{offer.team} {offer.status}</span><br />
+// @ts-expect-error -- TODO: Property 'points' does not exist on type 'never'. Property 'opponent' does not exist on type 'never'.
             <span className="proj">Proj: {offer.points} Opp: {offer.opponent}</span></div> 
           </div>
           <div className="action-buttons">
             <button className="btn" onClick={acceptOffer}>Accept</button> 
             <button className="btn" onClick={declineOffer}>Decline</button>
-            <button className="btn" onClick={resetGame} disabled={caseSelected !== null || resetUsed[type]}>Reset</button>
+            <button className="btn" onClick={resetGame}>Reset</button>
           </div>
         </div>
       )
@@ -477,13 +432,14 @@ const Game = ({ uid, onComplete }) => {
       return (
         <div className="action-box">
           <div className="offer-box">
+// @ts-expect-error -- TODO: 'gameCases' is possibly 'null'.
             <p>You have rejected all offers and there is one more case remaining: {gameCases[0].number}.</p>
             <p>Would you like to keep your original case or swap with the last remaining?</p>
           </div>
           <div className="action-buttons">
             <button className="btn" onClick={keep}>Keep</button>
             <button className="btn" onClick={swap}>Swap</button>
-            <button className="btn" onClick={resetGame} disabled={caseSelected !== null || resetUsed[type]}>Reset</button>
+            <button className="btn" onClick={resetGame}>Reset</button>
           </div>
         </div>
       )
@@ -491,20 +447,20 @@ const Game = ({ uid, onComplete }) => {
       return (
         <div className="action-box">
           <div className="offer-box">
+// @ts-expect-error -- TODO: 'caseSelected' is possibly 'null'. 'caseSelected' is possibly 'null'.
             {caseSelected.number? <p>Your Final case is case#{caseSelected.number}</p> : <p>You accepted the Banker's offer.</p> }
+// @ts-expect-error -- TODO: 'caseSelected' is possibly 'null'. 'caseSelected' is possibly 'null'.
             <p>Congratulations!! Your player is {caseSelected.name}. His projected points are {caseSelected.points}</p>
           </div>
           <div className="action-buttons">
-            <button className="btn" onClick={resetGame} disabled={caseSelected !== null || resetUsed[type]}>Reset</button>
-            {midway ? (finished ? <button className="btn" onClick={submitLineup}>Submit Lineup</button> : <button className="btn" onClick={swapPosition}>Switch Position Group</button>) : null}
+            <button className="btn" onClick={resetGame}>Reset</button>
           </div>
         </div>
       )
     } else {
       return (
         <div className="action-buttons">
-            <button className="btn" onClick={resetGame} disabled={caseSelected !== null || resetUsed[type]}>Reset</button>
-            {midway ? (finished ? <button className="btn" onClick={submitLineup}>Submit Lineup</button> : <button className="btn" onClick={swapPosition}>Switch Position Group</button>) : null}
+            <button className="btn" onClick={resetGame}>Reset</button>
           </div>
       )
     }
@@ -514,7 +470,6 @@ const Game = ({ uid, onComplete }) => {
 
   return (
     <>
-      <h3>Current User: {currentName}</h3>
       <div className="game">
         <div className="board">
           {render()}
@@ -524,15 +479,8 @@ const Game = ({ uid, onComplete }) => {
           {renderActions()}
         </div>
       </div>
-      <div className="contestant-flexbox">
-        <div className="contestant-card">
-          <p>{currentName}</p>
-          <p><b>RB:</b> {lineUp.RB.name}</p>
-          <p><b>WR:</b> {lineUp.WR.name}</p>
-        </div>
-      </div>
     </>
   )
 }
 
-export default Game
+export default DisplayGame

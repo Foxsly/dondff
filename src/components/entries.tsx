@@ -1,22 +1,32 @@
 import React, { useState } from "react";
 import { auth, db } from "../firebase-config";
-import { collection, doc, setDoc } from "firebase/firestore";
+import { collection, doc, DocumentData, setDoc } from "firebase/firestore";
 import { useCollectionData } from "react-firebase-hooks/firestore";
 import { Link } from "react-router-dom";
 
-function roundToTwo(number) {
+function roundToTwo(number: number) {
   return Math.round(number * 100) / 100;
 }
 
-const Entries = ({ leagueId, season, week, actualWeek }) => {
+interface EntriesProps {
+leagueId: any;
+season: any;
+week: any;
+actualWeek: any;
+}
+
+const Entries = ({ leagueId, season, week, actualWeek }: EntriesProps) => {
   const user = auth.currentUser;
 
   const entriesCollection = collection(db, "leagues", leagueId, "seasons", season, "weeks", week, "entries");
+// @ts-expect-error -- TODO: Object literal may only specify known properties, and 'idField' does not exist in type 'Options & IDOptions<DocumentData> & InitialValueOptions<DocumentData[]>'.
   const [entries] = useCollectionData(entriesCollection, { idField: "id" });
 
   const membersCollection = collection(db, "leagues", leagueId, "members");
+// @ts-expect-error -- TODO: Object literal may only specify known properties, and 'idField' does not exist in type 'Options & IDOptions<DocumentData> & InitialValueOptions<DocumentData[]>'.
   const [members] = useCollectionData(membersCollection, { idField: "id" });
 
+// @ts-expect-error -- TODO: Parameter 'id' implicitly has an 'any' type.
   const memberLabel = (id) => {
     const member = members?.find((member) => member.id === id);
     return (
@@ -33,8 +43,11 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
   const isAdmin = currentMember?.role === "admin";
   const [selectedUids, setSelectedUids] = useState([]);
 
+// @ts-expect-error -- TODO: Parameter 'uid' implicitly has an 'any' type.
   const toggleUid = (uid) => {
+// @ts-expect-error -- TODO: Argument of type '(prev: never[]) => any[]' is not assignable to parameter of type 'SetStateAction<never[]>'.
     setSelectedUids((prev) =>
+// @ts-expect-error -- TODO: Argument of type 'any' is not assignable to parameter of type 'never'.
       prev.includes(uid)
         ? prev.filter((id) => id !== uid)
         : [...prev, uid]
@@ -45,7 +58,7 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
     ? [...entries].sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0))
     : [];
 
-  const projectedTotal = (entry) =>
+  const projectedTotal = (entry: DocumentData) =>
     (entry.lineUp?.RB?.points ?? 0) + (entry.lineUp?.WR?.points ?? 0);
 
   const calculateScores = async () => {
@@ -106,6 +119,7 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
                     <input
                       type="checkbox"
                       className="mr-2"
+// @ts-expect-error -- TODO: Argument of type 'any' is not assignable to parameter of type 'never'.
                       checked={selectedUids.includes(entry.id)}
                       onChange={() => toggleUid(entry.id)}
                     />

@@ -1,8 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-const Breadcrumbs = ({ items }) => {
-  return (
+interface BreadcrumbsProps {
+items: { label: string; }[] | ({ label: string; to: string; } | { label: any; })[] | ({ label: string; to: string; } | { label: string; })[];
+}
+
+const Breadcrumbs = ({ items }: BreadcrumbsProps) => {
+  return (`
     <nav className="breadcrumbs">
       {items.map((item, index) => (
         <span key={index}>
@@ -11,7 +15,7 @@ const Breadcrumbs = ({ items }) => {
         </span>
       ))}
     </nav>
-  );
+  `);
 };
 
 export default Breadcrumbs;

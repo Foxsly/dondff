@@ -1,3 +1,10 @@
+import React from "react";
+
+import Game from "../game";
+import {doc, getDoc, setDoc} from "firebase/firestore";
+import userEvent from "@testing-library/user-event";
+import {render, screen} from "@testing-library/react";
+
 jest.mock('firebase/firestore', () => ({
   doc: jest.fn(),
   setDoc: jest.fn(),
@@ -19,14 +26,8 @@ jest.mock('../util', () => ({
   generateCases: jest.fn(),
 }));
 
-const { render, screen } = require('@testing-library/react');
-const userEvent = require('@testing-library/user-event').default;
-const React = require('react');
-const { doc, setDoc, getDoc } = require('firebase/firestore');
 
 const useStateSpy = jest.spyOn(React, 'useState');
-const Game = require('../game').default;
-
 afterEach(() => {
   useStateSpy.mockReset();
 });

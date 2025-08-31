@@ -4,15 +4,21 @@ import { collection, doc, setDoc } from "firebase/firestore";
 import { useCollectionData } from "react-firebase-hooks/firestore";
 import { Link } from "react-router-dom";
 
-const Seasons = ({ leagueId }) => {
+interface SeasonsProps {
+leagueId: string | undefined | string[];
+}
+
+const Seasons = ({ leagueId }: SeasonsProps) => {
   const [year, setYear] = useState("");
 
+// @ts-expect-error -- TODO: No overload matches this call.
   const leagueCollection = collection(db, "leagues", leagueId, "seasons");
   const [docs, loading] = useCollectionData(leagueCollection);
 
-  const addSeason = async (year) => {
+  const addSeason = async (year: React.SetStateAction<string>) => {
     setYear(year);
     try {
+// @ts-expect-error -- TODO: No overload matches this call.
       const docRef = doc(db, "leagues", leagueId, "seasons", year);
       await setDoc(docRef, {
         season: year,

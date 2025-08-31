@@ -9,6 +9,7 @@ function Navbar() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (current) => {
+// @ts-expect-error -- TODO: Argument of type 'User | null' is not assignable to parameter of type 'SetStateAction<null>'.
       setUser(current);
     });
     return () => unsubscribe();
@@ -52,6 +53,7 @@ function Navbar() {
           </>
         ) : (
           <>
+// @ts-expect-error -- TODO: Property 'email' does not exist on type 'never'. Property 'displayName' does not exist on type 'never'.
             <span className="font-semibold">{user.email || user.displayName}</span>
             <button
               onClick={logout}

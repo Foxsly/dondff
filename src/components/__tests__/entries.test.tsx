@@ -1,3 +1,14 @@
+import {render, screen, waitFor} from "@testing-library/react";
+
+import generated from "@testing-library/jest-dom";
+import userEvent from "@testing-library/user-event";
+import {MemoryRouter} from "react-router-dom";
+import {doc, setDoc} from "firebase/firestore";
+
+import {useCollectionData} from "react-firebase-hooks/firestore";
+import Entries from "../entries";
+import React from "react";
+
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
   doc: jest.fn(),
@@ -12,15 +23,6 @@ jest.mock('../../firebase-config', () => ({
 jest.mock('react-firebase-hooks/firestore', () => ({
   useCollectionData: jest.fn(),
 }));
-
-const { render, screen, waitFor } = require('@testing-library/react');
-require('@testing-library/jest-dom');
-const userEvent = require('@testing-library/user-event').default;
-const { MemoryRouter } = require('react-router-dom');
-const { setDoc, doc } = require('firebase/firestore');
-const { useCollectionData } = require('react-firebase-hooks/firestore');
-const Entries = require('../entries').default;
-
 test('calculateScores sums player scores and persists finalScore', async () => {
   const dummyEntries = [
     {
@@ -62,6 +64,7 @@ test('calculateScores sums player scores and persists finalScore', async () => {
     });
 
   doc.mockImplementation(
+// @ts-expect-error -- TODO: Parameter 'db' implicitly has an 'any' type. Parameter 'l' implicitly has an 'any' type. Parameter 'leagueId' implicitly has an 'any' type. Parameter 's' implicitly has an 'any' type. Parameter 'season' implicitly has an 'any' type. Parameter 'w' implicitly has an 'any' type. Parameter 'week' implicitly has an 'any' type. Parameter 'e' implicitly has an 'any' type. Parameter 'entryId' implicitly has an 'any' type.
     (db, l, leagueId, s, season, w, week, e, entryId) => entryId
   );
   setDoc.mockResolvedValue();
@@ -78,8 +81,10 @@ test('calculateScores sums player scores and persists finalScore', async () => {
 
   expect(dummyEntries.length).toBe(2);
   expect(dummyEntries[0].id).toBe('entry1');
+// @ts-expect-error -- TODO: Property 'finalScore' does not exist on type '{ id: string; name: string; lineUp: { RB: { playerId: string; pprScore: number; name: string; }; WR: { playerId: string; pprScore: number; name: string; }; }; }'.
   expect(dummyEntries[0].finalScore).toBe(30);
   expect(dummyEntries[1].id).toBe('entry2');
+// @ts-expect-error -- TODO: Property 'finalScore' does not exist on type '{ id: string; name: string; lineUp: { RB: { playerId: string; pprScore: number; name: string; }; WR: { playerId: string; pprScore: number; name: string; }; }; }'.
   expect(dummyEntries[1].finalScore).toBe(30.16666); //Don't round on the backend, round on the display
 });
 

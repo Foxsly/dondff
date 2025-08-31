@@ -1,22 +1,17 @@
-jest.mock('uuid', () => ({ v4: jest.fn() }));
+import React from "react";
+import {render, screen, waitFor} from '@testing-library/react';
+import {MemoryRouter} from "react-router-dom";
+import {onAuthStateChanged} from "firebase/auth";
+import {addDoc, doc, getDocs, onSnapshot, query, setDoc} from "firebase/firestore";
+import {v4 as uuidv4} from "uuid";
+import userEvent from "@testing-library/user-event";
+import Dashboard from "../dashboard";
 
-jest.mock('firebase/firestore', () => ({
-  addDoc: jest.fn(),
-  setDoc: jest.fn(),
-  collection: jest.fn(() => 'leaguesRef'),
-  doc: jest.fn(() => 'memberRef'),
-  getDocs: jest.fn(),
-  onSnapshot: jest.fn(() => () => {}),
-  query: jest.fn(() => 'query'),
-  where: jest.fn(() => 'where'),
-  collectionGroup: jest.fn(() => 'membersQuery'),
-  getDoc: jest.fn(),
-}));
+jest.mock('uuid');
 
-jest.mock('firebase/auth', () => ({
-  onAuthStateChanged: jest.fn(),
-  signOut: jest.fn(),
-}));
+jest.mock('firebase/firestore');
+
+jest.mock('firebase/auth');
 
 jest.mock('react-router-dom', () => {
   const actual = jest.requireActual('react-router-dom');
@@ -31,21 +26,6 @@ jest.mock('../../firebase-config', () => ({
   db: {},
 }));
 
-const { render, screen, waitFor } = require('@testing-library/react');
-const userEvent = require('@testing-library/user-event').default;
-const { MemoryRouter } = require('react-router-dom');
-const { v4: uuidv4 } = require('uuid');
-const {
-  addDoc,
-  setDoc,
-  onSnapshot,
-  doc,
-  getDocs,
-  query,
-} = require('firebase/firestore');
-const { onAuthStateChanged } = require('firebase/auth');
-const Dashboard = require('../dashboard').default;
-
 onSnapshot.mockReturnValue(() => {});
 doc.mockReturnValue('memberRef');
 
@@ -54,7 +34,8 @@ test('creates league and adds owner as admin', async () => {
   uuidv4.mockReturnValue('access-code');
   addDoc.mockResolvedValue({ id: 'league123' });
   setDoc.mockResolvedValue();
-  onAuthStateChanged.mockImplementation((auth, callback) => {
+// @ts-expect-error -- TODO: Parameter 'auth' implicitly has an 'any' type.
+  onAuthStateChanged.mockImplementation((auth, callback: (arg0: { uid: string; displayName: string; email: string; }) => void) => {
     callback(mockUser);
     return () => {};
   });
@@ -95,7 +76,8 @@ test('joins league and adds user as player when access code matches', async () =
   jest.clearAllMocks();
   doc.mockReturnValue('memberRef');
   const mockUser = { uid: 'user123', displayName: 'User One', email: 'user1@example.com' };
-  onAuthStateChanged.mockImplementation((auth, callback) => {
+// @ts-expect-error -- TODO: Parameter 'auth' implicitly has an 'any' type.
+  onAuthStateChanged.mockImplementation((auth, callback: (arg0: { uid: string; displayName: string; email: string; }) => void) => {
     callback(mockUser);
     return () => {};
   });

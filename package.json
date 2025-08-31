@@ -10,7 +10,6 @@
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^5.16.5",
-    "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
     "dotenv": "^16.0.3",
     "firebase": "^9.12.1",
@@ -30,6 +29,12 @@
     "build:css": "tailwindcss -i ./src/index.css -o ./src/index.css"
   },
   "devDependencies": {
+    "@jest/types": "^30.0.5",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.0",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.23",
     "tailwindcss": "^3.3.2"

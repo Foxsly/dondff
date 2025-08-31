@@ -17,6 +17,7 @@ const SignUp = () => {
 
   useEffect(() => {
     onAuthStateChanged(auth, (currentUser) => {
+// @ts-expect-error -- TODO: Argument of type 'User | null' is not assignable to parameter of type 'SetStateAction<{}>'.
         setUser(currentUser);
     });
   }, [])
@@ -28,6 +29,7 @@ const SignUp = () => {
       navigate("/dashboard")
       setRegisterError("")
     } catch (error) {
+// @ts-expect-error -- TODO: 'error' is of type 'unknown'.
       setRegisterError(error.message)
     }
   }
@@ -39,6 +41,7 @@ const SignUp = () => {
       navigate("/dashboard")
       setLoginError("")
     } catch (error) {
+// @ts-expect-error -- TODO: 'error' is of type 'unknown'.
       setLoginError(error.message)
     }
   }
@@ -47,6 +50,7 @@ const SignUp = () => {
     try {
       await signOut(auth)
     } catch (error) {
+// @ts-expect-error -- TODO: 'error' is of type 'unknown'.
       console.log(error.message)
     }
   }
@@ -55,6 +59,7 @@ const SignUp = () => {
     return (
       <div className="max-w-md mx-auto mt-10 space-y-4 text-center">
         <h4 className="text-xl font-semibold">User Logged IN:</h4>
+// @ts-expect-error -- TODO: Property 'email' does not exist on type '{}'.
         <p>{user ? user.email : "Not Logged In"}</p>
         <div className="flex justify-center gap-4">
           <button

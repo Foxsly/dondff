@@ -1,7 +1,16 @@
 import React, { useState } from "react";
 import Entries from "./entries";
 
-const Accordion = ({ weekDoc, leagueId, season, actualWeek }) => {
+interface AccordionProps {
+key: any;
+// @ts-expect-error -- TODO: Cannot find name 'DocumentData'. Did you mean 'Document'?
+weekDoc: DocumentData;
+leagueId: string | undefined;
+season: string | undefined;
+actualWeek: null;
+}
+
+const Accordion = ({ weekDoc, leagueId, season, actualWeek }: AccordionProps) => {
   const [isActive, setIsActive] = useState(false);
 
   return (
