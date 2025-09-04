@@ -1,0 +1,229 @@
+openapi: 3.1.0
+info:
+  title: DONDFF
+  description: |
+    This API supports DONDFF requests
+  version: 1.0.0
+tags:
+  - name: user
+  - name: admin
+servers:
+  - url: https://dondff.foxsly.org/v1
+paths:
+  /user:
+    get:
+      summary: Get all users
+      description: Retrieves all users in the system
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/user"
+
+  /user/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/userId"
+    get:
+      summary: Get a specific user
+      description: Retrieves the requested user
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/user"
+
+  /league:
+    get:
+      summary: Get all leagues
+      description: Retrieves all leagues you have access to
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/league"
+
+  /league/{leagueId}:
+    parameters:
+      - $ref: "#/components/parameters/leagueId"
+    get:
+      summary: Get a specific league
+      description: Retrieves the requested league
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/league"
+
+  /league/{leagueId}/user:
+    parameters:
+      - $ref: "#/components/parameters/leagueId"
+    get:
+      summary: Get the members of a specific league
+      description: Retrieves the members in the requested league
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/user"
+
+  /league/{leagueId}/{year}:
+    parameters:
+      - $ref: "#/components/parameters/leagueId"
+      - $ref: "#/components/parameters/year"
+    get:
+      summary: Get a specific league for a given year
+      description: Retrieves the requested league for the requested year
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  season:
+                    type: integer
+
+  /league/{leagueId}/{year}/{week}/entry:
+    parameters:
+      - $ref: "#/components/parameters/leagueId"
+      - $ref: "#/components/parameters/year"
+      - $ref: "#/components/parameters/week"
+    get:
+      summary: Get the entries for a given week/year for a league
+      description: Retrieves the entries for the week/year combination in the requested league
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/entry"
+    put:
+      summary: Create/update a new entry for a week
+      description: Creates (or updates) a new entry for the week/year/league combination
+      responses:
+        "200":
+          description: "Entry successfully created/updated"
+
+components:
+  parameters:
+    leagueId:
+      description: League ID
+      name: leagueId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/uuid'
+    userId:
+      description: User ID
+      name: userId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/uuid'
+    year:
+      name: "year"
+      in: "path"
+      required: true
+      description: "League year"
+      schema:
+        type: integer
+    week:
+      name: "week"
+      in: "path"
+      required: true
+      description: "Week of the season"
+      schema:
+        type: integer
+  schemas:
+    uuid:
+      type: string
+      description: A UUID
+    user:
+      type: object
+      properties:
+        userId:
+          $ref: "#/components/schemas/uuid"
+          description: |
+            User ID - used to identify user in other contexts
+        emailAddress:
+          type: string
+          description: User's email address
+        name:
+          type: string
+          description: User's name, for display
+    league:
+      type: "object"
+      properties:
+        leagueId:
+          $ref: "#/components/schemas/uuid"
+        name:
+          type: string
+          description: League name
+        accessCode:
+          type: string
+          description: Access code used to join the league
+    entry:
+      type: "object"
+      properties:
+        name:
+          type: "string"
+          description: "Email address associated with the entry"
+        lineup:
+          type: "object"
+          properties:
+            RB:
+              $ref: "#/components/schemas/playerPick"
+            WR:
+              $ref: "#/components/schemas/playerPick"
+            finalScore:
+              type: "number"
+              description: "Final score for the week"
+        finalScore:
+          type: "number"
+          description: "Final score for the week"
+    playerPick:
+      type: "object"
+      properties:
+        name:
+          type: "string"
+          description: Player name
+        opponent:
+          type: "string"
+          description: Player's opponent for that week
+        playerId:
+          type: "string"
+          description: Unique identifier for player (comes from Sleeper)
+        points:
+          type: "number"
+          description: Projected points
+        team:
+          type: "string"
+          description: Player's team
+        status:
+          type: "string"
+          description: No idea
+        pprScore:
+          type: "number"
+          description: PPR points scored by the player that week
+
+
