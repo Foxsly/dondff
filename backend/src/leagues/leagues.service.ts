@@ -1,26 +1,44 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLeagueDto } from './dto/create-league.dto';
 import { UpdateLeagueDto } from './dto/update-league.dto';
+import * as leaguesRepository from './leagues.repository';
+import { League } from './entities/league.entity';
 
 @Injectable()
 export class LeaguesService {
-  create(createLeagueDto: CreateLeagueDto) {
-    return 'This action adds a new league';
+  constructor(
+    @Inject(leaguesRepository.LEAGUES_REPOSITORY)
+    private readonly repo: leaguesRepository.ILeaguesRepository,
+  ) {}
+
+  async create(createLeagueDto: CreateLeagueDto): Promise<League> {
+    return this.repo.create(createLeagueDto);
   }
 
-  findAll() {
-    return `This action returns all leagues`;
+  async findAll(): Promise<League[]> {
+    return this.repo.findAll();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} league`;
+  async findOne(id: number): Promise<League> {
+    const league = await this.repo.findOne(id);
+    if (!league) {
+      throw new NotFoundException(`League with id ${id} not found`);
+    }
+    return league;
   }
 
-  update(id: number, updateLeagueDto: UpdateLeagueDto) {
-    return `This action updates a #${id} league`;
+  async update(id: number, updateLeagueDto: UpdateLeagueDto): Promise<League> {
+    const updated = await this.repo.update(id, updateLeagueDto);
+    if (!updated) {
+      throw new NotFoundException(`League with id ${id} not found`);
+    }
+    return updated;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} league`;
+  async remove(id: number): Promise<void> {
+    const removed = await this.repo.remove(id);
+    if (!removed) {
+      throw new NotFoundException(`League with id ${id} not found`);
+    }
   }
 }
