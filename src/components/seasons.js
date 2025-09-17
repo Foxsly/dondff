@@ -29,7 +29,7 @@ const Seasons = ({ leagueId }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto p-4 space-y-4">
       {loading && "Loading..."}
       <div className="flex flex-wrap gap-2">
         {docs?.map((doc) => (

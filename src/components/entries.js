@@ -61,6 +61,17 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
     ? [...entries].sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0))
     : [];
 
+    //helpers for if week is finalized
+    const weekNum = Number(week);
+    const actualWeekNum = Number(actualWeek);
+    const isCurrentWeek = weekNum === actualWeekNum;
+
+    //check to see if finalScores have been calculated. Used to switch table displays
+  const allHaveFinal = (entries ?? []).length > 0 &&
+  (entries ?? []).every(e => typeof e?.finalScore === "number");
+
+  const showResults = !isCurrentWeek && allHaveFinal;
+
   const projectedTotal = (entry) =>
     (entry.lineUp?.RB?.points ?? 0) + (entry.lineUp?.WR?.points ?? 0);
 
@@ -99,8 +110,8 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
     }
   };
 
-  return (
-    <div className="space-y-4">
+  function ResultsTable({ entries }) {
+    return (
       <div className="overflow-x-auto">
         <table className="min-w-full text-left border border-[#3a465b]">
           <thead className="bg-[#3a465b]">
@@ -108,20 +119,24 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
               <th className="p-2 border-b border-[#3a465b]">Member</th>
               <th className="p-2 border-b border-[#3a465b]">RB</th>
               <th className="p-2 border-b border-[#3a465b]">RB Projection</th>
+              <th className="p-2 border-b border-[#3a465b]">RB Final</th>
               <th className="p-2 border-b border-[#3a465b]">WR</th>
               <th className="p-2 border-b border-[#3a465b]">WR Projection</th>
+              <th className="p-2 border-b border-[#3a465b]">WR Final</th>
               <th className="p-2 border-b border-[#3a465b]">Projected Total</th>
               <th className="p-2 border-b border-[#3a465b]">Final Score</th>
             </tr>
           </thead>
           <tbody>
-            {sortedEntries.map((entry) => (
+            {entries.map((entry) => (
               <tr key={entry.name} className="odd:bg-[#3a465b]/20">
                 <td className="p-2 border-b border-[#3a465b]">{memberLabel(entry.name)}</td>
                 <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.RB?.name ?? ""}</td>
                 <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.RB?.points) ?? 0}</td>
+                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.RB?.pprScore) ?? 0}</td>
                 <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.WR?.name ?? ""}</td>
                 <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.WR?.points) ?? 0}</td>
+                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.WR?.pprScore) ?? 0}</td>
                 <td className="p-2 border-b border-[#3a465b]">{roundToTwo(projectedTotal(entry))}</td>
                 <td className="p-2 border-b border-[#3a465b]">{entry.finalScore ? roundToTwo(entry.finalScore) : ""}</td>
               </tr>
@@ -129,6 +144,53 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
           </tbody>
         </table>
       </div>
+    )
+  }
+
+    function ProjectionsTable({ entries }) {
+    return (
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-left border border-[#3a465b]">
+          <thead className="bg-[#3a465b]">
+            <tr>
+              <th className="p-2 border-b border-[#3a465b]">Member</th>
+              <th className="p-2 border-b border-[#3a465b]">RB</th>
+              <th className="p-2 border-b border-[#3a465b]">RB Projection</th>
+              
+              <th className="p-2 border-b border-[#3a465b]">WR</th>
+              <th className="p-2 border-b border-[#3a465b]">WR Projection</th>
+             
+              <th className="p-2 border-b border-[#3a465b]">Projected Total</th>
+              
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((entry) => (
+              <tr key={entry.name} className="odd:bg-[#3a465b]/20">
+                <td className="p-2 border-b border-[#3a465b]">{memberLabel(entry.name)}</td>
+                <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.RB?.name ?? ""}</td>
+                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.RB?.points) ?? 0}</td>
+                
+                <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.WR?.name ?? ""}</td>
+                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.WR?.points) ?? 0}</td>
+                
+                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(projectedTotal(entry))}</td>
+                
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {showResults ? (
+        <ResultsTable entries={sortedEntries} />
+      ) : (
+        <ProjectionsTable entries={sortedEntries} />
+      )}
       {entries && !hasEntry && user && (
         <Link
           to="/game/setting-lineups"
