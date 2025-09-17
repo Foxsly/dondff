@@ -2,9 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { NotFoundException } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './entities/user.entity';
+import { CreateUserDto, IUser, UpdateUserDto } from './entities/user.entity';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -34,7 +32,11 @@ describe('UsersController', () => {
   describe('create', () => {
     it('calls service.create and returns result', async () => {
       const dto: CreateUserDto = { name: 'Alice', email: 'alice@example.com' };
-      const user = new User(1, 'Alice', 'alice@example.com');
+      const user: IUser = {
+        userId: 'c15b75c1-1726-4c21-943c-9ad9ddae8738',
+        name: 'Alice',
+        email: 'alice@example.com',
+      };
       service.create.mockResolvedValue(user);
 
       const result = await controller.create(dto);
@@ -45,7 +47,13 @@ describe('UsersController', () => {
 
   describe('findAll', () => {
     it('returns all users', async () => {
-      const users = [new User(1, 'Alice', 'alice@example.com')];
+      const users: IUser[] = [
+        {
+          userId: 'c15b75c1-1726-4c21-943c-9ad9ddae8738',
+          name: 'Alice',
+          email: 'alice@example.com',
+        },
+      ];
       service.findAll.mockResolvedValue(users);
 
       const result = await controller.findAll();
@@ -61,7 +69,11 @@ describe('UsersController', () => {
     });
 
     it('should return a user when service returns a user', async () => {
-      const mockUser = { userId: 1, name: 'Test', email: 'test@example.com' };
+      const mockUser: IUser = {
+        userId: 'c15b75c1-1726-4c21-943c-9ad9ddae8738',
+        name: 'Test',
+        email: 'test@example.com',
+      };
       service.findOne.mockResolvedValueOnce(mockUser);
 
       const result = await controller.findOne('1');
@@ -72,11 +84,15 @@ describe('UsersController', () => {
   describe('update', () => {
     it('calls service.update with id and dto', async () => {
       const dto: UpdateUserDto = { name: 'Updated' };
-      const updated = new User(1, 'Updated', 'alice@example.com');
+      const updated: IUser = {
+        userId: 'c15b75c1-1726-4c21-943c-9ad9ddae8738',
+        name: 'Alice',
+        email: 'alice@example.com',
+      };
       service.update.mockResolvedValue(updated);
 
-      const result = await controller.update('1', dto);
-      expect(service.update).toHaveBeenCalledWith(1, dto);
+      const result = await controller.update('c15b75c1-1726-4c21-943c-9ad9ddae8738', dto);
+      expect(service.update).toHaveBeenCalledWith('c15b75c1-1726-4c21-943c-9ad9ddae8738', dto);
       expect(result).toEqual(updated);
     });
   });
@@ -86,7 +102,7 @@ describe('UsersController', () => {
       service.remove.mockResolvedValue(undefined);
 
       const result = await controller.remove('1');
-      expect(service.remove).toHaveBeenCalledWith(1);
+      expect(service.remove).toHaveBeenCalledWith('1');
       expect(result).toBeUndefined();
     });
   });
