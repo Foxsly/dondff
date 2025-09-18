@@ -1,10 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
-import { IUser } from './entities/user.entity';
+import { CreateUserDto, IUser, UpdateUserDto } from './entities/user.entity';
 import { NotFoundException } from '@nestjs/common';
 import { USERS_REPOSITORY, IUsersRepository } from './users.repository';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 
 describe('UsersService', () => {
   let service: UsersService;
