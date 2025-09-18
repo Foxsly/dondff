@@ -1,8 +1,7 @@
-import { League as LeagueEntity } from './entities/league.entity';
+import { CreateLeagueDto, League, League as LeagueEntity } from './entities/league.entity';
 import { Inject, Injectable } from '@nestjs/common';
-import { Kysely, Selectable } from 'kysely';
+import { Kysely } from 'kysely';
 import { DB } from '../infrastructure/database/types';
-import { CreateLeagueDto } from './dto/create-league.dto';
 
 export const LEAGUES_REPOSITORY = Symbol('LEAGUES_REPOSITORY');
 
@@ -10,9 +9,9 @@ export const LEAGUES_REPOSITORY = Symbol('LEAGUES_REPOSITORY');
 export interface ILeaguesRepository {
   create(league: CreateLeagueDto): Promise<LeagueEntity>;
   findAll(): Promise<LeagueEntity[]>;
-  findOne(id: number): Promise<LeagueEntity | null>;
-  update(id: number, league: Partial<LeagueEntity>): Promise<LeagueEntity | null>;
-  remove(id: number): Promise<boolean>;
+  findOne(id: string): Promise<League | null>;
+  update(id: string, league: Partial<League>): Promise<League | null>;
+  remove(id: string): Promise<boolean>;
 }
 
 // In-memory implementation (great for testing or prototyping)
@@ -22,7 +21,7 @@ export class InMemoryLeaguesRepository implements ILeaguesRepository {
   private leagues: LeagueEntity[] = [];
 
   async create(league: CreateLeagueDto): Promise<LeagueEntity> {
-    const leagueWithId: LeagueEntity = { leagueId: this.leagues.length + 1, ...league };
+    const leagueWithId: LeagueEntity = { leagueId: crypto.randomUUID(), ...league };
     this.leagues.push(leagueWithId);
     return leagueWithId;
   }
@@ -31,11 +30,11 @@ export class InMemoryLeaguesRepository implements ILeaguesRepository {
     return this.leagues;
   }
 
-  async findOne(id: number): Promise<LeagueEntity | null> {
+  async findOne(id: string): Promise<League | null> {
     return this.leagues.find((league) => league.leagueId === id) ?? null;
   }
 
-  async update(id: number, league: Partial<LeagueEntity>): Promise<LeagueEntity | null> {
+  async update(id: string, league: Partial<League>): Promise<League | null> {
     const index = this.leagues.findIndex((league) => league.leagueId === id);
     if (index === -1) return null;
 
@@ -43,7 +42,7 @@ export class InMemoryLeaguesRepository implements ILeaguesRepository {
     return this.leagues[index];
   }
 
-  async remove(id: number): Promise<boolean> {
+  async remove(id: string): Promise<boolean> {
     const index = this.leagues.findIndex((league) => league.leagueId === id);
     if (index === -1) return false;
 
@@ -62,40 +61,32 @@ export class InMemoryLeaguesRepository implements ILeaguesRepository {
 export class DatabaseLeaguesRepository implements ILeaguesRepository {
   constructor(@Inject('DB_CONNECTION') private readonly db: Kysely<DB>) {}
 
-  private mapToEntity = (row: Selectable<DB['league']>): LeagueEntity =>
-    new LeagueEntity(
-      row.leagueId!,
-      row.name,
-    );
-
   async create(league: CreateLeagueDto): Promise<LeagueEntity> {
-    const result = await this.db
+    return await this.db
       .insertInto('league')
       .values({
+        leagueId: crypto.randomUUID(),
         name: league.name,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
-
-    return this.mapToEntity(result);
   }
 
   async findAll(): Promise<LeagueEntity[]> {
-    const rows: Selectable<DB['league']>[] = await this.db.selectFrom('league').selectAll().execute();
-    return rows.map(this.mapToEntity);
+    return await this.db.selectFrom('league').selectAll().execute();
   }
 
-  async findOne(id: number): Promise<LeagueEntity | null> {
+  async findOne(id: string): Promise<League | null> {
     const row = await this.db
       .selectFrom('league')
       .selectAll()
       .where('leagueId', '=', id)
       .executeTakeFirst();
 
-    return row ? this.mapToEntity(row) : null;
+    return row ? row : null;
   }
 
-  async update(id: number, league: Partial<LeagueEntity>): Promise<LeagueEntity | null> {
+  async update(id: string, league: Partial<League>): Promise<League | null> {
     const result = await this.db
       .updateTable('league')
       .set({
@@ -105,10 +96,10 @@ export class DatabaseLeaguesRepository implements ILeaguesRepository {
       .returningAll()
       .executeTakeFirst();
 
-    return result ? this.mapToEntity(result) : null;
+    return result ? result : null;
   }
 
-  async remove(id: number): Promise<boolean> {
+  async remove(id: string): Promise<boolean> {
     const result = await this.db.deleteFrom('league').where('leagueId', '=', id).executeTakeFirst();
     return (result?.numDeletedRows ?? 0n) > 0n;
   }

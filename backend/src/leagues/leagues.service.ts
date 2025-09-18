@@ -1,8 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateLeagueDto } from './dto/create-league.dto';
-import { UpdateLeagueDto } from './dto/update-league.dto';
 import * as leaguesRepository from './leagues.repository';
-import { League } from './entities/league.entity';
+import { CreateLeagueDto, League, UpdateLeagueDto } from './entities/league.entity';
 
 @Injectable()
 export class LeaguesService {
@@ -19,7 +17,7 @@ export class LeaguesService {
     return this.repo.findAll();
   }
 
-  async findOne(id: number): Promise<League> {
+  async findOne(id: string): Promise<League> {
     const league = await this.repo.findOne(id);
     if (!league) {
       throw new NotFoundException(`League with id ${id} not found`);
@@ -27,7 +25,7 @@ export class LeaguesService {
     return league;
   }
 
-  async update(id: number, updateLeagueDto: UpdateLeagueDto): Promise<League> {
+  async update(id: string, updateLeagueDto: UpdateLeagueDto): Promise<League> {
     const updated = await this.repo.update(id, updateLeagueDto);
     if (!updated) {
       throw new NotFoundException(`League with id ${id} not found`);
@@ -35,7 +33,7 @@ export class LeaguesService {
     return updated;
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     const removed = await this.repo.remove(id);
     if (!removed) {
       throw new NotFoundException(`League with id ${id} not found`);

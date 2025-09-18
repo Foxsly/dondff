@@ -1,14 +1,13 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { LeaguesService } from './leagues.service';
-import { CreateLeagueDto } from './dto/create-league.dto';
-import { UpdateLeagueDto } from './dto/update-league.dto';
+import * as leagueEntity from './entities/league.entity';
 
 @Controller('leagues')
 export class LeaguesController {
   constructor(private readonly leaguesService: LeaguesService) {}
 
   @Post()
-  create(@Body() createLeagueDto: CreateLeagueDto) {
+  create(@Body() createLeagueDto: leagueEntity.CreateLeagueDto) {
     return this.leaguesService.create(createLeagueDto);
   }
 
@@ -19,16 +18,16 @@ export class LeaguesController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.leaguesService.findOne(+id);
+    return this.leaguesService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateLeagueDto: UpdateLeagueDto) {
-    return this.leaguesService.update(+id, updateLeagueDto);
+  update(@Param('id') id: string, @Body() updateLeagueDto: leagueEntity.UpdateLeagueDto) {
+    return this.leaguesService.update(id, updateLeagueDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.leaguesService.remove(+id);
+    return this.leaguesService.remove(id);
   }
 }

@@ -1,25 +1,11 @@
 import { User } from '../../users/entities/user.entity';
-
-export interface League {
-  leagueId: Generated<number | null>;
-  name: string;
-}
+import { Team } from '../../teams/entities/team.entity';
+import { League } from '../../leagues/entities/league.entity';
 
 export interface LeagueUser {
-  leagueId: number;
+  leagueId: string;
+  userId: string;
   role: string;
-  userId: number;
-}
-
-export interface Team {
-  leagueId: number;
-  playerId: number;
-  playerName: string;
-  position: string;
-  seasonYear: number;
-  teamId: Generated<number | null>;
-  userId: number;
-  week: number;
 }
 
 export interface DB {

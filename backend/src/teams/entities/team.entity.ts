@@ -1,14 +1,17 @@
-import { Generated } from '../../infrastructure/database/types';
+import { tags } from 'typia';
+import { Selectable } from 'kysely';
 
-export class Team {
-  constructor(
-    public readonly teamId: number,
-    public readonly leagueId: number,
-    public readonly userId: number,
-    public readonly seasonYear: number,
-    public readonly week: number,
-    public readonly position: string,
-    public readonly playerId: number,
-    public readonly playerName: string,
-  ) {}
+export interface ITeam {
+  teamId: string & tags.Format<'uuid'>;
+  leagueId: string & tags.Format<'uuid'>;
+  userId: string & tags.Format<'uuid'>;
+  seasonYear: number & tags.Minimum<2020>;
+  week: number & tags.Minimum<1> & tags.Maximum<25>;
+  position: string & tags.Pattern<'^(QB|RB|WR|TE)$'>;
+  playerId: number;
+  playerName: string;
 }
+
+export type Team = Selectable<ITeam>;
+export type CreateTeamDto = Omit<ITeam, 'teamId'>;
+export type UpdateTeamDto = Partial<ITeam>;
