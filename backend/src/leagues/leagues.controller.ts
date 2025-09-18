@@ -31,4 +31,9 @@ export class LeaguesController {
   remove(@TypedParam('id') id: string) {
     return this.leaguesService.remove(id);
   }
+
+  @TypedRoute.Get(':id/users')
+  findLeagueUsers(@TypedParam('id') id: string) {
+    return this.leaguesService.findLeagueUsers(id);
+  }
 }

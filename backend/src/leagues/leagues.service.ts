@@ -1,24 +1,24 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import * as leaguesRepository from './leagues.repository';
+import * as lr from './leagues.repository';
 import { CreateLeagueDto, League, UpdateLeagueDto } from './entities/league.entity';
 
 @Injectable()
 export class LeaguesService {
   constructor(
-    @Inject(leaguesRepository.LEAGUES_REPOSITORY)
-    private readonly repo: leaguesRepository.ILeaguesRepository,
+    @Inject(lr.LEAGUES_REPOSITORY)
+    private readonly leaguesRepository: lr.ILeaguesRepository,
   ) {}
 
   async create(createLeagueDto: CreateLeagueDto): Promise<League> {
-    return this.repo.create(createLeagueDto);
+    return this.leaguesRepository.create(createLeagueDto);
   }
 
   async findAll(): Promise<League[]> {
-    return this.repo.findAll();
+    return this.leaguesRepository.findAll();
   }
 
   async findOne(id: string): Promise<League> {
-    const league = await this.repo.findOne(id);
+    const league = await this.leaguesRepository.findOne(id);
     if (!league) {
       throw new NotFoundException(`League with id ${id} not found`);
     }
@@ -26,7 +26,7 @@ export class LeaguesService {
   }
 
   async update(id: string, updateLeagueDto: UpdateLeagueDto): Promise<League> {
-    const updated = await this.repo.update(id, updateLeagueDto);
+    const updated = await this.leaguesRepository.update(id, updateLeagueDto);
     if (!updated) {
       throw new NotFoundException(`League with id ${id} not found`);
     }
@@ -34,9 +34,13 @@ export class LeaguesService {
   }
 
   async remove(id: string): Promise<void> {
-    const removed = await this.repo.remove(id);
+    const removed = await this.leaguesRepository.remove(id);
     if (!removed) {
       throw new NotFoundException(`League with id ${id} not found`);
     }
+  }
+
+  async findLeagueUsers(id: string) {
+    return await this.leaguesRepository.findLeagueUsers(id);
   }
 }
