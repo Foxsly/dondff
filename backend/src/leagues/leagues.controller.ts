@@ -1,33 +1,34 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Body } from '@nestjs/common';
 import { LeaguesService } from './leagues.service';
 import * as leagueEntity from './entities/league.entity';
+import { TypedParam, TypedRoute } from '@nestia/core';
 
 @Controller('leagues')
 export class LeaguesController {
   constructor(private readonly leaguesService: LeaguesService) {}
 
-  @Post()
+  @TypedRoute.Post()
   create(@Body() createLeagueDto: leagueEntity.CreateLeagueDto) {
     return this.leaguesService.create(createLeagueDto);
   }
 
-  @Get()
+  @TypedRoute.Get()
   findAll() {
     return this.leaguesService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
+  @TypedRoute.Get(':id')
+  findOne(@TypedParam('id') id: string) {
     return this.leaguesService.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateLeagueDto: leagueEntity.UpdateLeagueDto) {
+  @TypedRoute.Patch(':id')
+  update(@TypedParam('id') id: string, @Body() updateLeagueDto: leagueEntity.UpdateLeagueDto) {
     return this.leaguesService.update(id, updateLeagueDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
+  @TypedRoute.Delete(':id')
+  remove(@TypedParam('id') id: string) {
     return this.leaguesService.remove(id);
   }
 }

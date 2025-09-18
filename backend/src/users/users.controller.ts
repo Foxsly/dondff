@@ -1,32 +1,24 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  NotFoundException,
-} from '@nestjs/common';
+import { Controller, Body, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import * as userEntity from './entities/user.entity';
+import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
-  async create(@Body() createUserDto: userEntity.CreateUserDto) {
+  @TypedRoute.Post()
+  async create(@TypedBody() createUserDto: userEntity.CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
-  @Get()
+  @TypedRoute.Get()
   async findAll() {
     return this.usersService.findAll();
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
+  @TypedRoute.Get(':id')
+  async findOne(@TypedParam('id') id: string) {
     const user = await this.usersService.findOne(id);
     if (user === undefined || user === null) {
       throw new NotFoundException();
@@ -34,13 +26,13 @@ export class UsersController {
     return user;
   }
 
-  @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateUserDto: userEntity.UpdateUserDto) {
+  @TypedRoute.Patch(':id')
+  async update(@TypedParam('id') id: string, @Body() updateUserDto: userEntity.UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
 
-  @Delete(':id')
-  async remove(@Param('id') id: string) {
+  @TypedRoute.Delete(':id')
+  async remove(@TypedParam('id') id: string) {
     return this.usersService.remove(id);
   }
 }

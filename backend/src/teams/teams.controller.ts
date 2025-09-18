@@ -1,33 +1,38 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Body } from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import * as teamEntity from './entities/team.entity';
+import { TypedParam, TypedRoute } from '@nestia/core';
+import { ITeam, Team } from './entities/team.entity';
 
 @Controller('teams')
 export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
-  @Post()
-  create(@Body() createTeamDto: teamEntity.CreateTeamDto) {
+  @TypedRoute.Post()
+  async create(@Body() createTeamDto: teamEntity.CreateTeamDto): Promise<Team> {
     return this.teamsService.create(createTeamDto);
   }
 
-  @Get()
-  findAll() {
+  @TypedRoute.Get()
+  async findAll(): Promise<ITeam[]> {
     return this.teamsService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
+  @TypedRoute.Get(':id')
+  async findOne(@TypedParam('id') id: string): Promise<ITeam> {
     return this.teamsService.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTeamDto: teamEntity.UpdateTeamDto) {
+  @TypedRoute.Patch(':id')
+  async update(
+    @TypedParam('id') id: string,
+    @Body() updateTeamDto: teamEntity.UpdateTeamDto,
+  ): Promise<Team> {
     return this.teamsService.update(id, updateTeamDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
+  @TypedRoute.Delete(':id')
+  async remove(@TypedParam('id') id: string): Promise<void> {
     return this.teamsService.remove(id);
   }
 }

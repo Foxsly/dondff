@@ -1,4 +1,4 @@
-import { CreateTeamDto, ITeam, Team as TeamEntity, Team } from './entities/team.entity';
+import { CreateTeamDto, ITeam, Team } from './entities/team.entity';
 import { Inject, Injectable } from '@nestjs/common';
 import { Kysely } from 'kysely';
 import { DB } from '../infrastructure/database/types';
@@ -8,61 +8,18 @@ export const TEAMS_REPOSITORY = Symbol('TEAMS_REPOSITORY');
 
 // Repository contract
 export interface ITeamsRepository {
-  create(team: CreateTeamDto): Promise<TeamEntity>;
-  findAll(): Promise<TeamEntity[]>;
-  findOne(id: string): Promise<Team | null>;
+  create(team: CreateTeamDto): Promise<Team>;
+  findAll(): Promise<ITeam[]>;
+  findOne(id: string): Promise<ITeam | null>;
   update(id: string, team: Partial<Team>): Promise<Team | null>;
   remove(id: string): Promise<boolean>;
 }
-
-// In-memory implementation (great for testing or prototyping)
-
-/* eslint-disable @typescript-eslint/require-await */
-export class InMemoryTeamsRepository implements ITeamsRepository {
-  private teams: TeamEntity[] = [];
-
-  async create(team: CreateTeamDto): Promise<Team> {
-    const teamWithId: Team = { teamId: crypto.randomUUID(), ...team };
-    this.teams.push(teamWithId);
-    return teamWithId;
-  }
-
-  async findAll(): Promise<TeamEntity[]> {
-    return this.teams;
-  }
-
-  async findOne(id: string): Promise<Team | null> {
-    return this.teams.find((team) => team.teamId === id) ?? null;
-  }
-
-  async update(id: string, team: Partial<Team>): Promise<Team | null> {
-    const index = this.teams.findIndex((team) => team.teamId === id);
-    if (index === -1) return null;
-
-    this.teams[index] = { ...this.teams[index], ...team };
-    return this.teams[index];
-  }
-
-  async remove(id: string): Promise<boolean> {
-    const index = this.teams.findIndex((team) => team.teamId === id);
-    if (index === -1) return false;
-
-    this.teams.splice(index, 1);
-    return true;
-  }
-
-  // Helper for tests
-  seed(teams: TeamEntity[]) {
-    this.teams = teams;
-  }
-}
-/* eslint-enable @typescript-eslint/require-await */
 
 @Injectable()
 export class DatabaseTeamsRepository implements ITeamsRepository {
   constructor(@Inject('DB_CONNECTION') private readonly db: Kysely<DB>) {}
 
-  async create(team: CreateTeamDto): Promise<TeamEntity> {
+  async create(team: CreateTeamDto): Promise<Team> {
     //TODO SHOULD THIS CONTAIN A RESET FLAG, OR DOES THAT GO ON TeamPlayer?
     //DO WE STORE THE PLAYERS IN THE BOXES IN CASE SOMEONE TRIES THE REFRESH WORKAROUND?
     //CREATE SEPARATE TeamPlayerBoxes TABLE THAT AUDITS THE PLAYERS IN THE BOXES?
