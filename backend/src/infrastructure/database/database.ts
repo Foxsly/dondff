@@ -1,5 +1,5 @@
 import SQLite from 'better-sqlite3';
-import { Kysely, SqliteDialect } from 'kysely';
+import { Kysely, ParseJSONResultsPlugin, SqliteDialect } from 'kysely';
 import { DB } from './types';
 
 const dialect = new SqliteDialect({
@@ -12,4 +12,6 @@ const dialect = new SqliteDialect({
 // to communicate with your database.
 export const db = new Kysely<DB>({
   dialect,
+  log: ['query', 'error'],
+  plugins: [new ParseJSONResultsPlugin()],
 });

@@ -1,5 +1,6 @@
 import { tags } from 'typia';
 import { Selectable } from 'kysely';
+import { ITeamPlayer } from './team-player.entity';
 
 export interface ITeam {
   teamId: string & tags.Format<'uuid'>;
@@ -7,11 +8,9 @@ export interface ITeam {
   userId: string & tags.Format<'uuid'>;
   seasonYear: number & tags.Minimum<2020>;
   week: number & tags.Minimum<1> & tags.Maximum<25>;
-  position: string & tags.Pattern<'^(QB|RB|WR|TE)$'>;
-  playerId: number;
-  playerName: string;
+  players: ITeamPlayer[];
 }
 
-export type Team = Selectable<ITeam>;
-export type CreateTeamDto = Omit<ITeam, 'teamId'>;
-export type UpdateTeamDto = Partial<ITeam>;
+export type Team = Selectable<Omit<ITeam, 'players'>>;
+export type CreateTeamDto = Omit<ITeam, 'teamId' | 'players'>;
+export type UpdateTeamDto = Partial<Omit<ITeam, 'players'>>;

@@ -1,7 +1,8 @@
-import { CreateTeamDto, Team as TeamEntity, Team } from './entities/team.entity';
+import { CreateTeamDto, ITeam, Team as TeamEntity, Team } from './entities/team.entity';
 import { Inject, Injectable } from '@nestjs/common';
 import { Kysely } from 'kysely';
 import { DB } from '../infrastructure/database/types';
+import { jsonArrayFrom } from 'kysely/helpers/sqlite';
 
 export const TEAMS_REPOSITORY = Symbol('TEAMS_REPOSITORY');
 
@@ -20,8 +21,8 @@ export interface ITeamsRepository {
 export class InMemoryTeamsRepository implements ITeamsRepository {
   private teams: TeamEntity[] = [];
 
-  async create(team: CreateTeamDto): Promise<TeamEntity> {
-    const teamWithId: TeamEntity = { teamId: crypto.randomUUID(), ...team };
+  async create(team: CreateTeamDto): Promise<Team> {
+    const teamWithId: Team = { teamId: crypto.randomUUID(), ...team };
     this.teams.push(teamWithId);
     return teamWithId;
   }
@@ -62,6 +63,9 @@ export class DatabaseTeamsRepository implements ITeamsRepository {
   constructor(@Inject('DB_CONNECTION') private readonly db: Kysely<DB>) {}
 
   async create(team: CreateTeamDto): Promise<TeamEntity> {
+    //TODO SHOULD THIS CONTAIN A RESET FLAG, OR DOES THAT GO ON TeamPlayer?
+    //DO WE STORE THE PLAYERS IN THE BOXES IN CASE SOMEONE TRIES THE REFRESH WORKAROUND?
+    //CREATE SEPARATE TeamPlayerBoxes TABLE THAT AUDITS THE PLAYERS IN THE BOXES?
     return await this.db
       .insertInto('team')
       .values({
@@ -70,26 +74,54 @@ export class DatabaseTeamsRepository implements ITeamsRepository {
         userId: team.userId,
         seasonYear: team.seasonYear,
         week: team.week,
-        position: team.position,
-        playerId: team.playerId,
-        playerName: team.playerName,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
   }
 
-  async findAll(): Promise<TeamEntity[]> {
-    return await this.db.selectFrom('team').selectAll().execute();
-  }
-
-  async findOne(id: string): Promise<Team | null> {
-    const row = await this.db
+  async findAll(): Promise<ITeam[]> {
+    return await this.db
       .selectFrom('team')
       .selectAll()
-      .where('teamId', '=', id)
+      .select((eb) => [
+        'teamId',
+        jsonArrayFrom(
+          eb
+            .selectFrom('teamPlayer')
+            .select([
+              'teamPlayer.teamId',
+              'teamPlayer.playerId',
+              'teamPlayer.position',
+              'teamPlayer.playerName',
+            ])
+            .whereRef('teamPlayer.teamId', '=', 'team.teamId'),
+        ).as('players'),
+      ])
+      .execute();
+  }
+
+  async findOne(teamId: string): Promise<ITeam | null> {
+    const teamRow = await this.db
+      .selectFrom('team')
+      .selectAll()
+      .select((eb) => [
+        'teamId',
+        jsonArrayFrom(
+          eb
+            .selectFrom('teamPlayer')
+            .select([
+              'teamPlayer.teamId',
+              'teamPlayer.playerId',
+              'teamPlayer.position',
+              'teamPlayer.playerName',
+            ])
+            .whereRef('teamPlayer.teamId', '=', 'team.teamId'),
+        ).as('players'),
+      ])
+      .where('teamId', '=', teamId)
       .executeTakeFirst();
 
-    return row ? row : null;
+    return teamRow ? teamRow : null;
   }
 
   async update(id: string, team: Partial<Team>): Promise<Team | null> {
@@ -100,9 +132,6 @@ export class DatabaseTeamsRepository implements ITeamsRepository {
         ...(team.userId && { userId: team.userId }),
         ...(team.seasonYear && { seasonYear: team.seasonYear }),
         ...(team.week && { week: team.week }),
-        ...(team.position && { position: team.position }),
-        ...(team.playerId && { playerId: team.playerId }),
-        ...(team.playerName && { playerName: team.playerName }),
       })
       .where('teamId', '=', id)
       .returningAll()

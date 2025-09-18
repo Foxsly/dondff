@@ -1,6 +1,7 @@
-import { User } from '../../users/entities/user.entity';
+import { IUser } from '../../users/entities/user.entity';
 import { Team } from '../../teams/entities/team.entity';
-import { League } from '../../leagues/entities/league.entity';
+import { ILeague } from '../../leagues/entities/league.entity';
+import { ITeamPlayer } from '../../teams/entities/team-player.entity';
 
 export interface LeagueUser {
   leagueId: string;
@@ -8,9 +9,11 @@ export interface LeagueUser {
   role: string;
 }
 
+//Maps DB table (key) to object (value)a
 export interface DB {
-  league: League;
+  league: ILeague;
   leagueUser: LeagueUser;
   team: Team;
-  user: User;
+  user: IUser;
+  teamPlayer: ITeamPlayer;
 }
