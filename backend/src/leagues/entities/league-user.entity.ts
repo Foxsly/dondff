@@ -8,3 +8,5 @@ export interface ILeagueUser {
 }
 
 export type LeagueUser = Selectable<ILeagueUser>;
+export type AddLeagueUserDto = Omit<ILeagueUser, 'leagueId'>;
+export type UpdateLeagueUserDto = Pick<ILeagueUser, 'role'>;

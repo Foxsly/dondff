@@ -2,7 +2,7 @@ import { CreateLeagueDto, League, League as LeagueEntity } from './entities/leag
 import { Inject, Injectable } from '@nestjs/common';
 import { Kysely } from 'kysely';
 import { DB } from '../infrastructure/database/types';
-import { ILeagueUser } from './entities/league-user.entity';
+import { AddLeagueUserDto, ILeagueUser, UpdateLeagueUserDto } from './entities/league-user.entity';
 
 export const LEAGUES_REPOSITORY = Symbol('LEAGUES_REPOSITORY');
 
@@ -14,6 +14,9 @@ export interface ILeaguesRepository {
   update(id: string, league: Partial<League>): Promise<League | null>;
   remove(id: string): Promise<boolean>;
   findLeagueUsers(id: string): Promise<ILeagueUser[]>;
+  addLeagueUser(leagueId: string, addLeagueUserDto: AddLeagueUserDto): Promise<ILeagueUser>;
+  removeLeagueUser(leagueId: string, userId: string): Promise<boolean>;
+  updateLeagueUser(leagueId: string, userId: string, updateLeagueUserDto: UpdateLeagueUserDto): Promise<ILeagueUser>;
 }
 
 @Injectable()
@@ -64,6 +67,40 @@ export class DatabaseLeaguesRepository implements ILeaguesRepository {
   }
 
   async findLeagueUsers(id: string): Promise<ILeagueUser[]> {
-    return await this.db.selectFrom("leagueUser").selectAll().where('leagueId', '=', id).execute();
+    return await this.db.selectFrom('leagueUser').selectAll().where('leagueId', '=', id).execute();
   }
+
+  async addLeagueUser(leagueId: string, addLeagueUserDto: AddLeagueUserDto): Promise<ILeagueUser> {
+    return await this.db
+      .insertInto('leagueUser')
+      .values({
+        leagueId: leagueId,
+        userId: addLeagueUserDto.userId,
+        role: addLeagueUserDto.role,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+  }
+
+  async removeLeagueUser(leagueId: string, userId: string): Promise<boolean> {
+    const result = await this.db
+      .deleteFrom('leagueUser')
+      .where('leagueId', '=', leagueId)
+      .where('userId', '=', userId)
+      .executeTakeFirst();
+
+    return (result?.numDeletedRows ?? 0n) > 0n;
+  }
+
+  async updateLeagueUser(leagueId: string, userId: string, updateLeagueUserDto: UpdateLeagueUserDto): Promise<ILeagueUser> {
+    return await this.db.updateTable("leagueUser")
+      .set({
+        role: updateLeagueUserDto.role,
+      }).
+      where('leagueId', '=', leagueId)
+      .where('userId', '=', userId)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+  }
+
 }
