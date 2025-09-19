@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateUserDto, UpdateUserDto, User } from './entities/user.entity';
+import { CreateUserDto, UpdateUserDto, User, UserLeagues } from './entities/user.entity';
 import * as usersRepository from './users.repository';
 
 @Injectable()
@@ -38,5 +38,9 @@ export class UsersService {
     if (!removed) {
       throw new NotFoundException(`User with id ${id} not found`);
     }
+  }
+
+  async getLeaguesForUser(userId: string): Promise<UserLeagues[]> {
+    return this.repo.getLeagues(userId);
   }
 }

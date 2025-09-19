@@ -2,6 +2,7 @@ import { Controller, Body, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import * as userEntity from './entities/user.entity';
 import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
+import { UserLeagues } from './entities/user.entity';
 
 @Controller('users')
 export class UsersController {
@@ -32,7 +33,12 @@ export class UsersController {
   }
 
   @TypedRoute.Delete(':id')
-  async remove(@TypedParam('id') id: string) {
+  async remove(@TypedParam('id') id: string) : Promise<void> {
     return this.usersService.remove(id);
+  }
+
+  @TypedRoute.Get(':id/leagues')
+  async getLeaguesForUser(@TypedParam('id') id: string): Promise<UserLeagues[]> {
+    return this.usersService.getLeaguesForUser(id);
   }
 }
