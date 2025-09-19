@@ -3,6 +3,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Kysely } from 'kysely';
 import { DB } from '../infrastructure/database/types';
 import { AddLeagueUserDto, ILeagueUser, UpdateLeagueUserDto } from './entities/league-user.entity';
+import { ITeam } from '../teams/entities/team.entity';
+import { withPlayers } from '../teams/teams.repository';
 
 export const LEAGUES_REPOSITORY = Symbol('LEAGUES_REPOSITORY');
 
@@ -16,7 +18,12 @@ export interface ILeaguesRepository {
   findLeagueUsers(id: string): Promise<ILeagueUser[]>;
   addLeagueUser(leagueId: string, addLeagueUserDto: AddLeagueUserDto): Promise<ILeagueUser>;
   removeLeagueUser(leagueId: string, userId: string): Promise<boolean>;
-  updateLeagueUser(leagueId: string, userId: string, updateLeagueUserDto: UpdateLeagueUserDto): Promise<ILeagueUser>;
+  updateLeagueUser(
+    leagueId: string,
+    userId: string,
+    updateLeagueUserDto: UpdateLeagueUserDto,
+  ): Promise<ILeagueUser>;
+  findLeagueTeams(leagueId: string): Promise<ITeam[]>;
 }
 
 @Injectable()
@@ -92,15 +99,28 @@ export class DatabaseLeaguesRepository implements ILeaguesRepository {
     return (result?.numDeletedRows ?? 0n) > 0n;
   }
 
-  async updateLeagueUser(leagueId: string, userId: string, updateLeagueUserDto: UpdateLeagueUserDto): Promise<ILeagueUser> {
-    return await this.db.updateTable("leagueUser")
+  async updateLeagueUser(
+    leagueId: string,
+    userId: string,
+    updateLeagueUserDto: UpdateLeagueUserDto,
+  ): Promise<ILeagueUser> {
+    return await this.db
+      .updateTable('leagueUser')
       .set({
         role: updateLeagueUserDto.role,
-      }).
-      where('leagueId', '=', leagueId)
+      })
+      .where('leagueId', '=', leagueId)
       .where('userId', '=', userId)
       .returningAll()
       .executeTakeFirstOrThrow();
   }
 
+  async findLeagueTeams(leagueId: string): Promise<ITeam[]> {
+    return await this.db
+      .selectFrom('team')
+      .selectAll()
+      .select((eb) => [withPlayers(eb)])
+      .where('leagueId', '=', leagueId)
+      .execute();
+  }
 }

@@ -1,6 +1,6 @@
 import { CreateTeamDto, ITeam, Team } from './entities/team.entity';
 import { Inject, Injectable } from '@nestjs/common';
-import { Kysely } from 'kysely';
+import { ExpressionBuilder, Kysely } from 'kysely';
 import { DB } from '../infrastructure/database/types';
 import { jsonArrayFrom } from 'kysely/helpers/sqlite';
 
@@ -40,20 +40,7 @@ export class DatabaseTeamsRepository implements ITeamsRepository {
     return await this.db
       .selectFrom('team')
       .selectAll()
-      .select((eb) => [
-        'teamId',
-        jsonArrayFrom(
-          eb
-            .selectFrom('teamPlayer')
-            .select([
-              'teamPlayer.teamId',
-              'teamPlayer.playerId',
-              'teamPlayer.position',
-              'teamPlayer.playerName',
-            ])
-            .whereRef('teamPlayer.teamId', '=', 'team.teamId'),
-        ).as('players'),
-      ])
+      .select((eb) => [withPlayers(eb)])
       .execute();
   }
 
@@ -61,20 +48,7 @@ export class DatabaseTeamsRepository implements ITeamsRepository {
     const teamRow = await this.db
       .selectFrom('team')
       .selectAll()
-      .select((eb) => [
-        'teamId',
-        jsonArrayFrom(
-          eb
-            .selectFrom('teamPlayer')
-            .select([
-              'teamPlayer.teamId',
-              'teamPlayer.playerId',
-              'teamPlayer.position',
-              'teamPlayer.playerName',
-            ])
-            .whereRef('teamPlayer.teamId', '=', 'team.teamId'),
-        ).as('players'),
-      ])
+      .select((eb) => [withPlayers(eb)])
       .where('teamId', '=', teamId)
       .executeTakeFirst();
 
@@ -101,4 +75,18 @@ export class DatabaseTeamsRepository implements ITeamsRepository {
     const result = await this.db.deleteFrom('team').where('teamId', '=', id).executeTakeFirst();
     return (result?.numDeletedRows ?? 0n) > 0n;
   }
+}
+
+export function withPlayers(eb: ExpressionBuilder<DB, 'team'>) {
+  return jsonArrayFrom(
+    eb
+      .selectFrom('teamPlayer')
+      .select([
+        'teamPlayer.teamId',
+        'teamPlayer.playerId',
+        'teamPlayer.position',
+        'teamPlayer.playerName',
+      ])
+      .whereRef('teamPlayer.teamId', '=', 'team.teamId'),
+  ).as('players');
 }

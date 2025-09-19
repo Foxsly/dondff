@@ -65,4 +65,12 @@ export class LeaguesController {
   ): Promise<ILeagueUser> {
     return this.leaguesService.updateLeagueUser(leagueId, userId, updateLeagueUserDto);
   }
+
+  /**
+   * Get all teams/entries for a league
+   */
+  @TypedRoute.Get(':id/teams')
+  getLeagueTeams(@TypedParam('id') leagueId: string) {
+    return this.leaguesService.getLeagueTeams(leagueId);
+  }
 }

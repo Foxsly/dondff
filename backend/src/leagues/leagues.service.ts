@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import * as lr from './leagues.repository';
 import { CreateLeagueDto, League, UpdateLeagueDto } from './entities/league.entity';
 import { AddLeagueUserDto, UpdateLeagueUserDto } from './entities/league-user.entity';
+import { ITeam } from '../teams/entities/team.entity';
 
 @Injectable()
 export class LeaguesService {
@@ -53,7 +54,15 @@ export class LeaguesService {
     return await this.leaguesRepository.removeLeagueUser(leagueId, userId);
   }
 
-  async updateLeagueUser(leagueId: string, userId: string, updateLeagueUserDto: UpdateLeagueUserDto) {
+  async updateLeagueUser(
+    leagueId: string,
+    userId: string,
+    updateLeagueUserDto: UpdateLeagueUserDto,
+  ) {
     return await this.leaguesRepository.updateLeagueUser(leagueId, userId, updateLeagueUserDto);
+  }
+
+  async getLeagueTeams(leagueId: string): Promise<ITeam[]> {
+    return await this.leaguesRepository.findLeagueTeams(leagueId);
   }
 }
