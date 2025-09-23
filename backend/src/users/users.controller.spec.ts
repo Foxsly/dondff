@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
-import { NotFoundException } from '@nestjs/common';
 import { CreateUserDto, IUser, UpdateUserDto } from './entities/user.entity';
+import { NotFoundException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -20,6 +20,7 @@ describe('UsersController', () => {
             findOne: jest.fn(),
             update: jest.fn(),
             remove: jest.fn(),
+            getLeaguesForUser: jest.fn(),
           },
         },
       ],
@@ -28,7 +29,6 @@ describe('UsersController', () => {
     controller = module.get<UsersController>(UsersController);
     service = module.get(UsersService);
   });
-
   describe('create', () => {
     it('calls service.create and returns result', async () => {
       const dto: CreateUserDto = { name: 'Alice', email: 'alice@example.com' };
@@ -80,7 +80,6 @@ describe('UsersController', () => {
       expect(result).toEqual(mockUser);
     });
   });
-
   describe('update', () => {
     it('calls service.update with id and dto', async () => {
       const dto: UpdateUserDto = { name: 'Updated' };

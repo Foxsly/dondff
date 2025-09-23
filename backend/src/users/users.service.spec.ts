@@ -15,6 +15,7 @@ describe('UsersService', () => {
       findOne: jest.fn(),
       update: jest.fn(),
       remove: jest.fn(),
+      getLeagues: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
