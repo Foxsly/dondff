@@ -1,10 +1,10 @@
 {
-  "name": "ff-deal-or-no-deal",
+  "name": "dondff-frontend",
   "version": "0.1.0",
-  "description": "Fantasy Football Deal or No Deal app",
+  "description": "Fantasy Football DOND",
   "repository": {
     "type": "git",
-    "url": "https://github.com/<org>/dondff.git"
+    "url": "https://github.com/nosewicz/dondff.git"
   },
   "license": "MIT",
   "private": true,
@@ -27,7 +27,7 @@
     "build": "npm run build:css && react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "build:css": "tailwindcss -i ./src/index.css -o ./src/index.css"
+    "build:css": "tailwindcss -i src/index.css -o ./src/index.css"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.14",
