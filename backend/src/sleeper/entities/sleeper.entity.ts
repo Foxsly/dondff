@@ -19,10 +19,10 @@ export interface ISleeperState {
 // Player
 // -----------------------------
 export interface ISleeperPlayer {
-  fantasy_positions: (string & tags.Pattern<'^(QB|RB|WR|TE|K|DEF|DB)$'>)[];
+  fantasy_positions: (string & tags.Pattern<'^(QB|RB|FB|WR|TE|K|DEF|DB)$'>)[];
   first_name: string & tags.MinLength<1>;
   last_name: string & tags.MinLength<1>;
-  position: string & tags.Pattern<'^(QB|RB|WR|TE|K|DEF|DB)$'>;
+  position: string & tags.Pattern<'^(QB|RB|FB|WR|TE|K|DEF|DB)$'>;
   // Ignore this team - players who have been cut would have a 'null' team
   // The team on ISleeperPlayerEntry represents their team at the time of the game
   // team: string & tags.MinLength<2> & tags.MaxLength<3>;

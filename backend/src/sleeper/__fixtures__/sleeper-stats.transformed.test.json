@@ -31,36 +31,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 2,
-      "pos_rank_half_ppr": 2,
-      "pos_rank_ppr": 2,
-      "pts_std": 28.7,
-      "pts_half_ppr": 33.2,
-      "pts_ppr": 37.7
-    },
-    "week": 2,
-    "season": 2025,
-    "season_type": "regular",
-    "sport": "nfl",
-    "player_id": "11632",
-    "player": {
-      "fantasy_positions": [
-        "WR"
-      ],
-      "first_name": "Malik",
-      "last_name": "Nabers",
-      "position": "WR",
-      "injury_status": null
-    },
-    "team": "NYG",
-    "opponent": "DAL",
-    "game_id": "202510209",
-    "date": "2025-09-14T00:00:00.000Z",
-    "last_modified": "2025-09-19T18:24:08.826Z",
-    "updated_at": "2025-09-19T18:24:08.826Z"
-  },
-  {
-    "stats": {
       "pos_rank_std": 4,
       "pos_rank_half_ppr": 3,
       "pos_rank_ppr": 3,
@@ -88,66 +58,6 @@
     "date": "2025-09-14T00:00:00.000Z",
     "last_modified": "2025-09-19T18:24:09.423Z",
     "updated_at": "2025-09-19T18:24:09.423Z"
-  },
-  {
-    "stats": {
-      "pos_rank_std": 3,
-      "pos_rank_half_ppr": 4,
-      "pos_rank_ppr": 4,
-      "pts_std": 24.8,
-      "pts_half_ppr": 28.3,
-      "pts_ppr": 31.8
-    },
-    "week": 2,
-    "season": 2025,
-    "season_type": "regular",
-    "sport": "nfl",
-    "player_id": "11620",
-    "player": {
-      "fantasy_positions": [
-        "WR"
-      ],
-      "first_name": "Rome",
-      "last_name": "Odunze",
-      "position": "WR",
-      "injury_status": null
-    },
-    "team": "CHI",
-    "opponent": "DET",
-    "game_id": "202510211",
-    "date": "2025-09-14T00:00:00.000Z",
-    "last_modified": "2025-09-15T20:08:47.740Z",
-    "updated_at": "2025-09-15T20:08:47.740Z"
-  },
-  {
-    "stats": {
-      "pos_rank_std": 5,
-      "pos_rank_half_ppr": 5,
-      "pos_rank_ppr": 5,
-      "pts_std": 20.2,
-      "pts_half_ppr": 24.2,
-      "pts_ppr": 28.2
-    },
-    "week": 2,
-    "season": 2025,
-    "season_type": "regular",
-    "sport": "nfl",
-    "player_id": "8126",
-    "player": {
-      "fantasy_positions": [
-        "WR"
-      ],
-      "first_name": "Wan'Dale",
-      "last_name": "Robinson",
-      "position": "WR",
-      "injury_status": null
-    },
-    "team": "NYG",
-    "opponent": "DAL",
-    "game_id": "202510209",
-    "date": "2025-09-14T00:00:00.000Z",
-    "last_modified": "2025-09-15T15:08:43.302Z",
-    "updated_at": "2025-09-15T15:08:43.302Z"
   },
   {
     "stats": {
@@ -239,5 +149,125 @@
     "date": "2025-09-14T00:00:00.000Z",
     "last_modified": "2025-09-14T17:01:06.988Z",
     "updated_at": "2025-09-14T17:01:06.988Z"
+  },
+  {
+    "stats": {
+      "pos_rank_std": 999,
+      "pos_rank_half_ppr": 999,
+      "pos_rank_ppr": 999,
+      "pts_std": 3.2,
+      "pts_half_ppr": 4.2,
+      "pts_ppr": 5.2
+    },
+    "week": 1,
+    "season": 2025,
+    "season_type": "regular",
+    "sport": "nfl",
+    "player_id": "1379",
+    "player": {
+      "fantasy_positions": [
+        "RB"
+      ],
+      "first_name": "Kyle",
+      "last_name": "Juszczyk",
+      "position": "FB",
+      "injury_status": null
+    },
+    "team": "SF",
+    "opponent": "SEA",
+    "game_id": "202510130",
+    "date": "2025-09-07T00:00:00.000Z",
+    "last_modified": "2025-09-19T18:24:19.339Z",
+    "updated_at": "2025-09-19T18:24:19.339Z"
+  },
+  {
+    "stats": {
+      "pos_rank_std": 999,
+      "pos_rank_half_ppr": 999,
+      "pos_rank_ppr": 999,
+      "pts_std": 0,
+      "pts_half_ppr": 0,
+      "pts_ppr": 0
+    },
+    "week": 1,
+    "season": 2025,
+    "season_type": "regular",
+    "sport": "nfl",
+    "player_id": "4381",
+    "player": {
+      "fantasy_positions": [
+        "TE"
+      ],
+      "first_name": "Taysom",
+      "last_name": "Hill",
+      "position": "TE",
+      "injury_status": "PUP"
+    },
+    "team": "NO",
+    "opponent": "ARI",
+    "game_id": "202510122",
+    "date": "2025-09-07T00:00:00.000Z",
+    "last_modified": "2025-09-07T17:02:56.119Z",
+    "updated_at": "2025-09-07T17:02:56.119Z"
+  },
+  {
+    "stats": {
+      "pos_rank_std": 21,
+      "pos_rank_half_ppr": 21,
+      "pos_rank_ppr": 21,
+      "pts_std": 11.9,
+      "pts_half_ppr": 11.9,
+      "pts_ppr": 11.9
+    },
+    "week": 1,
+    "season": 2025,
+    "season_type": "regular",
+    "sport": "nfl",
+    "player_id": "3163",
+    "player": {
+      "fantasy_positions": [
+        "QB"
+      ],
+      "first_name": "Jared",
+      "last_name": "Goff",
+      "position": "QB",
+      "injury_status": null
+    },
+    "team": "DET",
+    "opponent": "GB",
+    "game_id": "202510112",
+    "date": "2025-09-07T00:00:00.000Z",
+    "last_modified": "2025-09-11T09:09:09.824Z",
+    "updated_at": "2025-09-11T09:09:09.824Z"
+  },
+  {
+    "stats": {
+      "pos_rank_std": 999,
+      "pos_rank_half_ppr": 999,
+      "pos_rank_ppr": 999,
+      "pts_std": 7,
+      "pts_half_ppr": 7,
+      "pts_ppr": 7
+    },
+    "week": 1,
+    "season": 2025,
+    "season_type": "regular",
+    "sport": "nfl",
+    "player_id": "11539",
+    "player": {
+      "fantasy_positions": [
+        "K"
+      ],
+      "first_name": "Jake",
+      "last_name": "Bates",
+      "position": "K",
+      "injury_status": null
+    },
+    "team": "DET",
+    "opponent": "GB",
+    "game_id": "202510112",
+    "date": "2025-09-07T00:00:00.000Z",
+    "last_modified": "2025-09-11T09:09:09.831Z",
+    "updated_at": "2025-09-11T09:09:09.831Z"
   }
 ]
