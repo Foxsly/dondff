@@ -7,10 +7,11 @@
   "rootDir": "src",
   "testRegex": ".*\\.spec\\.ts$",
   "transform": {
-    "^.+\\.(t|j)s$": [
+    "\\.(ts|tsx)$": [
       "ts-jest",
       {
-        "tsconfig": "tsconfig.test.json"
+        "tsconfig": "tsconfig.test.json",
+        "compiler": "typescript"
       }
     ]
   },

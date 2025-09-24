@@ -23,7 +23,9 @@ export interface ISleeperPlayer {
   first_name: string & tags.MinLength<1>;
   last_name: string & tags.MinLength<1>;
   position: string & tags.Pattern<'^(QB|RB|WR|TE|K|DEF|DB)$'>;
-  team: string & tags.MinLength<2> & tags.MaxLength<3>;
+  // Ignore this team - players who have been cut would have a 'null' team
+  // The team on ISleeperPlayerEntry represents their team at the time of the game
+  // team: string & tags.MinLength<2> & tags.MaxLength<3>;
   injury_status: string | null;
 }
 
@@ -35,7 +37,6 @@ export interface IBaseSleeperPlayerStats {
   pts_half_ppr: number;
   pts_ppr: number;
 }
-//TODO eventually filter out players who have no projection so they don't get picked on accident
 
 // Stats for "stat" endpoint
 export interface ISleeperPlayerStats extends IBaseSleeperPlayerStats {

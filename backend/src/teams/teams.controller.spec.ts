@@ -85,7 +85,9 @@ describe('TeamsController', () => {
     });
 
     it('throws NotFoundException if team not found', async () => {
-      service.findOne.mockResolvedValue(null);
+      service.findOne.mockImplementation(() => {
+        throw new NotFoundException();
+      });
 
       await expect(controller.findOne('non-existent-id')).rejects.toThrow(NotFoundException);
     });
@@ -103,7 +105,9 @@ describe('TeamsController', () => {
 
     it('throws NotFoundException if team not found', async () => {
       const dto: UpdateTeamDto = { week: 3 };
-      service.update.mockResolvedValue(null);
+      service.update.mockImplementation(() => {
+        throw new NotFoundException();
+      });
 
       await expect(controller.update('non-existent-id', dto)).rejects.toThrow(NotFoundException);
     });

@@ -14,8 +14,8 @@ export class SleeperService {
   private readonly BASE_URL = 'https://api.sleeper.app';
 
   // Create transformer functions
-  private assertSleeperStats = typia.createAssert<SleeperStatResponse>();
-  private assertSleeperProjections = typia.createAssert<SleeperProjectionResponse>();
+  private assertSleeperStats = typia.misc.createAssertPrune<SleeperStatResponse>();
+  private assertSleeperProjections = typia.misc.createAssertPrune<SleeperProjectionResponse>();
 
   constructor(
     @Inject(HttpService)
@@ -55,15 +55,16 @@ export class SleeperService {
     const response = await lastValueFrom(response$);
     return this.assertSleeperStats(
       this.transformSleeperEntries(
-        response.data.map((entry) => ({
-          ...entry,
-          stats: {
-            ...entry.stats,
-            pts_std: entry.stats?.pts_std ?? 0,
-            pts_half_ppr: entry.stats?.pts_half_ppr ?? 0,
-            pts_ppr: entry.stats?.pts_ppr ?? 0,
-          },
-        })),
+        response.data
+          .map((entry) => ({
+            ...entry,
+            stats: {
+              ...entry.stats,
+              pts_std: entry.stats?.pts_std ?? 0,
+              pts_half_ppr: entry.stats?.pts_half_ppr ?? 0,
+              pts_ppr: entry.stats?.pts_ppr ?? 0,
+            },
+          })),
       ),
     );
   }
