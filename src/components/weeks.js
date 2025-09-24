@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, {useEffect, useState} from "react";
+import {useParams} from "react-router-dom";
 import {auth, db} from "../firebase-config";
-import { collection, doc, onSnapshot, setDoc } from "firebase/firestore";
-import { useCollectionData } from "react-firebase-hooks/firestore";
+import {collection, doc, onSnapshot, setDoc} from "firebase/firestore";
+import {useCollectionData} from "react-firebase-hooks/firestore";
 import Accordion from "./accordion";
 import Breadcrumbs from "./breadcrumbs";
 
+const API_BASE = process.env.REACT_APP_API_BASE;
 const Weeks = () => {
-  const { leagueId, season } = useParams();
+  const {leagueId, season} = useParams();
   const [week, setWeek] = useState("1");
   const [actualNFLWeek, setActualNFLWeek] = useState(null);
   const [leagueName, setLeagueName] = useState("");
@@ -17,7 +18,7 @@ const Weeks = () => {
   const [docs, loading] = useCollectionData(leagueCollection);
 
   const membersCollection = collection(db, "leagues", leagueId, "members");
-  const [members] = useCollectionData(membersCollection, { idField: "id" });
+  const [members] = useCollectionData(membersCollection, {idField: "id"});
   const currentMember = members?.find((m) => m.uid === user?.uid);
   const isAdmin = currentMember?.role === "admin";
 
@@ -31,7 +32,7 @@ const Weeks = () => {
 
   const getActualWeek = async () => {
     try {
-      const url = "https://api.sleeper.app/v1/state/nfl";
+      const url = `${API_BASE}/sleeper/state`;
       const response = await fetch(url);
       const json = await response.json();
       const actualWeek = json.week;
@@ -60,9 +61,9 @@ const Weeks = () => {
     <div className="max-w-4xl mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
       <Breadcrumbs
         items={[
-          { label: "Dashboard", to: "/dashboard" },
-          { label: leagueName, to: `/league/${leagueId}` },
-          { label: `Season ${season}` },
+          {label: "Dashboard", to: "/dashboard"},
+          {label: leagueName, to: `/league/${leagueId}`},
+          {label: `Season ${season}`},
         ]}
       />
       {loading && "Loading..."}
@@ -77,42 +78,42 @@ const Weeks = () => {
           />
         ))}
       </div>
-      { isAdmin && (
-      <div className="flex items-center gap-2 mt-4">
-        <label className="flex items-center gap-2">
-          select NFL week:
-          <select
-            className="p-1 bg-transparent border rounded border-[#3a465b]"
-            value={week}
-            onChange={(e) => setWeek(e.target.value)}
+      {isAdmin && (
+        <div className="flex items-center gap-2 mt-4">
+          <label className="flex items-center gap-2">
+            select NFL week:
+            <select
+              className="p-1 bg-transparent border rounded border-[#3a465b]"
+              value={week}
+              onChange={(e) => setWeek(e.target.value)}
+            >
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+              <option value="11">11</option>
+              <option value="12">12</option>
+              <option value="13">13</option>
+              <option value="14">14</option>
+              <option value="15">15</option>
+              <option value="16">16</option>
+              <option value="17">17</option>
+              <option value="18">18</option>
+            </select>
+          </label>
+          <button
+            className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
+            onClick={addWeek}
           >
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-            <option value="8">8</option>
-            <option value="9">9</option>
-            <option value="10">10</option>
-            <option value="11">11</option>
-            <option value="12">12</option>
-            <option value="13">13</option>
-            <option value="14">14</option>
-            <option value="15">15</option>
-            <option value="16">16</option>
-            <option value="17">17</option>
-            <option value="18">18</option>
-          </select>
-        </label>
-        <button
-          className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
-          onClick={addWeek}
-        >
-          Add Week
-        </button>
-      </div>
+            Add Week
+          </button>
+        </div>
       )}
       <div>Current NFL Week: {actualNFLWeek}</div>
     </div>

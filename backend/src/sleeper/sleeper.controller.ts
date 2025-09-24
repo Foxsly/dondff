@@ -21,7 +21,6 @@ export class SleeperController {
     return this.sleeperService.getPlayerProjections(query.position, year, week);
   }
 
-
   @TypedRoute.Get('stats/:year/:week')
   getStats(
     @TypedParam('year') year: number,

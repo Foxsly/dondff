@@ -1,8 +1,10 @@
-  export const getPlayers = async (week, position, seasonYear, playerLimit, callback) => {
+const API_BASE = process.env.REACT_APP_API_BASE;
+
+export const getPlayers = async (week, position, seasonYear, playerLimit, callback) => {
     console.log("calling getPlayers with " + week + " " + position + " " + seasonYear + " " + playerLimit)
-    let players = new Array();
+    let players = [];
     try {
-      const url = `https://api.sleeper.com/projections/nfl/${seasonYear}/${week}?season_type=regular&position=${position}&order_by=pts_ppr`
+      const url = `${API_BASE}/sleeper/projections/${seasonYear}/${week}?position=${position}`
       const response = await fetch(url)
       const json = await response.json()
       for (let i = 0; i < playerLimit; i++) {

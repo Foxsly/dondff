@@ -4,6 +4,8 @@ import { collection, doc, setDoc } from "firebase/firestore";
 import { useCollectionData } from "react-firebase-hooks/firestore";
 import { Link } from "react-router-dom";
 
+const API_BASE = process.env.REACT_APP_API_BASE;
+
 function roundToTwo(number) {
   return Math.round(number * 100) / 100;
 }
@@ -64,8 +66,8 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
 
   const calculateScores = async () => {
     if (!entries) return;
-    const rbUrl = `https://api.sleeper.com/stats/nfl/${season}/${week}?season_type=regular&position=RB&order_by=pts_ppr`;
-    const wrUrl = `https://api.sleeper.com/stats/nfl/${season}/${week}?season_type=regular&position=WR&order_by=pts_ppr`;
+    const rbUrl = `${API_BASE}/sleeper/stats/${season}/${week}?position=RB`;
+    const wrUrl = `${API_BASE}/sleeper/stats/${season}/${week}?position=WR`;
     const rbResponse = await fetch(rbUrl);
     const wrResponse = await fetch(wrUrl);
     const rbJson = await rbResponse.json();
