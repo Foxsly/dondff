@@ -29,6 +29,7 @@
     "eject": "react-scripts eject",
     "build:css": "tailwindcss -i src/index.css -o ./src/index.css"
   },
+  "proxy": "http://localhost:3001",
   "devDependencies": {
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.23",
