@@ -1,7 +1,8 @@
 import { CreateUserDto, User, UserLeagues } from './entities/user.entity';
 import { Inject, Injectable } from '@nestjs/common';
 import { Kysely } from 'kysely';
-import { DB } from '../infrastructure/database/types';
+import { DB } from '@/infrastructure/database/types';
+import { DB_PROVIDER } from '@/infrastructure/database/database.module';
 
 export const USERS_REPOSITORY = Symbol('USERS_REPOSITORY');
 
@@ -17,11 +18,11 @@ export interface IUsersRepository {
 
 @Injectable()
 export class DatabaseUsersRepository implements IUsersRepository {
-  constructor(@Inject('DB_CONNECTION') private readonly db: Kysely<DB>) {}
+  constructor(@Inject(DB_PROVIDER) private readonly db: Kysely<DB>) {}
 
   async create(user: CreateUserDto): Promise<User> {
     return await this.db
-      .insertInto('user')
+      .insertInto('dondUser')
       .values({
         userId: crypto.randomUUID(),
         name: user.name,
@@ -32,12 +33,12 @@ export class DatabaseUsersRepository implements IUsersRepository {
   }
 
   async findAll(): Promise<User[]> {
-    return await this.db.selectFrom('user').selectAll().execute();
+    return await this.db.selectFrom('dondUser').selectAll().execute();
   }
 
   async findOne(id: string): Promise<User | null> {
     const row = await this.db
-      .selectFrom('user')
+      .selectFrom('dondUser')
       .selectAll()
       .where('userId', '=', id)
       .executeTakeFirst();
@@ -47,7 +48,7 @@ export class DatabaseUsersRepository implements IUsersRepository {
 
   async update(id: string, user: Partial<User>): Promise<User | null> {
     const result = await this.db
-      .updateTable('user')
+      .updateTable('dondUser')
       .set({
         ...(user.name && { name: user.name }),
         ...(user.email && { email: user.email }),
@@ -60,7 +61,7 @@ export class DatabaseUsersRepository implements IUsersRepository {
   }
 
   async remove(id: string): Promise<boolean> {
-    const result = await this.db.deleteFrom('user').where('userId', '=', id).executeTakeFirst();
+    const result = await this.db.deleteFrom('dondUser').where('userId', '=', id).executeTakeFirst();
     return (result?.numDeletedRows ?? 0n) > 0n;
   }
 

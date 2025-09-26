@@ -6,9 +6,17 @@ import { LeaguesModule } from './leagues/leagues.module';
 import { TeamsModule } from './teams/teams.module';
 import { ConfigModule } from '@nestjs/config';
 import { SleeperModule } from './sleeper/sleeper.module';
+import { DatabaseModule } from './infrastructure/database/database.module';
 
 @Module({
-  imports: [UsersModule, LeaguesModule, TeamsModule, ConfigModule.forRoot(), SleeperModule],
+  imports: [
+    DatabaseModule,
+    ConfigModule.forRoot(),
+    UsersModule,
+    LeaguesModule,
+    TeamsModule,
+    SleeperModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

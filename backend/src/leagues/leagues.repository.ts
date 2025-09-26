@@ -1,10 +1,11 @@
 import { CreateLeagueDto, League, League as LeagueEntity } from './entities/league.entity';
 import { Inject, Injectable } from '@nestjs/common';
 import { Kysely } from 'kysely';
-import { DB } from '../infrastructure/database/types';
+import { DB } from '@/infrastructure/database/types';
 import { AddLeagueUserDto, ILeagueUser, UpdateLeagueUserDto } from './entities/league-user.entity';
-import { ITeam } from '../teams/entities/team.entity';
-import { withPlayers } from '../teams/teams.repository';
+import { ITeam } from '@/teams/entities/team.entity';
+import { withPlayers } from '@/teams/teams.repository';
+import { DB_PROVIDER } from '@/infrastructure/database/database.module';
 
 export const LEAGUES_REPOSITORY = Symbol('LEAGUES_REPOSITORY');
 
@@ -28,7 +29,7 @@ export interface ILeaguesRepository {
 
 @Injectable()
 export class DatabaseLeaguesRepository implements ILeaguesRepository {
-  constructor(@Inject('DB_CONNECTION') private readonly db: Kysely<DB>) {}
+  constructor(@Inject(DB_PROVIDER) private readonly db: Kysely<DB>) {}
 
   async create(league: CreateLeagueDto): Promise<LeagueEntity> {
     return await this.db

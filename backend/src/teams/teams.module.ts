@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import { TeamsController } from './teams.controller';
-import { db } from '../infrastructure/database/database';
+import { db } from '@/infrastructure/database/database';
 import { DatabaseTeamsRepository, TEAMS_REPOSITORY } from './teams.repository';
+import { DatabaseModule } from '@/infrastructure/database/database.module';
 
 @Module({
   controllers: [TeamsController],
@@ -17,5 +18,6 @@ import { DatabaseTeamsRepository, TEAMS_REPOSITORY } from './teams.repository';
       useClass: DatabaseTeamsRepository,
     },
   ],
+  imports: [DatabaseModule],
 })
 export class TeamsModule {}

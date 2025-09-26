@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { LeaguesService } from './leagues.service';
 import { LeaguesController } from './leagues.controller';
-import { db } from '../infrastructure/database/database';
+import { db } from '@/infrastructure/database/database';
 import { DatabaseLeaguesRepository, LEAGUES_REPOSITORY } from './leagues.repository';
+import { DatabaseModule } from '@/infrastructure/database/database.module';
 
 @Module({
   controllers: [LeaguesController],
@@ -17,5 +18,6 @@ import { DatabaseLeaguesRepository, LEAGUES_REPOSITORY } from './leagues.reposit
       useClass: DatabaseLeaguesRepository,
     },
   ],
+  imports: [DatabaseModule],
 })
 export class LeaguesModule {}

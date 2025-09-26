@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import * as lr from './leagues.repository';
 import { CreateLeagueDto, League, UpdateLeagueDto } from './entities/league.entity';
 import { AddLeagueUserDto, UpdateLeagueUserDto } from './entities/league-user.entity';
-import { ITeam } from '../teams/entities/team.entity';
+import { ITeam } from '@/teams/entities/team.entity';
 
 @Injectable()
 export class LeaguesService {

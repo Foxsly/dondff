@@ -1,7 +1,7 @@
 import { tags } from 'typia';
 import { Selectable } from 'kysely';
-import { ILeagueUser } from '../../leagues/entities/league-user.entity';
-import { ILeague } from '../../leagues/entities/league.entity';
+import { ILeagueUser } from '@/leagues/entities/league-user.entity';
+import { ILeague } from '@/leagues/entities/league.entity';
 
 export interface IUser {
   userId: string & tags.Format<'uuid'>;

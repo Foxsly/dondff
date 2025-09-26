@@ -1,8 +1,9 @@
 import { CreateTeamDto, ITeam, Team } from './entities/team.entity';
 import { Inject, Injectable } from '@nestjs/common';
 import { ExpressionBuilder, Kysely } from 'kysely';
-import { DB } from '../infrastructure/database/types';
+import { DB } from '@/infrastructure/database/types';
 import { jsonArrayFrom } from 'kysely/helpers/sqlite';
+import { DB_PROVIDER } from '@/infrastructure/database/database.module';
 
 export const TEAMS_REPOSITORY = Symbol('TEAMS_REPOSITORY');
 
@@ -17,7 +18,7 @@ export interface ITeamsRepository {
 
 @Injectable()
 export class DatabaseTeamsRepository implements ITeamsRepository {
-  constructor(@Inject('DB_CONNECTION') private readonly db: Kysely<DB>) {}
+  constructor(@Inject(DB_PROVIDER) private readonly db: Kysely<DB>) {}
 
   async create(team: CreateTeamDto): Promise<Team> {
     //TODO SHOULD THIS CONTAIN A RESET FLAG, OR DOES THAT GO ON TeamPlayer?

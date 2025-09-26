@@ -3,7 +3,7 @@ import { LeaguesService } from './leagues.service';
 import { NotFoundException } from '@nestjs/common';
 import * as lr from './leagues.repository';
 import { League } from './entities/league.entity';
-import { ITeam } from '../teams/entities/team.entity';
+import { ITeam } from '@/teams/entities/team.entity';
 
 describe('LeaguesService', () => {
   let service: LeaguesService;
