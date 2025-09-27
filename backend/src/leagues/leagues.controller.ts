@@ -1,16 +1,19 @@
 import { Controller, Body } from '@nestjs/common';
 import { LeaguesService } from './leagues.service';
-import * as leagueEntity from './entities/league.entity';
 import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
-import * as leagueUserEntity from './entities/league-user.entity';
-import { ILeagueUser } from './entities/league-user.entity';
+import type {
+  AddLeagueUserDto,
+  ILeagueUser,
+  UpdateLeagueUserDto,
+} from './entities/league-user.entity';
+import type { CreateLeagueDto, UpdateLeagueDto } from '@/leagues/entities/league.entity';
 
 @Controller('leagues')
 export class LeaguesController {
   constructor(private readonly leaguesService: LeaguesService) {}
 
   @TypedRoute.Post()
-  create(@Body() createLeagueDto: leagueEntity.CreateLeagueDto) {
+  create(@Body() createLeagueDto: CreateLeagueDto) {
     return this.leaguesService.create(createLeagueDto);
   }
 
@@ -25,7 +28,7 @@ export class LeaguesController {
   }
 
   @TypedRoute.Patch(':id')
-  update(@TypedParam('id') id: string, @Body() updateLeagueDto: leagueEntity.UpdateLeagueDto) {
+  update(@TypedParam('id') id: string, @Body() updateLeagueDto: UpdateLeagueDto) {
     return this.leaguesService.update(id, updateLeagueDto);
   }
 
@@ -44,7 +47,7 @@ export class LeaguesController {
   @TypedRoute.Put(':id/users')
   addLeagueUser(
     @TypedParam('id') leagueId: string,
-    @TypedBody() addLeagueUserDto: leagueUserEntity.AddLeagueUserDto,
+    @TypedBody() addLeagueUserDto: AddLeagueUserDto,
   ) {
     return this.leaguesService.addLeagueUser(leagueId, addLeagueUserDto);
   }
@@ -61,7 +64,7 @@ export class LeaguesController {
   updateLeagueUser(
     @TypedParam('id') leagueId: string,
     @TypedParam('userId') userId: string,
-    @TypedBody() updateLeagueUserDto: leagueUserEntity.UpdateLeagueUserDto,
+    @TypedBody() updateLeagueUserDto: UpdateLeagueUserDto,
   ): Promise<ILeagueUser> {
     return this.leaguesService.updateLeagueUser(leagueId, userId, updateLeagueUserDto);
   }

@@ -1,19 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeamsService } from './teams.service';
-import * as teamsRepository from './teams.repository';
 import { NotFoundException } from '@nestjs/common';
 import { ITeam, Team, CreateTeamDto, UpdateTeamDto } from './entities/team.entity';
+import { ITeamsRepository, TEAMS_REPOSITORY } from '@/teams/teams.repository';
 
 describe('TeamsService', () => {
   let service: TeamsService;
-  let repo: jest.Mocked<teamsRepository.ITeamsRepository>;
+  let repo: jest.Mocked<ITeamsRepository>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TeamsService,
         {
-          provide: teamsRepository.TEAMS_REPOSITORY,
+          provide: TEAMS_REPOSITORY,
           useValue: {
             create: jest.fn(),
             findAll: jest.fn(),
@@ -26,7 +26,7 @@ describe('TeamsService', () => {
     }).compile();
 
     service = module.get<TeamsService>(TeamsService);
-    repo = module.get(teamsRepository.TEAMS_REPOSITORY) as jest.Mocked<teamsRepository.ITeamsRepository>;
+    repo = module.get(TEAMS_REPOSITORY) as jest.Mocked<ITeamsRepository>;
   });
 
   const mockTeam: Team = {
@@ -43,7 +43,7 @@ describe('TeamsService', () => {
     userId: 'user-1',
     seasonYear: 2025,
     week: 1,
-    players: []
+    players: [],
   };
 
   describe('create', () => {

@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { SleeperService } from './sleeper.service';
 import { TypedParam, TypedQuery, TypedRoute } from '@nestia/core';
-import * as sleeper from './entities/sleeper.entity';
+import type { SleeperStatRequest } from '@/sleeper/entities/sleeper.entity';
 
 @Controller('sleeper')
 export class SleeperController {
@@ -16,7 +16,7 @@ export class SleeperController {
   getProjections(
     @TypedParam('year') year: number,
     @TypedParam('week') week: number,
-    @TypedQuery() query: sleeper.SleeperStatRequest,
+    @TypedQuery() query: SleeperStatRequest,
   ) {
     return this.sleeperService.getPlayerProjections(query.position, year, week);
   }
@@ -25,7 +25,7 @@ export class SleeperController {
   getStats(
     @TypedParam('year') year: number,
     @TypedParam('week') week: number,
-    @TypedQuery() query: sleeper.SleeperStatRequest,
+    @TypedQuery() query: SleeperStatRequest,
   ) {
     return this.sleeperService.getPlayerStatistics(query.position, year, week);
   }

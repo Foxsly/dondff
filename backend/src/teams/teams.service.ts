@@ -1,12 +1,14 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import * as teamsRepository from './teams.repository';
 import { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
+import { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.entity';
+import { TEAMS_REPOSITORY } from '@/teams/teams.repository';
+import type { ITeamsRepository } from '@/teams/teams.repository';
 
 @Injectable()
 export class TeamsService {
   constructor(
-    @Inject(teamsRepository.TEAMS_REPOSITORY)
-    private readonly repo: teamsRepository.ITeamsRepository,
+    @Inject(TEAMS_REPOSITORY)
+    private readonly repo: ITeamsRepository,
   ) {}
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
@@ -38,5 +40,9 @@ export class TeamsService {
     if (!removed) {
       throw new NotFoundException(`Team with id ${id} not found`);
     }
+  }
+
+  upsertTeamPlayer(teamId: string, dto: CreateTeamPlayerDto): Promise<TeamPlayer> {
+    return this.repo.upsertTeamPlayer(teamId, dto);
   }
 }

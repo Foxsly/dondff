@@ -1,14 +1,15 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import * as lr from './leagues.repository';
 import { CreateLeagueDto, League, UpdateLeagueDto } from './entities/league.entity';
 import { AddLeagueUserDto, UpdateLeagueUserDto } from './entities/league-user.entity';
 import { ITeam } from '@/teams/entities/team.entity';
+import { LEAGUES_REPOSITORY } from '@/leagues/leagues.repository';
+import type { ILeaguesRepository } from '@/leagues/leagues.repository';
 
 @Injectable()
 export class LeaguesService {
   constructor(
-    @Inject(lr.LEAGUES_REPOSITORY)
-    private readonly leaguesRepository: lr.ILeaguesRepository,
+    @Inject(LEAGUES_REPOSITORY)
+    private readonly leaguesRepository: ILeaguesRepository,
   ) {}
 
   async create(createLeagueDto: CreateLeagueDto): Promise<League> {
