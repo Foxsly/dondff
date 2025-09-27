@@ -4,6 +4,7 @@ import { ExpressionBuilder, Kysely } from 'kysely';
 import { DB } from '@/infrastructure/database/types';
 import { jsonArrayFrom } from 'kysely/helpers/sqlite';
 import { DB_PROVIDER } from '@/infrastructure/database/database.module';
+import { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.entity';
 
 export const TEAMS_REPOSITORY = Symbol('TEAMS_REPOSITORY');
 
@@ -14,6 +15,7 @@ export interface ITeamsRepository {
   findOne(id: string): Promise<ITeam | null>;
   update(id: string, team: Partial<Team>): Promise<Team | null>;
   remove(id: string): Promise<boolean>;
+  upsertTeamPlayer(teamId: string, dto: CreateTeamPlayerDto): Promise<TeamPlayer>;
 }
 
 @Injectable()
@@ -75,6 +77,33 @@ export class DatabaseTeamsRepository implements ITeamsRepository {
   async remove(id: string): Promise<boolean> {
     const result = await this.db.deleteFrom('team').where('teamId', '=', id).executeTakeFirst();
     return (result?.numDeletedRows ?? 0n) > 0n;
+  }
+
+  async upsertTeamPlayer(teamId: string, dto: CreateTeamPlayerDto): Promise<TeamPlayer> {
+    await this.db
+      .insertInto('teamPlayer')
+      .values({
+        teamId,
+        position: dto.position,
+        playerId: dto.playerId,
+        playerName: dto.playerName,
+      })
+      .onConflict((oc) =>
+        oc.columns(['teamId', 'position']).doUpdateSet({
+          playerId: dto.playerId,
+          playerName: dto.playerName,
+        }),
+      )
+      .execute();
+
+    const row = await this.db
+      .selectFrom('teamPlayer')
+      .selectAll()
+      .where('teamId', '=', teamId)
+      .where('position', '=', dto.position)
+      .executeTakeFirstOrThrow();
+
+    return row as TeamPlayer;
   }
 }
 

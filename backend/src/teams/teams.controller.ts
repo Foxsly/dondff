@@ -1,15 +1,15 @@
 import { Controller, Body } from '@nestjs/common';
 import { TeamsService } from './teams.service';
-import * as teamEntity from './entities/team.entity';
-import { TypedParam, TypedRoute } from '@nestia/core';
-import { ITeam, Team } from './entities/team.entity';
+import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
+import type { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
+import type { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.entity';
 
 @Controller('teams')
 export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
   @TypedRoute.Post()
-  async create(@Body() createTeamDto: teamEntity.CreateTeamDto): Promise<Team> {
+  async create(@Body() createTeamDto: CreateTeamDto): Promise<Team> {
     return this.teamsService.create(createTeamDto);
   }
 
@@ -26,7 +26,7 @@ export class TeamsController {
   @TypedRoute.Patch(':id')
   async update(
     @TypedParam('id') id: string,
-    @Body() updateTeamDto: teamEntity.UpdateTeamDto,
+    @Body() updateTeamDto: UpdateTeamDto,
   ): Promise<Team> {
     return this.teamsService.update(id, updateTeamDto);
   }
@@ -34,5 +34,13 @@ export class TeamsController {
   @TypedRoute.Delete(':id')
   async remove(@TypedParam('id') id: string): Promise<void> {
     return this.teamsService.remove(id);
+  }
+
+  @TypedRoute.Put(':teamId/players')
+  upsertTeamPlayer(
+    @TypedParam('teamId') teamId: string,
+    @TypedBody() dto: CreateTeamPlayerDto,
+  ): Promise<TeamPlayer> {
+    return this.teamsService.upsertTeamPlayer(teamId, dto);
   }
 }

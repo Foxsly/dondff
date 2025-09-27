@@ -1,15 +1,14 @@
 import { Controller, Body, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
-import * as userEntity from './entities/user.entity';
 import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
-import { UserLeagues } from './entities/user.entity';
+import type { CreateUserDto, UpdateUserDto, UserLeagues } from './entities/user.entity';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @TypedRoute.Post()
-  async create(@TypedBody() createUserDto: userEntity.CreateUserDto) {
+  async create(@TypedBody() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
@@ -28,7 +27,7 @@ export class UsersController {
   }
 
   @TypedRoute.Patch(':id')
-  async update(@TypedParam('id') id: string, @Body() updateUserDto: userEntity.UpdateUserDto) {
+  async update(@TypedParam('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
 

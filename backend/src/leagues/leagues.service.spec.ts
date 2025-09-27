@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LeaguesService } from './leagues.service';
 import { NotFoundException } from '@nestjs/common';
-import * as lr from './leagues.repository';
 import { League } from './entities/league.entity';
 import { ITeam } from '@/teams/entities/team.entity';
+import { ILeaguesRepository, LEAGUES_REPOSITORY } from '@/leagues/leagues.repository';
 
 describe('LeaguesService', () => {
   let service: LeaguesService;
-  let repo: jest.Mocked<lr.ILeaguesRepository>;
+  let repo: jest.Mocked<ILeaguesRepository>;
 
   const mockLeague: League = {
     leagueId: 'uuid-1',
@@ -19,7 +19,7 @@ describe('LeaguesService', () => {
       providers: [
         LeaguesService,
         {
-          provide: lr.LEAGUES_REPOSITORY,
+          provide: LEAGUES_REPOSITORY,
           useValue: {
             create: jest.fn(),
             findAll: jest.fn(),
@@ -37,7 +37,7 @@ describe('LeaguesService', () => {
     }).compile();
 
     service = module.get<LeaguesService>(LeaguesService);
-    repo = module.get(lr.LEAGUES_REPOSITORY);
+    repo = module.get(LEAGUES_REPOSITORY);
   });
 
   it('should create a league', async () => {
