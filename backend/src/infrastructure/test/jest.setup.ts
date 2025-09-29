@@ -1,5 +1,3 @@
-import 'reflect-metadata';
-
 jest.mock('@nestia/core', () => {
   const makeDecorator = () => () => {};
 

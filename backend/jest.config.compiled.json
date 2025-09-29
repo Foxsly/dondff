@@ -1,8 +1,0 @@
-{
-  "rootDir": "dist-test",
-  "testRegex": ".*\\.spec\\.js$",
-  "testEnvironment": "node",
-  "moduleFileExtensions": ["js", "json"],
-  "collectCoverageFrom": ["**/*.js"],
-  "coverageDirectory": "../coverage"
-}

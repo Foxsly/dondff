@@ -7,7 +7,6 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "build:test": "tsc -p tsconfig.test.json",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "kysely-codegen": "kysely-codegen --out-file src/infrastructure/database/types.d.ts",
     "start": "nest start",
@@ -20,7 +19,6 @@
     "test:cov": "npm run build:test && jest --config jest.config.compiled.json --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "test:compiled": "npm run build:test && jest --config jest.config.compiled.json",
     "prepare": "ts-patch install",
     "migrate": "tsx -r tsconfig-paths/register src/infrastructure/database/migrate.ts latest",
     "migrate:down": "tsx -r tsconfig-paths/register src/infrastructure/database/migrate.ts down",
