@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { LeaguesService } from './leagues.service';
 import { LeaguesController } from './leagues.controller';
 import { db } from '@/infrastructure/database/database';
-import { DatabaseLeaguesRepository, LEAGUES_REPOSITORY } from './leagues.repository';
+import { DatabaseLeaguesRepository, LeaguesRepository } from './leagues.repository';
 import { DatabaseModule } from '@/infrastructure/database/database.module';
 
 @Module({
@@ -14,7 +14,7 @@ import { DatabaseModule } from '@/infrastructure/database/database.module';
       useValue: db,
     },
     {
-      provide: LEAGUES_REPOSITORY,
+      provide: LeaguesRepository,
       useClass: DatabaseLeaguesRepository,
     },
   ],

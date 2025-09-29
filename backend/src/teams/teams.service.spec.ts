@@ -2,31 +2,27 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TeamsService } from './teams.service';
 import { NotFoundException } from '@nestjs/common';
 import { ITeam, Team, CreateTeamDto, UpdateTeamDto } from './entities/team.entity';
-import { ITeamsRepository, TEAMS_REPOSITORY } from '@/teams/teams.repository';
+import { TeamsRepository } from '@/teams/teams.repository';
 
 describe('TeamsService', () => {
   let service: TeamsService;
-  let repo: jest.Mocked<ITeamsRepository>;
+  let repo: jest.Mocked<TeamsRepository>;
 
   beforeEach(async () => {
+    const mockRepo: jest.Mocked<TeamsRepository> = {
+      create: jest.fn(),
+      findAll: jest.fn(),
+      findOne: jest.fn(),
+      update: jest.fn(),
+      remove: jest.fn(),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        TeamsService,
-        {
-          provide: TEAMS_REPOSITORY,
-          useValue: {
-            create: jest.fn(),
-            findAll: jest.fn(),
-            findOne: jest.fn(),
-            update: jest.fn(),
-            remove: jest.fn(),
-          },
-        },
-      ],
+      providers: [TeamsService, { provide: TeamsRepository, useValue: mockRepo }],
     }).compile();
 
     service = module.get<TeamsService>(TeamsService);
-    repo = module.get(TEAMS_REPOSITORY) as jest.Mocked<ITeamsRepository>;
+    repo = module.get(TeamsRepository) as jest.Mocked<TeamsRepository>;
   });
 
   const mockTeam: Team = {

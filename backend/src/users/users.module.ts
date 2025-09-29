@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
-import { DatabaseUsersRepository, USERS_REPOSITORY } from './users.repository';
+import { DatabaseUsersRepository, UsersRepository } from './users.repository';
 import { db } from '@/infrastructure/database/database';
 import { DatabaseModule } from '@/infrastructure/database/database.module';
 
@@ -14,7 +14,7 @@ import { DatabaseModule } from '@/infrastructure/database/database.module';
       useValue: db,
     },
     {
-      provide: USERS_REPOSITORY,
+      provide: UsersRepository,
       useClass: DatabaseUsersRepository,
     },
   ],

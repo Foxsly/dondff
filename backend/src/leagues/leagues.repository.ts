@@ -9,27 +9,28 @@ import { DB_PROVIDER } from '@/infrastructure/database/database.module';
 
 export const LEAGUES_REPOSITORY = Symbol('LEAGUES_REPOSITORY');
 
-// Repository contract
-export interface ILeaguesRepository {
-  create(league: CreateLeagueDto): Promise<LeagueEntity>;
-  findAll(): Promise<LeagueEntity[]>;
-  findOne(id: string): Promise<League | null>;
-  update(id: string, league: Partial<League>): Promise<League | null>;
-  remove(id: string): Promise<boolean>;
-  findLeagueUsers(id: string): Promise<ILeagueUser[]>;
-  addLeagueUser(leagueId: string, addLeagueUserDto: AddLeagueUserDto): Promise<ILeagueUser>;
-  removeLeagueUser(leagueId: string, userId: string): Promise<boolean>;
-  updateLeagueUser(
+export abstract class LeaguesRepository {
+  abstract create(league: CreateLeagueDto): Promise<LeagueEntity>;
+  abstract findAll(): Promise<LeagueEntity[]>;
+  abstract findOne(id: string): Promise<League | null>;
+  abstract update(id: string, league: Partial<League>): Promise<League | null>;
+  abstract remove(id: string): Promise<boolean>;
+  abstract findLeagueUsers(id: string): Promise<ILeagueUser[]>;
+  abstract addLeagueUser(leagueId: string, addLeagueUserDto: AddLeagueUserDto): Promise<ILeagueUser>;
+  abstract removeLeagueUser(leagueId: string, userId: string): Promise<boolean>;
+  abstract updateLeagueUser(
     leagueId: string,
     userId: string,
     updateLeagueUserDto: UpdateLeagueUserDto,
   ): Promise<ILeagueUser>;
-  findLeagueTeams(leagueId: string): Promise<ITeam[]>;
+  abstract findLeagueTeams(leagueId: string): Promise<ITeam[]>;
 }
 
 @Injectable()
-export class DatabaseLeaguesRepository implements ILeaguesRepository {
-  constructor(@Inject(DB_PROVIDER) private readonly db: Kysely<DB>) {}
+export class DatabaseLeaguesRepository extends LeaguesRepository {
+  constructor(@Inject(DB_PROVIDER) private readonly db: Kysely<DB>) {
+    super();
+  }
 
   async create(league: CreateLeagueDto): Promise<LeagueEntity> {
     return await this.db

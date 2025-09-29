@@ -3,41 +3,39 @@ import { LeaguesService } from './leagues.service';
 import { NotFoundException } from '@nestjs/common';
 import { League } from './entities/league.entity';
 import { ITeam } from '@/teams/entities/team.entity';
-import { ILeaguesRepository, LEAGUES_REPOSITORY } from '@/leagues/leagues.repository';
+import { LeaguesRepository } from '@/leagues/leagues.repository';
 
 describe('LeaguesService', () => {
   let service: LeaguesService;
-  let repo: jest.Mocked<ILeaguesRepository>;
+  let repo: jest.Mocked<LeaguesRepository>;
 
   const mockLeague: League = {
     leagueId: 'uuid-1',
     name: 'Test League',
   };
+  const mockRepo: jest.Mocked<LeaguesRepository> = {
+    create:       jest.fn(),
+    findAll:      jest.fn(),
+    findOne:      jest.fn(),
+    update:       jest.fn(),
+    remove:       jest.fn(),
+    findLeagueUsers:   jest.fn(),
+    addLeagueUser:     jest.fn(),
+    removeLeagueUser:  jest.fn(),
+    updateLeagueUser:  jest.fn(),
+    findLeagueTeams:   jest.fn(),
+  } as any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LeaguesService,
-        {
-          provide: LEAGUES_REPOSITORY,
-          useValue: {
-            create: jest.fn(),
-            findAll: jest.fn(),
-            findOne: jest.fn(),
-            update: jest.fn(),
-            remove: jest.fn(),
-            findLeagueUsers: jest.fn(),
-            addLeagueUser: jest.fn(),
-            removeLeagueUser: jest.fn(),
-            updateLeagueUser: jest.fn(),
-            findLeagueTeams: jest.fn(),
-          },
-        },
+        { provide: LeaguesRepository, useValue: mockRepo }, // <-- match token
       ],
     }).compile();
 
-    service = module.get<LeaguesService>(LeaguesService);
-    repo = module.get(LEAGUES_REPOSITORY);
+    service = module.get(LeaguesService);
+    repo = module.get(LeaguesRepository) as jest.Mocked<LeaguesRepository>;
   });
 
   it('should create a league', async () => {

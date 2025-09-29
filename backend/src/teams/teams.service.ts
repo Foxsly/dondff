@@ -1,15 +1,11 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
 import { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.entity';
-import { TEAMS_REPOSITORY } from '@/teams/teams.repository';
-import type { ITeamsRepository } from '@/teams/teams.repository';
+import { TeamsRepository } from '@/teams/teams.repository';
 
 @Injectable()
 export class TeamsService {
-  constructor(
-    @Inject(TEAMS_REPOSITORY)
-    private readonly repo: ITeamsRepository,
-  ) {}
+  constructor(private readonly repo: TeamsRepository) {}
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
     return this.repo.create(createTeamDto);
@@ -42,7 +38,7 @@ export class TeamsService {
     }
   }
 
-  upsertTeamPlayer(teamId: string, dto: CreateTeamPlayerDto): Promise<TeamPlayer> {
+  async upsertTeamPlayer(teamId: string, dto: CreateTeamPlayerDto): Promise<TeamPlayer> {
     return this.repo.upsertTeamPlayer(teamId, dto);
   }
 }

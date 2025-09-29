@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import { TeamsController } from './teams.controller';
 import { db } from '@/infrastructure/database/database';
-import { DatabaseTeamsRepository, TEAMS_REPOSITORY } from './teams.repository';
+import { DatabaseTeamsRepository, TeamsRepository } from './teams.repository';
 import { DatabaseModule } from '@/infrastructure/database/database.module';
 
 @Module({
@@ -14,7 +14,7 @@ import { DatabaseModule } from '@/infrastructure/database/database.module';
       useValue: db,
     },
     {
-      provide: TEAMS_REPOSITORY,
+      provide: TeamsRepository,
       useClass: DatabaseTeamsRepository,
     },
   ],

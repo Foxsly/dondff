@@ -6,19 +6,20 @@ import { DB_PROVIDER } from '@/infrastructure/database/database.module';
 
 export const USERS_REPOSITORY = Symbol('USERS_REPOSITORY');
 
-// Repository contract
-export interface IUsersRepository {
-  create(user: CreateUserDto): Promise<User>;
-  findAll(): Promise<User[]>;
-  findOne(id: string): Promise<User | null>;
-  update(id: string, user: Partial<User>): Promise<User | null>;
-  remove(id: string): Promise<boolean>;
-  getLeagues(userId: string): Promise<UserLeagues[]>;
+export abstract class UsersRepository {
+  abstract create(user: CreateUserDto): Promise<User>;
+  abstract findAll(): Promise<User[]>;
+  abstract findOne(id: string): Promise<User | null>;
+  abstract update(id: string, user: Partial<User>): Promise<User | null>;
+  abstract remove(id: string): Promise<boolean>;
+  abstract getLeagues(userId: string): Promise<UserLeagues[]>;
 }
 
 @Injectable()
-export class DatabaseUsersRepository implements IUsersRepository {
-  constructor(@Inject(DB_PROVIDER) private readonly db: Kysely<DB>) {}
+export class DatabaseUsersRepository extends UsersRepository {
+  constructor(@Inject(DB_PROVIDER) private readonly db: Kysely<DB>) {
+    super();
+  }
 
   async create(user: CreateUserDto): Promise<User> {
     return await this.db

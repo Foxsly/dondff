@@ -9,18 +9,20 @@ import { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.en
 export const TEAMS_REPOSITORY = Symbol('TEAMS_REPOSITORY');
 
 // Repository contract
-export interface ITeamsRepository {
-  create(team: CreateTeamDto): Promise<Team>;
-  findAll(): Promise<ITeam[]>;
-  findOne(id: string): Promise<ITeam | null>;
-  update(id: string, team: Partial<Team>): Promise<Team | null>;
-  remove(id: string): Promise<boolean>;
-  upsertTeamPlayer(teamId: string, dto: CreateTeamPlayerDto): Promise<TeamPlayer>;
+export abstract class TeamsRepository {
+  abstract create(team: CreateTeamDto): Promise<Team>;
+  abstract findAll(): Promise<ITeam[]>;
+  abstract findOne(id: string): Promise<ITeam | null>;
+  abstract update(id: string, team: Partial<Team>): Promise<Team | null>;
+  abstract remove(id: string): Promise<boolean>;
+  abstract upsertTeamPlayer(teamId: string, dto: CreateTeamPlayerDto): Promise<TeamPlayer>;
 }
 
 @Injectable()
-export class DatabaseTeamsRepository implements ITeamsRepository {
-  constructor(@Inject(DB_PROVIDER) private readonly db: Kysely<DB>) {}
+export class DatabaseTeamsRepository extends TeamsRepository {
+  constructor(@Inject(DB_PROVIDER) private readonly db: Kysely<DB>) {
+    super();
+  }
 
   async create(team: CreateTeamDto): Promise<Team> {
     //TODO SHOULD THIS CONTAIN A RESET FLAG, OR DOES THAT GO ON TeamPlayer?
