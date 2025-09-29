@@ -5,6 +5,7 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   moduleFileExtensions: ['ts', 'js', 'json'],
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/src/**/*.e2e.spec.ts'],
   transform: {
     '^.+\\.ts$': [
       'ts-jest',
