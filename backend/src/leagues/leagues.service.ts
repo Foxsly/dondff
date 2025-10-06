@@ -9,15 +9,15 @@ export class LeaguesService {
   constructor(private readonly leaguesRepository: LeaguesRepository) {}
 
   async create(createLeagueDto: CreateLeagueDto): Promise<League> {
-    return this.leaguesRepository.create(createLeagueDto);
+    return this.leaguesRepository.createLeague(createLeagueDto);
   }
 
   async findAll(): Promise<League[]> {
-    return this.leaguesRepository.findAll();
+    return this.leaguesRepository.findAllLeagues();
   }
 
   async findOne(id: string): Promise<League> {
-    const league = await this.leaguesRepository.findOne(id);
+    const league = await this.leaguesRepository.findOneLeague(id);
     if (!league) {
       throw new NotFoundException(`League with id ${id} not found`);
     }
@@ -25,7 +25,7 @@ export class LeaguesService {
   }
 
   async update(id: string, updateLeagueDto: UpdateLeagueDto): Promise<League> {
-    const updated = await this.leaguesRepository.update(id, updateLeagueDto);
+    const updated = await this.leaguesRepository.updateLeague(id, updateLeagueDto);
     if (!updated) {
       throw new NotFoundException(`League with id ${id} not found`);
     }
@@ -33,7 +33,7 @@ export class LeaguesService {
   }
 
   async remove(id: string): Promise<void> {
-    const removed = await this.leaguesRepository.remove(id);
+    const removed = await this.leaguesRepository.deleteLeague(id);
     if (!removed) {
       throw new NotFoundException(`League with id ${id} not found`);
     }

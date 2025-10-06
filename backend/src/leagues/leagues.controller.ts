@@ -4,41 +4,43 @@ import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
 import type {
   AddLeagueUserDto,
   ILeagueUser,
+  LeagueUser,
   UpdateLeagueUserDto,
 } from './entities/league-user.entity';
-import type { CreateLeagueDto, UpdateLeagueDto } from '@/leagues/entities/league.entity';
+import type { CreateLeagueDto, League, UpdateLeagueDto } from '@/leagues/entities/league.entity';
+import { ITeam } from '@/teams/entities/team.entity';
 
 @Controller('leagues')
 export class LeaguesController {
   constructor(private readonly leaguesService: LeaguesService) {}
 
   @TypedRoute.Post()
-  create(@Body() createLeagueDto: CreateLeagueDto) {
+  create(@Body() createLeagueDto: CreateLeagueDto): Promise<League> {
     return this.leaguesService.create(createLeagueDto);
   }
 
   @TypedRoute.Get()
-  findAll() {
+  findAll(): Promise<League[]> {
     return this.leaguesService.findAll();
   }
 
   @TypedRoute.Get(':id')
-  findOne(@TypedParam('id') id: string) {
+  findOne(@TypedParam('id') id: string): Promise<League> {
     return this.leaguesService.findOne(id);
   }
 
   @TypedRoute.Patch(':id')
-  update(@TypedParam('id') id: string, @Body() updateLeagueDto: UpdateLeagueDto) {
+  update(@TypedParam('id') id: string, @Body() updateLeagueDto: UpdateLeagueDto): Promise<League> {
     return this.leaguesService.update(id, updateLeagueDto);
   }
 
   @TypedRoute.Delete(':id')
-  remove(@TypedParam('id') id: string) {
+  remove(@TypedParam('id') id: string): Promise<void> {
     return this.leaguesService.remove(id);
   }
 
   @TypedRoute.Get(':id/users')
-  findLeagueUsers(@TypedParam('id') id: string) {
+  findLeagueUsers(@TypedParam('id') id: string): Promise<LeagueUser[]> {
     return this.leaguesService.findLeagueUsers(id);
   }
 
@@ -48,7 +50,7 @@ export class LeaguesController {
   addLeagueUser(
     @TypedParam('id') leagueId: string,
     @TypedBody() addLeagueUserDto: AddLeagueUserDto,
-  ) {
+  ):Promise<ILeagueUser> {
     return this.leaguesService.addLeagueUser(leagueId, addLeagueUserDto);
   }
 
@@ -73,7 +75,7 @@ export class LeaguesController {
    * Get all teams/entries for a league
    */
   @TypedRoute.Get(':id/teams')
-  getLeagueTeams(@TypedParam('id') leagueId: string) {
+  getLeagueTeams(@TypedParam('id') leagueId: string): Promise<ITeam[]> {
     return this.leaguesService.getLeagueTeams(leagueId);
   }
 }

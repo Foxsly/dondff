@@ -6,17 +6,23 @@ import { AddLeagueUserDto, ILeagueUser, UpdateLeagueUserDto } from './entities/l
 import { ITeam } from '@/teams/entities/team.entity';
 import { withPlayers } from '@/teams/teams.repository';
 import { DB_PROVIDER } from '@/infrastructure/database/database.module';
-
-export const LEAGUES_REPOSITORY = Symbol('LEAGUES_REPOSITORY');
+import {
+  CreateLeagueSettingsDto,
+  ILeagueSettings,
+  LeagueSettings,
+} from '@/leagues/entities/league-settings.entity';
 
 export abstract class LeaguesRepository {
-  abstract create(league: CreateLeagueDto): Promise<LeagueEntity>;
-  abstract findAll(): Promise<LeagueEntity[]>;
-  abstract findOne(id: string): Promise<League | null>;
-  abstract update(id: string, league: Partial<League>): Promise<League | null>;
-  abstract remove(id: string): Promise<boolean>;
+  abstract createLeague(league: CreateLeagueDto): Promise<LeagueEntity>;
+  abstract findAllLeagues(): Promise<LeagueEntity[]>;
+  abstract findOneLeague(id: string): Promise<League | null>;
+  abstract updateLeague(id: string, league: Partial<League>): Promise<League | null>;
+  abstract deleteLeague(id: string): Promise<boolean>;
   abstract findLeagueUsers(id: string): Promise<ILeagueUser[]>;
-  abstract addLeagueUser(leagueId: string, addLeagueUserDto: AddLeagueUserDto): Promise<ILeagueUser>;
+  abstract addLeagueUser(
+    leagueId: string,
+    addLeagueUserDto: AddLeagueUserDto,
+  ): Promise<ILeagueUser>;
   abstract removeLeagueUser(leagueId: string, userId: string): Promise<boolean>;
   abstract updateLeagueUser(
     leagueId: string,
@@ -32,7 +38,7 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
     super();
   }
 
-  async create(league: CreateLeagueDto): Promise<LeagueEntity> {
+  async createLeague(league: CreateLeagueDto): Promise<LeagueEntity> {
     return await this.db
       .insertInto('league')
       .values({
@@ -43,11 +49,11 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
       .executeTakeFirstOrThrow();
   }
 
-  async findAll(): Promise<LeagueEntity[]> {
+  async findAllLeagues(): Promise<LeagueEntity[]> {
     return await this.db.selectFrom('league').selectAll().execute();
   }
 
-  async findOne(id: string): Promise<League | null> {
+  async findOneLeague(id: string): Promise<League | null> {
     const row = await this.db
       .selectFrom('league')
       .selectAll()
@@ -57,7 +63,7 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
     return row ? row : null;
   }
 
-  async update(id: string, league: Partial<League>): Promise<League | null> {
+  async updateLeague(id: string, league: Partial<League>): Promise<League | null> {
     const result = await this.db
       .updateTable('league')
       .set({
@@ -70,7 +76,7 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
     return result ? result : null;
   }
 
-  async remove(id: string): Promise<boolean> {
+  async deleteLeague(id: string): Promise<boolean> {
     const result = await this.db.deleteFrom('league').where('leagueId', '=', id).executeTakeFirst();
     return (result?.numDeletedRows ?? 0n) > 0n;
   }
@@ -125,4 +131,64 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
       .where('leagueId', '=', leagueId)
       .execute();
   }
+
+  async createLeagueSettings(input: CreateLeagueSettingsDto): Promise<ILeagueSettings> {
+    const now = new Date().toISOString();
+    const leagueSettingsId = crypto.randomUUID();
+
+    const inserted = await this.db
+      .insertInto('leagueSettings')
+      .values({
+        leagueSettingsId,
+        leagueId: input.leagueId,
+        scoringType: input.scoringType,
+        positions: stringifyPositions(input.positions), // <-- serialize
+        rbPoolSize: input.rbPoolSize,
+        wrPoolSize: input.wrPoolSize,
+        qbPoolSize: input.qbPoolSize,
+        tePoolSize: input.tePoolSize,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return {
+      ...inserted,
+      positions: parsePositions((inserted as any).positions), // <-- deserialize
+    };
+  }
+
+  async getLatestLeagueSettingsByLeague(leagueId: string): Promise<ILeagueSettings | null> {
+    const row = await this.db
+      .selectFrom('leagueSettings')
+      .selectAll()
+      .where('leagueId', '=', leagueId)
+      // Kysely prefers tuple form:
+      .orderBy('createdAt', 'desc')
+      .executeTakeFirst();
+
+    return row ? { ...row, positions: parsePositions((row as any).positions) } : null;
+  }
+
+  async findLeagueSettings(id: string): Promise<ILeagueSettings | null> {
+    const row = await this.db
+      .selectFrom('leagueSettings')
+      .selectAll()
+      .where('leagueSettingsId', '=', id)
+      .executeTakeFirst();
+
+    return row ? { ...row, positions: parsePositions((row as any).positions) } : null;
+  }
 }
+// helper parse/stringify (defensive)
+const parsePositions = (text: string | null | undefined): string[] => {
+  try {
+    const v = text ? JSON.parse(text) : [];
+    return Array.isArray(v) ? v.map(String) : [];
+  } catch {
+    return [];
+  }
+};
+
+const stringifyPositions = (arr: string[]): string => JSON.stringify(arr ?? []);
