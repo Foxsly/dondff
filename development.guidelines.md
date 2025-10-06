@@ -4,6 +4,16 @@ This document captures the key principles and practices that guide backend devel
 
 It reflects the patterns and reasoning that have evolved across the codebase — particularly around **domain design, repository structure, testing, and type safety**.
 
+## 🪶 Summary
+
+- Domain-first, strongly typed architecture with `typia` validation.
+- Repositories own all persistence logic and return rich domain entities.
+- Keep modules focused: Controller → Service → Repository → DB.
+- Use append-only, explicit migrations (no destructive schema changes).
+- Prefer UUIDs for all abstract primary keys.
+- SQLite for local dev, PostgreSQL for staging/production.
+- Consistent ISO string timestamps and JSON-safe serialization.
+
 ---
 
 ## ⚙️ Core Principles
@@ -15,6 +25,8 @@ It reflects the patterns and reasoning that have evolved across the codebase —
   - An interface (`IEntity`) defining the rich domain model.
   - DTOs for creation/update shaped by `typia` validation.
   - Repositories that translate between DB and domain.
+- Prefer **UUIDs for all primary keys**, even for entities that could use numeric IDs.  
+  This ensures cross-environment consistency and simplifies merging data across environments.
 
 ### 2. Strong Typing and Validation
 - Use **TypeScript types** and **typia** validation for all DTOs.  
