@@ -1,4 +1,4 @@
-import { CreateUserDto, User, UserLeagues } from './entities/user.entity';
+import { CreateUserDto, IUser, User, UserLeagues } from './entities/user.entity';
 import { Inject, Injectable } from '@nestjs/common';
 import { Kysely } from 'kysely';
 import { DB } from '@/infrastructure/database/types';
@@ -7,7 +7,7 @@ import { DB_PROVIDER } from '@/infrastructure/database/database.module';
 export const USERS_REPOSITORY = Symbol('USERS_REPOSITORY');
 
 export abstract class UsersRepository {
-  abstract create(user: CreateUserDto): Promise<User>;
+  abstract create(user: CreateUserDto): Promise<IUser>;
   abstract findAll(): Promise<User[]>;
   abstract findOne(id: string): Promise<User | null>;
   abstract update(id: string, user: Partial<User>): Promise<User | null>;
@@ -21,7 +21,7 @@ export class DatabaseUsersRepository extends UsersRepository {
     super();
   }
 
-  async create(user: CreateUserDto): Promise<User> {
+  async create(user: CreateUserDto): Promise<IUser> {
     return await this.db
       .insertInto('dondUser')
       .values({

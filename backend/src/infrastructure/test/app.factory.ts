@@ -1,8 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@/app.module';
-import { SleeperModule } from '@/sleeper/sleeper.module';
-import { Kysely, SqliteDialect, CamelCasePlugin } from 'kysely';
+import { CamelCasePlugin, Kysely, SqliteDialect } from 'kysely';
 import Database from 'better-sqlite3';
 import type { DB } from '@/infrastructure/database/types';
 import { DB_PROVIDER } from '@/infrastructure/database/database.module';
@@ -29,9 +28,10 @@ export async function createTestApp(rootModule: any = AppModule): Promise<INestA
   if (rootModule === AppModule) {
     await migrateToLatest(db);
   }
-  await app.init();
+  await app.listen(0, '127.0.0.1');
 
   // handy hooks for specs
+  (app as any).__baseUrl__ = await app.getUrl();
   (app as any).__db__ = db;
   (app as any).__reset__ = async () => resetAllTables(db);
 
@@ -42,4 +42,8 @@ export async function closeTestApp(app: INestApplication) {
   const db: Kysely<DB> | undefined = (app as any).__db__;
   await app.close();
   await db?.destroy?.();
+}
+
+export function getBaseUrl(app: INestApplication) {
+  return (app as any).__baseUrl__ as string;
 }

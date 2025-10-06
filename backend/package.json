@@ -27,7 +27,9 @@
     "migrate:status": "tsx -r tsconfig-paths/register src/infrastructure/database/migrate.ts status",
     "jest:config": "jest --showConfig",
     "jest:clearCache": "jest --clearCache",
-    "postinstall": "ts-patch install"
+    "postinstall": "ts-patch install",
+    "sdk": "nestia sdk -c nestia.config.ts",
+    "e2e:sdk": "nestia e2e -c nestia.config.ts"
   },
   "dependencies": {
     "@nestia/core": "^8.0.8",
