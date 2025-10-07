@@ -131,7 +131,10 @@ Use this prompt when working with AI to extend or refactor the codebase:
 > 3. Are tests verifying behavior, not implementation details?  
 >  
 > Output all code in the existing project structure and maintain consistency with the style of current modules.
-> The current repository & branch, for the moment, can be located at https://github.com/Foxsly/dondff/tree/nestjs-backend 
+>
+> The current repository & branch, for the moment, can be located at https://github.com/Foxsly/dondff/tree/nestjs-backend
+> 
+> When asked to generate a patch that I can apply, please generate a diff that can be applied in WebStorm via the 'Apply patch from clipboard'
 
 ---
 
