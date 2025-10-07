@@ -3,6 +3,10 @@ import { CreateLeagueDto, League, UpdateLeagueDto } from './entities/league.enti
 import { AddLeagueUserDto, UpdateLeagueUserDto } from './entities/league-user.entity';
 import { ITeam } from '@/teams/entities/team.entity';
 import { LeaguesRepository } from '@/leagues/leagues.repository';
+import {
+  CreateLeagueSettingsDto,
+  ILeagueSettings,
+} from '@/leagues/entities/league-settings.entity';
 
 @Injectable()
 export class LeaguesService {
@@ -57,6 +61,25 @@ export class LeaguesService {
     updateLeagueUserDto: UpdateLeagueUserDto,
   ) {
     return await this.leaguesRepository.updateLeagueUser(leagueId, userId, updateLeagueUserDto);
+  }
+
+  async createLeagueSettings(
+    leagueId: string,
+    dto: CreateLeagueSettingsDto,
+  ): Promise<ILeagueSettings> {
+    return this.leaguesRepository.createLeagueSettings(leagueId, dto);
+  }
+
+  async getLatestLeagueSettingsByLeague(leagueId: string): Promise<ILeagueSettings> {
+    const latest = await this.leaguesRepository.getLatestLeagueSettingsByLeague(leagueId);
+    if (!latest) throw new NotFoundException(`No league settings found for league ${leagueId}`);
+    return latest;
+  }
+
+  async findLeagueSettings(id: string): Promise<ILeagueSettings> {
+    const found = await this.leaguesRepository.findLeagueSettings(id);
+    if (!found) throw new NotFoundException(`League settings with id ${id} not found`);
+    return found;
   }
 
   async getLeagueTeams(leagueId: string): Promise<ITeam[]> {

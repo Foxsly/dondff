@@ -9,6 +9,10 @@ import type {
 } from './entities/league-user.entity';
 import type { CreateLeagueDto, League, UpdateLeagueDto } from '@/leagues/entities/league.entity';
 import { ITeam } from '@/teams/entities/team.entity';
+import type {
+  CreateLeagueSettingsDto,
+  ILeagueSettings,
+} from '@/leagues/entities/league-settings.entity';
 
 @Controller('leagues')
 export class LeaguesController {
@@ -50,7 +54,7 @@ export class LeaguesController {
   addLeagueUser(
     @TypedParam('id') leagueId: string,
     @TypedBody() addLeagueUserDto: AddLeagueUserDto,
-  ):Promise<ILeagueUser> {
+  ): Promise<ILeagueUser> {
     return this.leaguesService.addLeagueUser(leagueId, addLeagueUserDto);
   }
 
@@ -77,5 +81,35 @@ export class LeaguesController {
   @TypedRoute.Get(':id/teams')
   getLeagueTeams(@TypedParam('id') leagueId: string): Promise<ITeam[]> {
     return this.leaguesService.getLeagueTeams(leagueId);
+  }
+
+  /**
+   * Create a new set of league settings for a league (versioned by time).
+   * Path param takes precedence over any leagueId present in the body.
+   */
+  @TypedRoute.Post(':id/settings')
+  createLeagueSettings(
+    @TypedParam('id') leagueId: string,
+    @TypedBody() body: CreateLeagueSettingsDto,
+  ): Promise<ILeagueSettings> {
+    // Enforce path param as the source of truth for leagueId
+    // const { leagueId: _ignored, ...rest } = body as any;
+    return this.leaguesService.createLeagueSettings(leagueId, body);
+  }
+
+  /**
+   * Fetch the latest (most recently created) league settings for a league.
+   */
+  @TypedRoute.Get(':id/settings/latest')
+  getLatestLeagueSettings(@TypedParam('id') leagueId: string): Promise<ILeagueSettings> {
+    return this.leaguesService.getLatestLeagueSettingsByLeague(leagueId);
+  }
+
+  /**
+   * Fetch a specific league settings by its id.
+   */
+  @TypedRoute.Get('settings/:settingsId')
+  getLeagueSettingsById(@TypedParam('settingsId') settingsId: string): Promise<ILeagueSettings> {
+    return this.leaguesService.findLeagueSettings(settingsId);
   }
 }

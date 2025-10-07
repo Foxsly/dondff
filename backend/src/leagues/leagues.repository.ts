@@ -9,7 +9,6 @@ import { DB_PROVIDER } from '@/infrastructure/database/database.module';
 import {
   CreateLeagueSettingsDto,
   ILeagueSettings,
-  LeagueSettings,
 } from '@/leagues/entities/league-settings.entity';
 
 export abstract class LeaguesRepository {
@@ -30,6 +29,12 @@ export abstract class LeaguesRepository {
     updateLeagueUserDto: UpdateLeagueUserDto,
   ): Promise<ILeagueUser>;
   abstract findLeagueTeams(leagueId: string): Promise<ITeam[]>;
+  abstract createLeagueSettings(
+    leagueId: string,
+    input: CreateLeagueSettingsDto,
+  ): Promise<ILeagueSettings>;
+  abstract getLatestLeagueSettingsByLeague(leagueId: string): Promise<ILeagueSettings | null>;
+  abstract findLeagueSettings(leagueSettingsId: string): Promise<ILeagueSettings | null>;
 }
 
 @Injectable()
@@ -132,7 +137,10 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
       .execute();
   }
 
-  async createLeagueSettings(input: CreateLeagueSettingsDto): Promise<ILeagueSettings> {
+  async createLeagueSettings(
+    leagueId: string,
+    input: CreateLeagueSettingsDto,
+  ): Promise<ILeagueSettings> {
     const now = new Date().toISOString();
     const leagueSettingsId = crypto.randomUUID();
 
@@ -140,7 +148,7 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
       .insertInto('leagueSettings')
       .values({
         leagueSettingsId,
-        leagueId: input.leagueId,
+        leagueId: leagueId,
         scoringType: input.scoringType,
         positions: stringifyPositions(input.positions), // <-- serialize
         rbPoolSize: input.rbPoolSize,
@@ -171,11 +179,11 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
     return row ? { ...row, positions: parsePositions((row as any).positions) } : null;
   }
 
-  async findLeagueSettings(id: string): Promise<ILeagueSettings | null> {
+  async findLeagueSettings(leagueSettingsId: string): Promise<ILeagueSettings | null> {
     const row = await this.db
       .selectFrom('leagueSettings')
       .selectAll()
-      .where('leagueSettingsId', '=', id)
+      .where('leagueSettingsId', '=', leagueSettingsId)
       .executeTakeFirst();
 
     return row ? { ...row, positions: parsePositions((row as any).positions) } : null;
