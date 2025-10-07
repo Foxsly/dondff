@@ -137,7 +137,12 @@ describe('Leagues E2E', () => {
       expectIso(v1.updatedAt);
 
       // Create v2 settings (change pool sizes and positions order slightly)
-      const inputV2 = { ...inputV1, rbPoolSize: 28, wrPoolSize: 40, positions: ['QB', 'RB', 'WR', 'WR', 'TE', 'FLEX'] };
+      const inputV2 = {
+        ...inputV1,
+        rbPoolSize: 28,
+        wrPoolSize: 40,
+        positions: ['QB', 'RB', 'WR', 'WR', 'TE', 'FLEX'],
+      };
       const v2 = await Leagues.settings.createLeagueSettings(conn, league.leagueId, inputV2);
       expect(v2.leagueSettingsId).toBeDefined();
       expect(v2.leagueSettingsId).not.toBe(v1.leagueSettingsId);
@@ -152,6 +157,83 @@ describe('Leagues E2E', () => {
       const roundtripV1 = await Leagues.settings.getLeagueSettingsById(conn, v1.leagueSettingsId);
       expect(roundtripV1.leagueSettingsId).toBe(v1.leagueSettingsId);
       expect(roundtripV1.positions).toEqual(inputV1.positions);
+    });
+  });
+
+  describe('GET /leagues — findAll', () => {
+    it('returns all created leagues', async () => {
+      const l1 = await Leagues.create(conn, { name: randomName() });
+      const l2 = await Leagues.create(conn, { name: randomName() });
+      const l3 = await Leagues.create(conn, { name: randomName() });
+
+      const all = await Leagues.findAll(conn);
+      const ids = new Set(all.map((x) => x.leagueId));
+      expect(ids.has(l1.leagueId)).toBe(true);
+      expect(ids.has(l2.leagueId)).toBe(true);
+      expect(ids.has(l3.leagueId)).toBe(true);
+    });
+  });
+
+  describe('League Users — negative & idempotency', () => {
+    it('rejects duplicate add for same user, rejects update for unknown user, and returns false on remove unknown', async () => {
+      const league = await Leagues.create(conn, { name: randomName() });
+      const userA = await Users.create(conn, userFactory());
+
+      // First add succeeds
+      await Leagues.users.addLeagueUser(conn, league.leagueId, {
+        userId: userA.userId,
+        role: 'owner',
+      });
+
+      // Duplicate add should fail (current behavior is DB unique violation bubbling up)
+      await expect(
+        Leagues.users.addLeagueUser(conn, league.leagueId, { userId: userA.userId, role: 'owner' }),
+      ).rejects.toBeDefined();
+
+      // Update non-existent membership should fail
+      const randomUser = await Users.create(conn, userFactory());
+      await expect(
+        Leagues.users.updateLeagueUser(conn, league.leagueId, randomUser.userId, {
+          role: 'member',
+        }),
+      ).rejects.toBeDefined();
+
+      // Remove non-existent membership should return false
+      const removed = await Leagues.users.removeLeagueUser(
+        conn,
+        league.leagueId,
+        randomUser.userId,
+      );
+      expect(removed).toBe(false);
+    });
+  });
+
+  describe('League Settings — negative cases', () => {
+    it('returns 404 for latest and by-id when not found, and 400 on invalid payload', async () => {
+      const league = await Leagues.create(conn, { name: randomName() });
+
+      // latest when none exist -> NotFound
+      await expect(
+        Leagues.settings.latest.getLatestLeagueSettings(conn, league.leagueId),
+      ).rejects.toBeDefined();
+
+      // by id unknown -> NotFound
+      await expect(
+        Leagues.settings.getLeagueSettingsById(conn, '00000000-0000-0000-0000-000000000000'),
+      ).rejects.toBeDefined();
+
+      // invalid DTO -> 400 (empty positions)
+      await expect(
+        Leagues.settings.createLeagueSettings(conn, league.leagueId, {
+          leagueId: league.leagueId,
+          scoringType: 'PPR',
+          positions: [],
+          rbPoolSize: 0,
+          wrPoolSize: 0,
+          qbPoolSize: 0,
+          tePoolSize: 0,
+        }),
+      ).rejects.toBeDefined();
     });
   });
 });
