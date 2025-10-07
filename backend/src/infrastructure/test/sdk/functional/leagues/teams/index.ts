@@ -7,6 +7,7 @@
 import type { IConnection } from "@nestia/fetcher";
 import { PlainFetcher } from "@nestia/fetcher/lib/PlainFetcher";
 import type { Primitive } from "typia";
+import { ITeam } from '@/teams/entities/team.entity';
 
 /**
  * Get all teams/entries for a league

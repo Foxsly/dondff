@@ -7,6 +7,7 @@
 import type { IConnection } from "@nestia/fetcher";
 import { PlainFetcher } from "@nestia/fetcher/lib/PlainFetcher";
 import type { Primitive } from "typia";
+import { UserLeagues } from '@/users/entities/user.entity';
 
 /**
  * @controller UsersController.getLeaguesForUser

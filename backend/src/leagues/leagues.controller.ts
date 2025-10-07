@@ -4,7 +4,6 @@ import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
 import type {
   AddLeagueUserDto,
   ILeagueUser,
-  LeagueUser,
   UpdateLeagueUserDto,
 } from './entities/league-user.entity';
 import type { CreateLeagueDto, League, UpdateLeagueDto } from '@/leagues/entities/league.entity';
@@ -44,7 +43,7 @@ export class LeaguesController {
   }
 
   @TypedRoute.Get(':id/users')
-  findLeagueUsers(@TypedParam('id') id: string): Promise<LeagueUser[]> {
+  findLeagueUsers(@TypedParam('id') id: string): Promise<ILeagueUser[]> {
     return this.leaguesService.findLeagueUsers(id);
   }
 

@@ -31,7 +31,7 @@ export async function findLeagueUsers(
   });
 }
 export namespace findLeagueUsers {
-  export type Output = Primitive<LeagueUser[]>;
+  export type Output = Primitive<ILeagueUser[]>;
 
   export const METADATA = {
     method: "GET",
