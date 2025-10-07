@@ -15,6 +15,7 @@ import type { Primitive } from "typia";
 
 export * as users from "./users/index";
 export * as teams from "./teams/index";
+export * as settings from "./settings/index";
 
 /**
  * @controller LeaguesController.create
