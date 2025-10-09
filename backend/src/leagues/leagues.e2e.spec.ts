@@ -320,4 +320,84 @@ describe('Leagues E2E', () => {
       expect(latestB.leagueId).toBe(leagueB.leagueId);
     });
   });
+
+  //
+  // 4) DELETE /leagues/:id — delete league (happy + 404)
+  //
+  describe('DELETE /leagues/:id — delete league', () => {
+    it('deletes a league and subsequent fetch returns NotFound', async () => {
+      const league = await Leagues.create(conn, { name: randomName() });
+      await Leagues.remove(conn, league.leagueId);
+      await expect(Leagues.findOne(conn, league.leagueId)).rejects.toBeDefined();
+    });
+
+    it('returns NotFound for unknown league id', async () => {
+      await expect(
+        Leagues.remove(conn, '00000000-0000-0000-0000-000000000000'),
+      ).rejects.toBeDefined();
+    });
+  });
+
+  //
+  // 5) League Settings — enum validation & temporal ordering
+  //
+  describe('League Settings — enum validation & temporal ordering', () => {
+    it('rejects invalid scoringType and enforces temporal ordering for latest', async () => {
+      const league = await Leagues.create(conn, { name: randomName() });
+
+      // invalid scoringType -> 400
+      await expect(
+        Leagues.settings.createLeagueSettings(conn, league.leagueId, {
+          ...leagueSettingsFactory({ leagueId: league.leagueId }),
+          scoringType: 'INVALID_ENUM_VALUE' as any,
+        }),
+      ).rejects.toBeDefined();
+
+      // create v1 and v2 with valid enums
+      const v1 = await Leagues.settings.createLeagueSettings(
+        conn,
+        league.leagueId,
+        leagueSettingsFactory({ leagueId: league.leagueId, scoringType: 'STANDARD' }),
+      );
+      // Small delay to ensure distinct timestamps in case DB truncates precision
+      await new Promise((r) => setTimeout(r, 10));
+      const v2 = await Leagues.settings.createLeagueSettings(
+        conn,
+        league.leagueId,
+        leagueSettingsFactory({ leagueId: league.leagueId, scoringType: 'HALF_PPR' }),
+      );
+
+      // Temporal invariants
+      const t1c = new Date(v1.createdAt).getTime();
+      const t2c = new Date(v2.createdAt).getTime();
+      expect(t2c).toBeGreaterThan(t1c);
+      expect(new Date(v1.updatedAt).getTime()).toBeGreaterThanOrEqual(t1c);
+      expect(new Date(v2.updatedAt).getTime()).toBeGreaterThanOrEqual(t2c);
+
+      // Latest should be v2
+      const latest = await Leagues.settings.latest.getLatestLeagueSettings(conn, league.leagueId);
+      expect(latest.leagueSettingsId).toBe(v2.leagueSettingsId);
+      expect(latest.scoringType).toBe('HALF_PPR');
+    });
+  });
+
+  //
+  // 6) GET /leagues/:id/teams — populated state (SKIPPED until team creation helpers available)
+  //
+  describe.skip('GET /leagues/:id/teams — populated state', () => {
+    it('returns created teams (and players if included)', async () => {
+      // TODO: Replace with actual Teams SDK helpers and a teamFactory when available.
+      // Example shape (pseudocode):
+      //
+      // const league = await Leagues.create(conn, { name: randomName() });
+      // const t1 = await Teams.create(conn, { leagueId: league.leagueId, name: 'Alpha' });
+      // const t2 = await Teams.create(conn, { leagueId: league.leagueId, name: 'Beta' });
+      //
+      // const teams = await Leagues.getLeagueTeams(conn, league.leagueId);
+      // const names = teams.map(t => t.name).sort();
+      // expect(names).toEqual(['Alpha', 'Beta']);
+      //
+      // If players are embedded, assert shape (ids, positions, etc.).
+    });
+  });
 });
