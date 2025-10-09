@@ -236,4 +236,88 @@ describe('Leagues E2E', () => {
       ).rejects.toBeDefined();
     });
   });
+
+  //
+  // 1) PATCH /leagues/:id — update league (happy, 404, bad payload)
+  //
+  describe('PATCH /leagues/:id — update league', () => {
+    it('updates league name (happy path)', async () => {
+      const created = await Leagues.create(conn, { name: randomName() });
+      const newName = `${created.name} (updated)`;
+      const updated = await Leagues.update(conn, created.leagueId, { name: newName });
+      expect(updated.leagueId).toBe(created.leagueId);
+      expect(updated.name).toBe(newName);
+
+      const fetched = await Leagues.findOne(conn, created.leagueId);
+      expect(fetched.name).toBe(newName);
+    });
+
+    it('returns NotFound (404-ish) for unknown league id', async () => {
+      await expect(
+        Leagues.update(conn, '00000000-0000-0000-0000-000000000000', { name: 'Nope' }),
+      ).rejects.toBeDefined();
+    });
+
+    it('rejects invalid payload (empty name)', async () => {
+      const created = await Leagues.create(conn, { name: randomName() });
+      await expect(Leagues.update(conn, created.leagueId, { name: '' })).rejects.toBeDefined();
+    });
+  });
+
+  //
+  // 2) GET /leagues/:id/teams — empty-state (and TODO: populated-state)
+  //
+  describe('GET /leagues/:id/teams — empty state', () => {
+    it('returns an empty list when a league has no teams', async () => {
+      const league = await Leagues.create(conn, { name: randomName() });
+      const teams = await Leagues.teams.getLeagueTeams(conn, league.leagueId);
+      expect(Array.isArray(teams)).toBe(true);
+      expect(teams.length).toBe(0);
+    });
+  });
+  // NOTE: populated-state test can be added once team creation helpers are confirmed in the SDK.
+
+  //
+  // 3) League Settings — cross-league safety
+  //
+  describe('League Settings — cross-league safety', () => {
+    it('does not leak settings across leagues and ignores mismatched leagueId in body', async () => {
+      // Create two leagues
+      const leagueA = await Leagues.create(conn, { name: randomName() });
+      const leagueB = await Leagues.create(conn, { name: randomName() });
+
+      // Create settings for league A, but try to spoof leagueId in the body as leagueB
+      const spoofedSettingsInput = {
+        ...leagueSettingsFactory({ leagueId: leagueB.leagueId }), // spoofed
+      };
+      const createdA1 = await Leagues.settings.createLeagueSettings(
+        conn,
+        leagueA.leagueId, // authoritative path param
+        spoofedSettingsInput,
+      );
+      // Server must honor path param: result should belong to league A, not B
+      expect(createdA1.leagueId).toBe(leagueA.leagueId);
+      expect(createdA1.leagueId).not.toBe(leagueB.leagueId);
+
+      // League B "latest" should not see A's settings
+      await expect(
+        Leagues.settings.latest.getLatestLeagueSettings(conn, leagueB.leagueId),
+      ).rejects.toBeDefined();
+
+      // By-id read returns the entity; ensure it still belongs to A (not B)
+      const roundtrip = await Leagues.settings.getLeagueSettingsById(conn, createdA1.leagueSettingsId);
+      expect(roundtrip.leagueId).toBe(leagueA.leagueId);
+      expect(roundtrip.leagueId).not.toBe(leagueB.leagueId);
+
+      // Create a legit settings row for B and verify latest works for B now
+      const createdB1 = await Leagues.settings.createLeagueSettings(
+        conn,
+        leagueB.leagueId,
+        leagueSettingsFactory({ leagueId: leagueB.leagueId }),
+      );
+      const latestB = await Leagues.settings.latest.getLatestLeagueSettings(conn, leagueB.leagueId);
+      expect(latestB.leagueSettingsId).toBe(createdB1.leagueSettingsId);
+      expect(latestB.leagueId).toBe(leagueB.leagueId);
+    });
+  });
 });
