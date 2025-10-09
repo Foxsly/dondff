@@ -16,7 +16,7 @@ export interface ILeagueSettings {
   leagueSettingsId: string & tags.Format<'uuid'>;
   leagueId: string & tags.Format<'uuid'>;
   scoringType: ScoringType;
-  positions: string[] & tags.MinItems<1>;
+  positions: Array<string> & tags.MinItems<1> & tags.UniqueItems;
   rbPoolSize: number & tags.Minimum<0>;
   wrPoolSize: number & tags.Minimum<0>;
   qbPoolSize: number & tags.Minimum<0>;
