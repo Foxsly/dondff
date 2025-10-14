@@ -52,7 +52,11 @@ export class LeaguesService {
   }
 
   async removeLeagueUser(leagueId: string, userId: string): Promise<boolean> {
-    return await this.leaguesRepository.removeLeagueUser(leagueId, userId);
+    const removed = await this.leaguesRepository.removeLeagueUser(leagueId, userId);
+    if (!removed) {
+      throw new NotFoundException(`User with id ${userId} not found in league ${leagueId}`);
+    }
+    return removed;
   }
 
   async updateLeagueUser(

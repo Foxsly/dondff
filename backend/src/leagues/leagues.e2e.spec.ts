@@ -110,6 +110,27 @@ describe('Leagues E2E', () => {
     });
   });
 
+  describe('League Users — remove twice', () => {
+    it('returns 404 when removing the same user twice', async () => {
+      const league = await Leagues.create(conn, leagueFactory());
+      const user = await Users.create(conn, userFactory());
+
+      await Leagues.users.addLeagueUser(conn, league.leagueId, {
+        userId: user.userId,
+        role: 'owner',
+      });
+
+      // First removal succeeds
+      const removed1 = await Leagues.users.removeLeagueUser(conn, league.leagueId, user.userId);
+      expect(removed1).toBe(true);
+
+      // Second removal should return a 404
+      await expect(
+        Leagues.users.removeLeagueUser(conn, league.leagueId, user.userId),
+      ).rejects.toMatchObject({ status: 404 });
+    });
+  });
+
   describe('League Settings — create, latest, get by id', () => {
     const expectIso = (s: string) => {
       // Basic ISO sanity: toISOString round-trip shouldn't throw
