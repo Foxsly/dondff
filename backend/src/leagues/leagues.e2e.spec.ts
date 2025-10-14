@@ -26,8 +26,8 @@ describe('Leagues E2E', () => {
   describe('POST /leagues — create', () => {
     it('creates a league and returns the persisted entity', async () => {
       // call the generated SDK helper for POST /leagues
-      let leagueName = "My League";
-      const created = await Leagues.create(conn, leagueFactory({name: leagueName}));
+      let leagueName = 'My League';
+      const created = await Leagues.create(conn, leagueFactory({ name: leagueName }));
 
       // basic shape assertions
       expect(created).toBeDefined();
@@ -405,6 +405,30 @@ describe('Leagues E2E', () => {
       await expect(
         Leagues.remove(conn, '00000000-0000-0000-0000-000000000000'),
       ).rejects.toBeDefined();
+    });
+
+    it('returns NotFound when deleting the same league twice', async () => {
+      const league = await Leagues.create(conn, leagueFactory());
+      // First delete succeeds
+      await Leagues.remove(conn, league.leagueId);
+      // Second delete should result in a NotFound-like rejection
+      await expect(Leagues.remove(conn, league.leagueId)).rejects.toMatchObject({ status: 404 });
+    });
+
+    it('excludes a deleted league from findAll results', async () => {
+      const l1 = await Leagues.create(conn, leagueFactory());
+      const l2 = await Leagues.create(conn, leagueFactory());
+      const l3 = await Leagues.create(conn, leagueFactory());
+
+      // Delete one of them
+      await Leagues.remove(conn, l2.leagueId);
+
+      // findAll should not include the deleted league
+      const all = await Leagues.findAll(conn);
+      const ids = new Set(all.map((x) => x.leagueId));
+      expect(ids.has(l1.leagueId)).toBe(true);
+      expect(ids.has(l2.leagueId)).toBe(false); // deleted
+      expect(ids.has(l3.leagueId)).toBe(true);
     });
   });
 
