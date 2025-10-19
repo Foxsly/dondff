@@ -1,4 +1,4 @@
-import { Kysely, CamelCasePlugin } from 'kysely';
+import { Kysely, CamelCasePlugin, ParseJSONResultsPlugin } from 'kysely';
 import { SqliteDialect } from 'kysely';
 import Database from 'better-sqlite3';
 import { Pool } from 'pg';
@@ -53,7 +53,7 @@ export function createDb(): Kysely<DB> {
 
   return new Kysely<DB>({
     dialect: new SqliteDialect({ database: sqlite }),
-    plugins: [new CamelCasePlugin()],
+    plugins: [new CamelCasePlugin(), new ParseJSONResultsPlugin()],
     log: ['query', 'error']
   });
 }

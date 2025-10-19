@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@/app.module';
-import { CamelCasePlugin, Kysely, SqliteDialect } from 'kysely';
+import { CamelCasePlugin, Kysely, ParseJSONResultsPlugin, SqliteDialect } from 'kysely';
 import Database from 'better-sqlite3';
 import type { DB } from '@/infrastructure/database/types';
 import { DB_PROVIDER } from '@/infrastructure/database/database.module';
@@ -12,7 +12,7 @@ export async function createTestApp(rootModule: any = AppModule): Promise<INestA
   const sqlite = new Database(':memory:');
   const db = new Kysely<DB>({
     dialect: new SqliteDialect({ database: sqlite }),
-    plugins: [new CamelCasePlugin()],
+    plugins: [new CamelCasePlugin(), new ParseJSONResultsPlugin()],
   });
 
   const moduleRef: TestingModule = await Test.createTestingModule({
