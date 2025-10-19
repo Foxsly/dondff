@@ -1,3 +1,4 @@
+// Add E2E tests for teams module
 import { INestApplication } from '@nestjs/common';
 import { IConnection } from '@nestia/fetcher';
 import { createTestApp, closeTestApp, getBaseUrl } from '@/infrastructure/test/app.factory';
@@ -105,10 +106,29 @@ describe('Teams E2E', () => {
       } catch (err: any) {
         expect(err instanceof HttpError).toBe(true);
         if (err instanceof HttpError) {
-          expect(err.status).toBe(404);
-          // Optional assertions if available:
-          // expect(err.method).toBe('PATCH');
-          // expect(err.path).toMatch(/\/teams\/.+/);
+          const code = (err as any).status ?? (err as any).statusCode;
+          expect(code).toBe(404);
+          // Optional, only assert if available on this HttpError shape:
+          if ('method' in err) expect((err as any).method).toBe('PATCH');
+          if ('path' in err) expect((err as any).path).toMatch(/\/teams\/.+/);
+        }
+      }
+    });
+
+    it('READ (404): should return NotFound for non-existent team id', async () => {
+      const missingId = randomUUID();
+      try {
+        await Teams.findOne(conn, missingId);
+        // If we reached here, no error was thrown, which is a failure.
+        throw new Error('Expected 404 HttpError but read resolved');
+      } catch (err: any) {
+        expect(err instanceof HttpError).toBe(true);
+        if (err instanceof HttpError) {
+          const code = (err as any).status ?? (err as any).statusCode;
+          expect(code).toBe(404);
+          // Optional, only assert if available on this HttpError shape:
+          if ('method' in err) expect((err as any).method).toBe('GET');
+          if ('path' in err) expect((err as any).path).toMatch(/\/teams\/.+/);
         }
       }
     });
@@ -122,9 +142,10 @@ describe('Teams E2E', () => {
       } catch (err: any) {
         expect(err instanceof HttpError).toBe(true);
         if (err instanceof HttpError) {
-          expect(err.status).toBe(404);
-          // Optional assertions if available:
-          // expect(err.method).toBe('DELETE');
+          const code = (err as any).status ?? (err as any).statusCode;
+          expect(code).toBe(404);
+          // Optional, only assert if available on this HttpError shape:
+          if ('method' in err) expect((err as any).method).toBe('DELETE');
         }
       }
     });
