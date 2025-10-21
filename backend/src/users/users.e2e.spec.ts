@@ -36,7 +36,7 @@ describe('Users (e2e) via SDK', () => {
 
   it('GET /users returns created users', async () => {
     const seed = userFactory({ name: 'Jared Goff', email: 'qb1@detroitlions.com' });
-    await Users.create(conn, seed);
+    await ensureUser(conn, seed);
 
     const list = await Users.findAll(conn);
     expect(Array.isArray(list)).toBe(true);

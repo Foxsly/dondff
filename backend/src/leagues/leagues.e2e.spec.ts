@@ -111,8 +111,8 @@ describe('Leagues E2E', () => {
 
   describe('League Users — remove twice', () => {
     it('returns 404 when removing the same user twice', async () => {
-      const league = await Leagues.create(conn, leagueFactory());
-      const user = await Users.create(conn, userFactory());
+      const league = await ensureLeague(conn);
+      const user = await ensureUser(conn, userFactory());
 
       await Leagues.users.addLeagueUser(conn, league.leagueId, {
         userId: user.userId,
@@ -196,8 +196,8 @@ describe('Leagues E2E', () => {
   //
   describe('League Users — idempotent upsert', () => {
     it.skip('treats add as upsert: duplicate add updates role and does not create duplicates', async () => {
-      const league = await Leagues.create(conn, leagueFactory());
-      const u = await Users.create(conn, userFactory());
+      const league = await ensureLeague(conn);
+      const u = await ensureUser(conn, userFactory());
 
       // First add succeeds
       await Leagues.users.addLeagueUser(conn, league.leagueId, {
@@ -213,7 +213,7 @@ describe('Leagues E2E', () => {
       expect(second.role).toBe('member');
 
       // Update non-existent membership should fail
-      const randomUser = await Users.create(conn, userFactory());
+      const randomUser = await ensureUser(conn, userFactory());
       await expect(
         Leagues.users.updateLeagueUser(conn, league.leagueId, randomUser.userId, {
           role: 'member',
@@ -232,7 +232,7 @@ describe('Leagues E2E', () => {
 
   describe('League Settings — negative cases', () => {
     it('returns 404 for latest and by-id when not found, and 400 on invalid payload', async () => {
-      const league = await Leagues.create(conn, leagueFactory());
+      const league = await ensureLeague(conn);
 
       // latest when none exist -> NotFound
       await expect(
@@ -281,7 +281,7 @@ describe('Leagues E2E', () => {
     });
 
     it('rejects invalid payload (empty name)', async () => {
-      const created = await Leagues.create(conn, leagueFactory());
+      const created = await ensureLeague(conn);
       await expect(Leagues.update(conn, created.leagueId, { name: '' })).rejects.toBeDefined();
     });
   });
@@ -291,7 +291,7 @@ describe('Leagues E2E', () => {
   //
   describe.skip('GET /leagues/:id/teams — empty state', () => {
     it('returns an empty list when a league has no teams', async () => {
-      const league = await Leagues.create(conn, leagueFactory());
+      const league = await ensureLeague(conn);
       const teams = await Leagues.teams.getLeagueTeams(conn, league.leagueId);
       expect(Array.isArray(teams)).toBe(true);
       expect(teams.length).toBe(0);
@@ -351,7 +351,7 @@ describe('Leagues E2E', () => {
   //
   describe('League Settings — validation edges', () => {
     it('rejects invalid scoringType, duplicate/empty positions, and negative pool sizes', async () => {
-      const league = await Leagues.create(conn, leagueFactory());
+      const league = await ensureLeague(conn);
 
       // invalid scoringType
       await expect(
@@ -389,7 +389,7 @@ describe('Leagues E2E', () => {
   //
   describe('League Settings — latest under burst writes', () => {
     it('returns the true latest when multiple versions are created quickly', async () => {
-      const league = await Leagues.create(conn, leagueFactory());
+      const league = await ensureLeague(conn);
       const v1 = await Leagues.settings.createLeagueSettings(
         conn,
         league.leagueId,
@@ -428,7 +428,7 @@ describe('Leagues E2E', () => {
     });
 
     it('returns NotFound when deleting the same league twice', async () => {
-      const league = await Leagues.create(conn, leagueFactory());
+      const league = await ensureLeague(conn);
       // First delete succeeds
       await Leagues.remove(conn, league.leagueId);
       // Second delete should result in a NotFound-like rejection
