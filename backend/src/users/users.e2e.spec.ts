@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { createTestApp, closeTestApp } from '@/infrastructure/test/app.factory';
 import { getBaseUrl } from '@/infrastructure/test/app.factory';
-import { userFactory } from '@/infrastructure/test/factories';
+import { userFactory, ensureUser, resetDatabase } from '@/infrastructure/test/factories';
 import { IConnection } from '@nestia/fetcher';
 import * as Users from '@/infrastructure/test/sdk/functional/users';
 
@@ -19,13 +19,12 @@ describe('Users (e2e) via SDK', () => {
   });
 
   afterEach(async () => {
-    const reset = (app as any).__reset__ as undefined | (() => Promise<void>);
-    if (reset) await reset();
+    await resetDatabase(app);
   });
 
   it('POST /users creates a user', async () => {
     const payload = userFactory({ name: 'Amon-Ra St. Brown', email: 'sungod@detroitlions.com' });
-    const created = await Users.create(conn, payload);
+    const created = await ensureUser(conn, payload);
     expect(created).toEqual(
       expect.objectContaining({
         userId: expect.any(String),

@@ -3,9 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { IConnection } from '@nestia/fetcher';
 import { createTestApp, closeTestApp, getBaseUrl } from '@/infrastructure/test/app.factory';
 import * as Teams from '../infrastructure/test/sdk/functional/teams';
-import * as Users from '../infrastructure/test/sdk/functional/users';
-import * as Leagues from '../infrastructure/test/sdk/functional/leagues';
-import { teamFactory, userFactory, leagueFactory } from '@/infrastructure/test/factories';
+import { ensureTeamWithFKs, resetDatabase, buildTeamUpdateDto } from '@/infrastructure/test/factories';
 import { HttpError } from '../infrastructure/test/sdk/HttpError';
 import { randomUUID } from 'crypto';
 
@@ -19,36 +17,15 @@ describe('Teams E2E', () => {
   });
 
   afterEach(async () => {
-    // Best-effort DB reset between tests if the hook is exposed
-    const reset = (app as any)['__reset__'];
-    if (typeof reset === 'function') {
-      await reset();
-    }
+    await resetDatabase(app);
   });
 
   afterAll(async () => {
     await closeTestApp(app);
   });
 
-  /**
-   * Helpers: create preconditions and teams with real FKs.
-   */
-  async function createUserAndLeague() {
-    const user = await Users.create(conn, userFactory());
-    expect(user.userId).toBeDefined();
-
-    const league = await Leagues.create(conn, leagueFactory());
-    expect(league.leagueId).toBeDefined();
-
-    return { user, league };
-  }
-
   async function createTeamWithFKs() {
-    const { user, league } = await createUserAndLeague();
-    const dto = teamFactory({ userId: user.userId, leagueId: league.leagueId });
-    const created = await Teams.create(conn, dto);
-    expect(created.teamId).toBeDefined();
-    return { created, dto, user, league };
+    return ensureTeamWithFKs(conn);
   }
 
   it('CREATE: should create a team with valid user/league FKs', async () => {
@@ -83,7 +60,7 @@ describe('Teams E2E', () => {
   it('UPDATE: should update team fields and reflect on subsequent reads', async () => {
     const { created } = await createTeamWithFKs();
     const nextWeek = (created.week ?? 1) + 1;
-    const updated = await Teams.update(conn, created.teamId, { week: nextWeek } as any);
+    const updated = await Teams.update(conn, created.teamId, buildTeamUpdateDto({ week: nextWeek }) as any);
     expect(updated.teamId).toBe(created.teamId);
     expect(updated.week).toBe(nextWeek);
     const refetched = await Teams.findOne(conn, created.teamId);

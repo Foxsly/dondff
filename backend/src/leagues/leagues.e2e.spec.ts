@@ -3,7 +3,7 @@ import * as Leagues from '@/infrastructure/test/sdk/functional/leagues';
 import { closeTestApp, createTestApp, getBaseUrl } from '@/infrastructure/test/app.factory';
 import { INestApplication } from '@nestjs/common';
 import * as Users from '@/infrastructure/test/sdk/functional/users';
-import { userFactory, leagueSettingsFactory, leagueFactory } from '@/infrastructure/test/factories';
+import { userFactory, leagueSettingsFactory, leagueFactory, ensureUser, ensureLeague, resetDatabase } from '@/infrastructure/test/factories';
 
 describe('Leagues E2E', () => {
   let app: INestApplication;
@@ -19,15 +19,14 @@ describe('Leagues E2E', () => {
   });
 
   afterEach(async () => {
-    const reset = (app as any).__reset__ as undefined | (() => Promise<void>);
-    if (reset) await reset();
+    await resetDatabase(app);
   });
 
   describe('POST /leagues — create', () => {
     it('creates a league and returns the persisted entity', async () => {
       // call the generated SDK helper for POST /leagues
       let leagueName = 'My League';
-      const created = await Leagues.create(conn, leagueFactory({ name: leagueName }));
+      const created = await ensureLeague(conn, { name: leagueName });
 
       // basic shape assertions
       expect(created).toBeDefined();
@@ -46,9 +45,9 @@ describe('Leagues E2E', () => {
   describe('League Users — add, list, update, remove', () => {
     it('manages league users for a league', async () => {
       // Arrange: create a league and a user
-      const league = await Leagues.create(conn, leagueFactory());
+      const league = await ensureLeague(conn);
       const userInput = userFactory();
-      const user = await Users.create(conn, userInput);
+      const user = await ensureUser(conn, userInput);
 
       // Initially, no users in the league
       const emptyUsers = await Leagues.users.findLeagueUsers(conn, league.leagueId);
@@ -72,7 +71,7 @@ describe('Leagues E2E', () => {
 
       // Add a second user as MEMBER
       const userInput2 = userFactory();
-      const user2 = await Users.create(conn, userInput2);
+      const user2 = await ensureUser(conn, userInput2);
       const added2 = await Leagues.users.addLeagueUser(conn, league.leagueId, {
         userId: user2.userId,
         role: 'member',
@@ -141,7 +140,7 @@ describe('Leagues E2E', () => {
     };
 
     it('creates settings, fetches latest, and retrieves by id', async () => {
-      const league = await Leagues.create(conn, leagueFactory());
+      const league = await ensureLeague(conn);
 
       // Create v1 settings
       const inputV1 = leagueSettingsFactory();
@@ -180,9 +179,9 @@ describe('Leagues E2E', () => {
 
   describe('GET /leagues — findAll', () => {
     it('returns all created leagues', async () => {
-      const l1 = await Leagues.create(conn, leagueFactory());
-      const l2 = await Leagues.create(conn, leagueFactory());
-      const l3 = await Leagues.create(conn, leagueFactory());
+      const l1 = await ensureLeague(conn);
+      const l2 = await ensureLeague(conn);
+      const l3 = await ensureLeague(conn);
 
       const all = await Leagues.findAll(conn);
       const ids = new Set(all.map((x) => x.leagueId));
@@ -265,7 +264,7 @@ describe('Leagues E2E', () => {
   //
   describe('PATCH /leagues/:id — update league', () => {
     it('updates league name (happy path)', async () => {
-      const created = await Leagues.create(conn, leagueFactory());
+      const created = await ensureLeague(conn);
       const newName = `${created.name} (updated)`;
       const updated = await Leagues.update(conn, created.leagueId, { name: newName });
       expect(updated.leagueId).toBe(created.leagueId);
@@ -306,8 +305,8 @@ describe('Leagues E2E', () => {
   describe('League Settings — cross-league safety', () => {
     it('does not leak settings across leagues and ignores mismatched leagueId in body', async () => {
       // Create two leagues
-      const leagueA = await Leagues.create(conn, leagueFactory());
-      const leagueB = await Leagues.create(conn, leagueFactory());
+      const leagueA = await ensureLeague(conn);
+      const leagueB = await ensureLeague(conn);
 
       // Create settings for league A, but try to spoof leagueId in the body as leagueB
       const spoofedSettingsInput = {
@@ -417,7 +416,7 @@ describe('Leagues E2E', () => {
   //
   describe('DELETE /leagues/:id — delete league', () => {
     it('deletes a league and subsequent fetch returns NotFound', async () => {
-      const league = await Leagues.create(conn, leagueFactory());
+      const league = await ensureLeague(conn);
       await Leagues.remove(conn, league.leagueId);
       await expect(Leagues.findOne(conn, league.leagueId)).rejects.toBeDefined();
     });
@@ -437,9 +436,9 @@ describe('Leagues E2E', () => {
     });
 
     it('excludes a deleted league from findAll results', async () => {
-      const l1 = await Leagues.create(conn, leagueFactory());
-      const l2 = await Leagues.create(conn, leagueFactory());
-      const l3 = await Leagues.create(conn, leagueFactory());
+      const l1 = await ensureLeague(conn);
+      const l2 = await ensureLeague(conn);
+      const l3 = await ensureLeague(conn);
 
       // Delete one of them
       await Leagues.remove(conn, l2.leagueId);
@@ -458,7 +457,7 @@ describe('Leagues E2E', () => {
   //
   describe('League Settings — enum validation & temporal ordering', () => {
     it('rejects invalid scoringType and enforces temporal ordering for latest', async () => {
-      const league = await Leagues.create(conn, leagueFactory());
+      const league = await ensureLeague(conn);
 
       // invalid scoringType -> 400
       await expect(

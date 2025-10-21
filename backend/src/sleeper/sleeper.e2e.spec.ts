@@ -3,6 +3,7 @@ import nock from 'nock';
 import type { INestApplication } from '@nestjs/common';
 import { closeTestApp, createTestApp } from '@/infrastructure/test/app.factory';
 import { SleeperModule } from '@/sleeper/sleeper.module';
+import { resetDatabase } from '@/infrastructure/test/factories';
 import stateResponse from './__fixtures__/sleeper-state.test.json';
 import statsRaw from './__fixtures__/sleeper-stats.raw.test.json';
 import statsTransformed from './__fixtures__/sleeper-stats.transformed.test.json';
@@ -22,8 +23,7 @@ describe('Sleeper (e2e)', () => {
 
   // If other tests mutate DB, reset between tests
   afterEach(async () => {
-    const reset = (app as any).__reset__ as undefined | (() => Promise<void>);
-    if (reset) await reset();
+    await resetDatabase(app);
     nock.cleanAll(); // ensure mocks reset between tests
   });
 

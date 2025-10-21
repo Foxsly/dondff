@@ -190,10 +190,19 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
   }
 }
 // helper parse/stringify (defensive)
-const parsePositions = (text: string | null | undefined): string[] => {
+// Accepts already-parsed arrays (when ParseJSONResultsPlugin is active) OR JSON strings.
+const parsePositions = (value: unknown): string[] => {
   try {
-    const v = text ? JSON.parse(text) : [];
-    return Array.isArray(v) ? v.map(String) : [];
+    if (Array.isArray(value)) {
+      return value.map(String);
+    }
+    if (value == null) return [];
+    if (typeof value === 'string') {
+      const v = value.length ? JSON.parse(value) : [];
+      return Array.isArray(v) ? v.map(String) : [];
+    }
+    // Fallback: unknown JSON shape → coerce to []
+    return [];
   } catch {
     return [];
   }
