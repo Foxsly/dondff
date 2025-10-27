@@ -1,0 +1,32 @@
+# ----------------------------------------------------------
+# Dockerignore for backend (distroless + rootless container)
+# Reduces image size and avoids copying local junk
+# ----------------------------------------------------------
+
+# Node modules (will be installed in build stage)
+node_modules
+
+# Build and cache outputs
+dist
+.turbo
+.cache
+.next
+
+# OS / editor files
+.DS_Store
+*.swp
+*.log
+
+# Local databases
+*.db
+*.sqlite
+.data
+
+# Environment files and secrets
+.env
+.env.*
+
+# Git and test artifacts
+.git
+coverage
+jest-*
