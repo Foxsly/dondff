@@ -2,10 +2,20 @@
 import { INestApplication } from '@nestjs/common';
 import { IConnection } from '@nestia/fetcher';
 import { createTestApp, closeTestApp, getBaseUrl } from '@/infrastructure/test/app.factory';
-import * as Teams from '../infrastructure/test/sdk/functional/teams';
+import * as Teams from '@/infrastructure/test/sdk/functional/teams';
 import { ensureTeamWithFKs, resetDatabase, buildTeamUpdateDto } from '@/infrastructure/test/factories';
 import { HttpError } from '../infrastructure/test/sdk/HttpError';
 import { randomUUID } from 'crypto';
+
+function expectHttp404(err: any, method: string) {
+  expect(err instanceof HttpError).toBe(true);
+  if (err instanceof HttpError) {
+    const code = (err as any).status ?? (err as any).statusCode;
+    expect(code).toBe(404);
+    if ('method' in err) expect((err as any).method).toBe(method);
+    if ('path' in err) expect((err as any).path).toMatch(/\/teams\/.+/);
+  }
+}
 
 describe('Teams E2E', () => {
   let app: INestApplication;
@@ -73,22 +83,16 @@ describe('Teams E2E', () => {
     const all = await Teams.findAll(conn);
     expect(all.some((t) => t.teamId === created.teamId)).toBe(false);
   });
+
   describe('NEGATIVE', () => {
     it('UPDATE (404): should return NotFound for non-existent team id', async () => {
       const missingId = randomUUID();
       try {
-        await Teams.update(conn, missingId, { week: 99 } as any);
+        await Teams.update(conn, missingId, buildTeamUpdateDto({ week: 99 }) as any);
         // If we reached here, no error was thrown, which is a failure.
         throw new Error('Expected 404 HttpError but update resolved');
       } catch (err: any) {
-        expect(err instanceof HttpError).toBe(true);
-        if (err instanceof HttpError) {
-          const code = (err as any).status ?? (err as any).statusCode;
-          expect(code).toBe(404);
-          // Optional, only assert if available on this HttpError shape:
-          if ('method' in err) expect((err as any).method).toBe('PATCH');
-          if ('path' in err) expect((err as any).path).toMatch(/\/teams\/.+/);
-        }
+        expectHttp404(err, 'PATCH');
       }
     });
 
@@ -99,14 +103,7 @@ describe('Teams E2E', () => {
         // If we reached here, no error was thrown, which is a failure.
         throw new Error('Expected 404 HttpError but read resolved');
       } catch (err: any) {
-        expect(err instanceof HttpError).toBe(true);
-        if (err instanceof HttpError) {
-          const code = (err as any).status ?? (err as any).statusCode;
-          expect(code).toBe(404);
-          // Optional, only assert if available on this HttpError shape:
-          if ('method' in err) expect((err as any).method).toBe('GET');
-          if ('path' in err) expect((err as any).path).toMatch(/\/teams\/.+/);
-        }
+        expectHttp404(err, 'GET');
       }
     });
 
@@ -117,13 +114,7 @@ describe('Teams E2E', () => {
         // If we reached here, no error was thrown, which is a failure.
         throw new Error('Expected 404 HttpError but remove resolved');
       } catch (err: any) {
-        expect(err instanceof HttpError).toBe(true);
-        if (err instanceof HttpError) {
-          const code = (err as any).status ?? (err as any).statusCode;
-          expect(code).toBe(404);
-          // Optional, only assert if available on this HttpError shape:
-          if ('method' in err) expect((err as any).method).toBe('DELETE');
-        }
+        expectHttp404(err, 'DELETE');
       }
     });
   });

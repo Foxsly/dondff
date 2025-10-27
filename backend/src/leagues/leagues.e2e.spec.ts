@@ -2,8 +2,15 @@ import { IConnection } from '@nestia/fetcher';
 import * as Leagues from '@/infrastructure/test/sdk/functional/leagues';
 import { closeTestApp, createTestApp, getBaseUrl } from '@/infrastructure/test/app.factory';
 import { INestApplication } from '@nestjs/common';
-import * as Users from '@/infrastructure/test/sdk/functional/users';
-import { userFactory, leagueSettingsFactory, leagueFactory, ensureUser, ensureLeague, resetDatabase } from '@/infrastructure/test/factories';
+import {
+  userFactory,
+  leagueSettingsFactory,
+  ensureUser,
+  ensureLeague,
+  resetDatabase,
+  ensureLeagueUsers,
+  ensureLeagueSettingsVersion,
+} from '@/infrastructure/test/factories';
 
 describe('Leagues E2E', () => {
   let app: INestApplication;
@@ -44,52 +51,48 @@ describe('Leagues E2E', () => {
 
   describe('League Users — add, list, update, remove', () => {
     it('manages league users for a league', async () => {
-      // Arrange: create a league and a user
+      // Arrange: create a league and an OWNER user
       const league = await ensureLeague(conn);
-      const userInput = userFactory();
-      const user = await ensureUser(conn, userInput);
+      const owner = await ensureUser(conn, userFactory());
 
       // Initially, no users in the league
       const emptyUsers = await Leagues.users.findLeagueUsers(conn, league.leagueId);
-      expect(Array.isArray(emptyUsers)).toBe(true);
-      expect(emptyUsers.length).toBe(0);
+      expect(Array.isArray(emptyUsers)).toBe(true); // owner not yet linked until after add below
+      expect(emptyUsers.length).toBe(0); // ensures test controls the memberships end-to-end
 
-      // Add the user as OWNER
+      // Add the OWNER membership explicitly
       const added = await Leagues.users.addLeagueUser(conn, league.leagueId, {
-        userId: user.userId,
+        userId: owner.userId,
         role: 'owner',
       });
       expect(added.leagueId).toBe(league.leagueId);
-      expect(added.userId).toBe(user.userId);
+      expect(added.userId).toBe(owner.userId);
       expect(added.role).toBe('owner');
 
       // List should contain exactly one user now
       const listedAfterAdd = await Leagues.users.findLeagueUsers(conn, league.leagueId);
       expect(listedAfterAdd.length).toBe(1);
-      expect(listedAfterAdd[0].userId).toBe(user.userId);
+      expect(listedAfterAdd[0].userId).toBe(owner.userId);
       expect(listedAfterAdd[0].role).toBe('owner');
 
-      // Add a second user as MEMBER
-      const userInput2 = userFactory();
-      const user2 = await ensureUser(conn, userInput2);
-      const added2 = await Leagues.users.addLeagueUser(conn, league.leagueId, {
-        userId: user2.userId,
-        role: 'member',
-      });
-      expect(added2.leagueId).toBe(league.leagueId);
-      expect(added2.userId).toBe(user2.userId);
-      expect(added2.role).toBe('member');
+      // Add a second user as MEMBER using bulk helper
+      const { users } = await ensureLeagueUsers(conn, league.leagueId, [
+        { role: 'member', overrides: userFactory() },
+      ]);
+      const member = users[0].user;
+      // sanity
+      expect(users[0].role).toBe('member');
 
       // List should now contain both users
       const listedAfterSecondAdd = await Leagues.users.findLeagueUsers(conn, league.leagueId);
       expect(Array.isArray(listedAfterSecondAdd)).toBe(true);
       expect(listedAfterSecondAdd.length).toBe(2);
       const byId = Object.fromEntries(listedAfterSecondAdd.map((u) => [u.userId, u]));
-      expect(byId[user.userId].role).toBe('owner');
-      expect(byId[user2.userId].role).toBe('member');
+      expect(byId[owner.userId].role).toBe('owner');
+      expect(byId[member.userId].role).toBe('member');
 
       // Update original user role to MEMBER
-      const updated = await Leagues.users.updateLeagueUser(conn, league.leagueId, user.userId, {
+      const updated = await Leagues.users.updateLeagueUser(conn, league.leagueId, owner.userId, {
         role: 'member',
       });
       expect(updated.role).toBe('member');
@@ -97,11 +100,11 @@ describe('Leagues E2E', () => {
       const listedAfterUpdate = await Leagues.users.findLeagueUsers(conn, league.leagueId);
       expect(listedAfterUpdate.length).toBe(2);
       const byIdAfterUpdate = Object.fromEntries(listedAfterUpdate.map((u) => [u.userId, u]));
-      expect(byIdAfterUpdate[user.userId].role).toBe('member');
-      expect(byIdAfterUpdate[user2.userId].role).toBe('member');
+      expect(byIdAfterUpdate[owner.userId].role).toBe('member');
+      expect(byIdAfterUpdate[member.userId].role).toBe('member');
 
       // Remove the user
-      const removed = await Leagues.users.removeLeagueUser(conn, league.leagueId, user.userId);
+      const removed = await Leagues.users.removeLeagueUser(conn, league.leagueId, owner.userId);
       expect(removed).toBe(true);
 
       const listedAfterRemove = await Leagues.users.findLeagueUsers(conn, league.leagueId);
@@ -142,9 +145,9 @@ describe('Leagues E2E', () => {
     it('creates settings, fetches latest, and retrieves by id', async () => {
       const league = await ensureLeague(conn);
 
-      // Create v1 settings
-      const inputV1 = leagueSettingsFactory();
-      const v1 = await Leagues.settings.createLeagueSettings(conn, league.leagueId, inputV1);
+      // Create v1 settings via helper
+      const inputV1 = leagueSettingsFactory(); // keep for expectation symmetry
+      const v1 = await ensureLeagueSettingsVersion(conn, league.leagueId, inputV1);
       expect(v1.leagueSettingsId).toBeDefined();
       expect(v1.leagueId).toBe(league.leagueId);
       expect(v1.scoringType).toBe(inputV1.scoringType);
@@ -153,14 +156,14 @@ describe('Leagues E2E', () => {
       expectIso(v1.createdAt);
       expectIso(v1.updatedAt);
 
-      // Create v2 settings (change pool sizes and positions order slightly)
+      // Create v2 settings (change pool sizes and positions order slightly) via helper
       const inputV2 = {
         ...inputV1,
         rbPoolSize: 28,
         wrPoolSize: 40,
         positions: ['QB', 'RB', 'WR', 'FLEX', 'TE', 'DST'], // unique order, no duplicates
       };
-      const v2 = await Leagues.settings.createLeagueSettings(conn, league.leagueId, inputV2);
+      const v2 = await ensureLeagueSettingsVersion(conn, league.leagueId, inputV2);
       expect(v2.leagueSettingsId).toBeDefined();
       expect(v2.leagueSettingsId).not.toBe(v1.leagueSettingsId);
       expect(v2.positions).toEqual(inputV2.positions);
@@ -390,22 +393,18 @@ describe('Leagues E2E', () => {
   describe('League Settings — latest under burst writes', () => {
     it('returns the true latest when multiple versions are created quickly', async () => {
       const league = await ensureLeague(conn);
-      const v1 = await Leagues.settings.createLeagueSettings(
-        conn,
-        league.leagueId,
-        leagueSettingsFactory({ leagueId: league.leagueId, scoringType: 'STANDARD' }),
-      );
-      const v2 = await Leagues.settings.createLeagueSettings(
-        conn,
-        league.leagueId,
-        leagueSettingsFactory({ leagueId: league.leagueId, scoringType: 'HALF_PPR' }),
-      );
-      const v3 = await Leagues.settings.createLeagueSettings(
-        conn,
-        league.leagueId,
-        leagueSettingsFactory({ leagueId: league.leagueId, scoringType: 'PPR' }),
-      );
-
+      const v1 = await ensureLeagueSettingsVersion(conn, league.leagueId, {
+        leagueId: league.leagueId,
+        scoringType: 'STANDARD',
+      });
+      const v2 = await ensureLeagueSettingsVersion(conn, league.leagueId, {
+        leagueId: league.leagueId,
+        scoringType: 'HALF_PPR',
+      });
+      const v3 = await ensureLeagueSettingsVersion(conn, league.leagueId, {
+        leagueId: league.leagueId,
+        scoringType: 'PPR',
+      });
       const latest = await Leagues.settings.latest.getLatestLeagueSettings(conn, league.leagueId);
       expect(latest.leagueSettingsId).toBe(v3.leagueSettingsId);
     });

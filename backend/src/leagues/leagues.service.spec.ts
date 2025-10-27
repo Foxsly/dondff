@@ -14,11 +14,11 @@ describe('LeaguesService', () => {
     name: 'Test League',
   };
   const mockRepo: jest.Mocked<LeaguesRepository> = {
-    create:       jest.fn(),
-    findAll:      jest.fn(),
-    findOne:      jest.fn(),
-    update:       jest.fn(),
-    remove:       jest.fn(),
+    createLeague:       jest.fn(),
+    findAllLeagues:      jest.fn(),
+    findOneLeague:      jest.fn(),
+    updateLeague:       jest.fn(),
+    deleteLeague:       jest.fn(),
     findLeagueUsers:   jest.fn(),
     addLeagueUser:     jest.fn(),
     removeLeagueUser:  jest.fn(),
@@ -39,51 +39,51 @@ describe('LeaguesService', () => {
   });
 
   it('should create a league', async () => {
-    repo.create.mockResolvedValue(mockLeague);
+    repo.createLeague.mockResolvedValue(mockLeague);
     const result = await service.create({ name: 'Test League' });
     expect(result).toEqual(mockLeague);
-    expect(repo.create).toHaveBeenCalledWith({ name: 'Test League' });
+    expect(repo.createLeague).toHaveBeenCalledWith({ name: 'Test League' });
   });
 
   it('should find all leagues', async () => {
-    repo.findAll.mockResolvedValue([mockLeague]);
+    repo.findAllLeagues.mockResolvedValue([mockLeague]);
     const result = await service.findAll();
     expect(result).toEqual([mockLeague]);
   });
 
   it('should find a league by id', async () => {
-    repo.findOne.mockResolvedValue(mockLeague);
+    repo.findOneLeague.mockResolvedValue(mockLeague);
     const result = await service.findOne('uuid-1');
     expect(result).toEqual(mockLeague);
-    expect(repo.findOne).toHaveBeenCalledWith('uuid-1');
+    expect(repo.findOneLeague).toHaveBeenCalledWith('uuid-1');
   });
 
   it('should throw NotFoundException if league not found', async () => {
-    repo.findOne.mockResolvedValue(null);
+    repo.findOneLeague.mockResolvedValue(null);
     await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
   });
 
   it('should update a league', async () => {
     const updatedLeague = { ...mockLeague, name: 'Updated' };
-    repo.update.mockResolvedValue(updatedLeague);
+    repo.updateLeague.mockResolvedValue(updatedLeague);
     const result = await service.update('uuid-1', { name: 'Updated' });
     expect(result).toEqual(updatedLeague);
-    expect(repo.update).toHaveBeenCalledWith('uuid-1', { name: 'Updated' });
+    expect(repo.updateLeague).toHaveBeenCalledWith('uuid-1', { name: 'Updated' });
   });
 
   it('should throw NotFoundException if update fails', async () => {
-    repo.update.mockResolvedValue(null);
+    repo.updateLeague.mockResolvedValue(null);
     await expect(service.update('uuid-1', { name: 'Updated' })).rejects.toThrow(NotFoundException);
   });
 
   it('should remove a league', async () => {
-    repo.remove.mockResolvedValue(true);
+    repo.deleteLeague.mockResolvedValue(true);
     await expect(service.remove('uuid-1')).resolves.toBeUndefined();
-    expect(repo.remove).toHaveBeenCalledWith('uuid-1');
+    expect(repo.deleteLeague).toHaveBeenCalledWith('uuid-1');
   });
 
   it('should throw NotFoundException if remove fails', async () => {
-    repo.remove.mockResolvedValue(false);
+    repo.deleteLeague.mockResolvedValue(false);
     await expect(service.remove('uuid-1')).rejects.toThrow(NotFoundException);
   });
 

@@ -51,7 +51,6 @@ export const teamPlayerFactory = (
   playerName: overrides.playerName ?? `Player ${Math.random().toString(36).slice(2, 6)}`,
 });
 
-
 export function buildTeamCreateDto(overrides: Partial<CreateTeamDto> = {}): CreateTeamDto {
   return { ...teamFactory(), ...overrides };
 }
@@ -100,4 +99,136 @@ export async function ensureTeamWithFKs(
 export async function resetDatabase(app: any): Promise<void> {
   const reset = app?.__reset__;
   if (typeof reset === 'function') await reset();
+}
+
+/**
+ * Thin builder alias for league settings DTOs to mirror other `build*Dto` helpers.
+ */
+export function buildLeagueSettingsDto(
+  overrides: Partial<CreateLeagueSettingsDto> = {},
+): CreateLeagueSettingsDto {
+  return { ...leagueSettingsFactory(), ...overrides };
+}
+
+/**
+ * Ensure a league exists and seed an OWNER user membership.
+ * Returns `{ league, owner }` where `owner` is the created user entity.
+ */
+export async function ensureLeagueWithOwner(
+  conn: any,
+  userOverrides: Partial<CreateUserDto> = {},
+  leagueOverrides: Partial<CreateLeagueDto> = {},
+): Promise<{ league: any; owner: any }> {
+  const league = await ensureLeague(conn, leagueOverrides);
+  const owner = await ensureUser(conn, userOverrides);
+  await Leagues.users.addLeagueUser(conn, league.leagueId, {
+    userId: owner.userId,
+    role: 'owner',
+  });
+  return { league, owner };
+}
+
+/**
+ * Ensure multiple users exist and are added to a league with specified roles.
+ * `specs` example: `[ { overrides: { name: 'A' }, role: 'owner' }, { role: 'member' } ]`
+ * Returns `{ leagueId, users: Array<{ user, role }> }`.
+ */
+export async function ensureLeagueUsers(
+  conn: any,
+  leagueId: string,
+  specs: Array<{ overrides?: Partial<CreateUserDto>; role: 'owner' | 'member' }> = [],
+): Promise<{ leagueId: string; users: Array<{ user: any; role: 'owner' | 'member' }> }> {
+  const results: Array<{ user: any; role: 'owner' | 'member' }> = [];
+  for (const spec of specs) {
+    const user = await ensureUser(conn, spec.overrides ?? {});
+    await Leagues.users.addLeagueUser(conn, leagueId, {
+      userId: user.userId,
+      role: spec.role,
+    });
+    results.push({ user, role: spec.role });
+  }
+  return { leagueId, users: results };
+}
+
+/**
+ * Ensure a single league settings version exists for a league.
+ * Returns the created settings entity.
+ */
+export async function ensureLeagueSettingsVersion(
+  conn: any,
+  leagueId: string,
+  overrides: Partial<CreateLeagueSettingsDto> = {},
+): Promise<any> {
+  const input = buildLeagueSettingsDto({ leagueId, ...overrides });
+  const created = await Leagues.settings.createLeagueSettings(conn, leagueId, input as any);
+  if (!created?.leagueSettingsId) throw new Error('ensureLeagueSettingsVersion: failed to create');
+  return created;
+}
+
+/**
+ * Upsert a team player for a given team.
+ * NOTE: this is a light wrapper; callers should supply required fields in `overrides`.
+ * Returns the created/updated TeamPlayer entity.
+ */
+export async function ensureTeamPlayer(
+  conn: any,
+  teamId: string,
+  overrides: Partial<CreateTeamPlayerDto> = {},
+): Promise<any> {
+  // If you later add more defaults, seed them via teamPlayerFactory().
+  const dto = { ...overrides };
+  const created = await Teams.players.upsertTeamPlayer(conn, teamId, dto as any);
+  if (!created) throw new Error('ensureTeamPlayer: failed to upsert team player');
+  return created;
+}
+
+/**
+ * Convenience: create two users and add both to a league with roles (owner/member).
+ * Returns `{ league, owner, member }`.
+ */
+export async function ensureLeagueWithOwnerAndMember(
+  conn: any,
+  leagueOverrides: Partial<CreateLeagueDto> = {},
+  ownerOverrides: Partial<CreateUserDto> = {},
+  memberOverrides: Partial<CreateUserDto> = {},
+): Promise<{ league: any; owner: any; member: any }> {
+  const league = await ensureLeague(conn, leagueOverrides);
+  const owner = await ensureUser(conn, ownerOverrides);
+  const member = await ensureUser(conn, memberOverrides);
+  await Leagues.users.addLeagueUser(conn, league.leagueId, { userId: owner.userId, role: 'owner' });
+  await Leagues.users.addLeagueUser(conn, league.leagueId, {
+    userId: member.userId,
+    role: 'member',
+  });
+  return { league, owner, member };
+}
+
+/**
+ * Build a minimal, valid DTO for adding a league user, with overrides last.
+ * Example: `buildLeagueUserDto({ userId, role: 'member' })`
+ */
+export function buildLeagueUserDto(
+  overrides: Partial<{ userId: string; role: 'owner' | 'member' }> = {},
+): any {
+  const defaults = { role: 'member' as const };
+  return { ...defaults, ...overrides };
+}
+
+/**
+ * Build a valid payload for updating a league user membership (role change).
+ */
+export function buildUpdateLeagueUserDto(
+  overrides: Partial<{ role: 'owner' | 'member' }> = {},
+): any {
+  const defaults = { role: 'member' as const };
+  return { ...defaults, ...overrides };
+}
+
+/**
+ * Build a valid set of positions for league settings with uniqueness.
+ */
+export function buildPositions(
+  positions: string[] = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'DST'],
+): string[] {
+  return Array.from(new Set(positions.map(String)));
 }
