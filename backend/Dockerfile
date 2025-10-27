@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.6
 
 # ==========================================================
-#  Multi-stage build for NestJS backend (distroless, rootless)
+#  Multi-stage build for NestJS backend (distroless, rootless, tsc build)
 #  Default DB: Postgres
 #  Optional override: SQLite (via compose profile)
 # ==========================================================
@@ -14,14 +14,14 @@ WORKDIR /app
 # Install dependencies
 COPY package.json package-lock.json* ./
 RUN npm ci
+## Patch TypeScript compiler for Typia/Nestia transform
+RUN npx ts-patch install
 
 # Copy source files and configs
 COPY tsconfig.json tsconfig.build.json nest-cli.json ./
 COPY src ./src
-COPY openapi.yaml ./openapi.yaml
-COPY tsup.config.ts ./tsup.config.ts
 
-# Bundle (tsup) + typecheck (tsc --noEmit) using project script
+# Compile (tsc) + alias rewrite (tsc-alias) using project script
 RUN npm run build
 
 # Remove dev dependencies for production
