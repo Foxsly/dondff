@@ -1,121 +1,217 @@
-import React, {useEffect, useState} from "react";
-import {useParams} from "react-router-dom";
-import {auth, db} from "../firebase-config";
-import {collection, doc, onSnapshot, setDoc} from "firebase/firestore";
-import {useCollectionData} from "react-firebase-hooks/firestore";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import Accordion from "./accordion";
 import Breadcrumbs from "./breadcrumbs";
+import { getCurrentUser } from "../api/auth";
 
-const API_BASE = process.env.REACT_APP_API_BASE;
+const API_BASE =
+  process.env.REACT_APP_API_BASE ||
+  process.env.NX_API_BASE ||
+  "http://localhost:3001";
+
 const Weeks = () => {
-  const {leagueId, season} = useParams();
-  const [week, setWeek] = useState("1");
+  const { leagueId, season } = useParams();
+  const navigate = useNavigate();
+
+  const [weeks, setWeeks] = useState([]);
   const [actualNFLWeek, setActualNFLWeek] = useState(null);
   const [leagueName, setLeagueName] = useState("");
-  const user = auth.currentUser;
-
-  const leagueCollection = collection(db, "leagues", leagueId, "seasons", season, "weeks");
-  const [docs, loading] = useCollectionData(leagueCollection);
-
-  const membersCollection = collection(db, "leagues", leagueId, "members");
-  const [members] = useCollectionData(membersCollection, {idField: "id"});
-  const currentMember = members?.find((m) => m.uid === user?.uid);
-  const isAdmin = currentMember?.role === "admin";
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const leagueRef = doc(db, "leagues", leagueId);
-    const unsub = onSnapshot(leagueRef, (snap) => {
-      setLeagueName(snap.data()?.name || "");
-    });
-    return () => unsub();
-  }, [leagueId]);
+    let cancelled = false;
 
-  const getActualWeek = async () => {
-    try {
-      const url = `${API_BASE}/sleeper/state`;
-      const response = await fetch(url);
-      const json = await response.json();
-      const actualWeek = json.week;
-      setActualNFLWeek(actualWeek);
-    } catch (error) {
-      console.log(error);
+    async function load() {
+      try {
+        setError("");
+        setLoading(true);
+
+        const current = await getCurrentUser();
+        if (!current) {
+          if (!cancelled) {
+            navigate("/");
+          }
+          return;
+        }
+
+        const userId = current.id || current.userId;
+        if (!userId) {
+          console.warn("No user id found on current user", current);
+          if (!cancelled) {
+            navigate("/");
+          }
+          return;
+        }
+
+        // Fetch league details, all teams, and the current Sleeper state in parallel.
+        const [leagueRes, teamsRes, stateRes] = await Promise.all([
+          fetch(`${API_BASE}/leagues/${leagueId}`, {
+            credentials: "include",
+          }),
+          fetch(`${API_BASE}/teams`, {
+            credentials: "include",
+          }),
+          fetch(`${API_BASE}/sleeper/state`, {
+            credentials: "include",
+          }),
+        ]);
+
+        if (!leagueRes.ok) {
+          throw new Error(
+            `Failed to load league (status ${leagueRes.status})`
+          );
+        }
+        if (!teamsRes.ok) {
+          throw new Error(
+            `Failed to load teams (status ${teamsRes.status})`
+          );
+        }
+        if (!stateRes.ok) {
+          throw new Error(
+            `Failed to load Sleeper state (status ${stateRes.status})`
+          );
+        }
+
+        const leagueData = await leagueRes.json();
+        const teams = await teamsRes.json();
+        const sleeperState = await stateRes.json();
+
+        if (cancelled) return;
+
+        setLeagueName(leagueData?.name || "");
+
+        const weekSet = new Set();
+
+        // Derive weeks from teams that belong to this league and season.
+        if (Array.isArray(teams)) {
+          const leagueTeams = teams.filter((team) => {
+            const teamLeagueId =
+              team.leagueId || team.league_id || team.league;
+            const teamSeason =
+              team.season ??
+              team.year ??
+              team.seasonYear ??
+              team.season_id ??
+              null;
+
+            const matchesLeague =
+              teamLeagueId &&
+              String(teamLeagueId) === String(leagueId);
+            const matchesSeason =
+              !season || (teamSeason && String(teamSeason) === String(season));
+
+            return matchesLeague && matchesSeason;
+          });
+
+          leagueTeams.forEach((team) => {
+            const teamWeek =
+              team.week ??
+              team.weekNumber ??
+              team.week_number ??
+              team.week_id ??
+              null;
+            if (teamWeek != null) {
+              weekSet.add(String(teamWeek));
+            }
+          });
+        }
+
+        // Append the current NFL week from Sleeper state if available.
+        if (sleeperState) {
+          const currentWeek =
+            sleeperState.week ??
+            sleeperState.current_week ??
+            sleeperState.nflWeek ??
+            sleeperState.currentWeek ??
+            null;
+          if (currentWeek != null) {
+            setActualNFLWeek(Number(currentWeek));
+            weekSet.add(String(currentWeek));
+          }
+        }
+
+        const derivedWeeks = Array.from(weekSet);
+        derivedWeeks.sort((a, b) => Number(a) - Number(b));
+
+        setWeeks(derivedWeeks);
+      } catch (err) {
+        console.error("Failed to load weeks", err);
+        if (!cancelled) {
+          setError(
+            err && err.message ? err.message : "Failed to load weeks"
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
     }
-  };
 
-  const addWeek = async () => {
-    try {
-      const docRef = doc(db, "leagues", leagueId, "seasons", season, "weeks", week);
-      await setDoc(docRef, {
-        week: week,
-      });
-    } catch (error) {
-      console.log(error);
+    if (leagueId && season) {
+      load();
+    } else {
+      setLoading(false);
     }
-  };
 
-  useEffect(() => {
-    getActualWeek();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [leagueId, season, navigate]);
+
+  if (loading) {
+    return (
+      <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
+        <Breadcrumbs
+          items={[
+            { label: "Dashboard", to: "/dashboard" },
+            { label: leagueName || "League", to: `/league/${leagueId}` },
+            { label: `Season ${season}` },
+          ]}
+        />
+        <p>Loading weeks...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
+        <Breadcrumbs
+          items={[
+            { label: "Dashboard", to: "/dashboard" },
+            { label: leagueName || "League", to: `/league/${leagueId}` },
+            { label: `Season ${season}` },
+          ]}
+        />
+        <h2 className="text-2xl font-bold">Something went wrong</h2>
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
       <Breadcrumbs
         items={[
-          {label: "Dashboard", to: "/dashboard"},
-          {label: leagueName, to: `/league/${leagueId}`},
-          {label: `Season ${season}`},
+          { label: "Dashboard", to: "/dashboard" },
+          { label: leagueName || "League", to: `/league/${leagueId}` },
+          { label: `Season ${season}` },
         ]}
       />
-      {loading && "Loading..."}
       <div className="space-y-4 max-w-[90%] mx-auto">
-        {docs?.sort((a, b) => a.week - b.week).map((weekDoc) => (
+        {weeks.map((w) => (
           <Accordion
-            key={weekDoc.week}
-            weekDoc={weekDoc}
+            key={w}
+            weekDoc={{ week: w }}
             leagueId={leagueId}
             season={season}
             actualWeek={actualNFLWeek}
           />
         ))}
       </div>
-      {isAdmin && (
-        <div className="flex items-center gap-2 mt-4">
-          <label className="flex items-center gap-2">
-            select NFL week:
-            <select
-              className="p-1 bg-transparent border rounded border-[#3a465b]"
-              value={week}
-              onChange={(e) => setWeek(e.target.value)}
-            >
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6">6</option>
-              <option value="7">7</option>
-              <option value="8">8</option>
-              <option value="9">9</option>
-              <option value="10">10</option>
-              <option value="11">11</option>
-              <option value="12">12</option>
-              <option value="13">13</option>
-              <option value="14">14</option>
-              <option value="15">15</option>
-              <option value="16">16</option>
-              <option value="17">17</option>
-              <option value="18">18</option>
-            </select>
-          </label>
-          <button
-            className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
-            onClick={addWeek}
-          >
-            Add Week
-          </button>
-        </div>
-      )}
-      <div>Current NFL Week: {actualNFLWeek}</div>
+      <div>Current NFL Week: {actualNFLWeek ?? "Unknown"}</div>
     </div>
   );
 };

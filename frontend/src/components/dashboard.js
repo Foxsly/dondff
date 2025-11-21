@@ -1,151 +1,308 @@
 import React, { useState, useEffect } from "react";
-import { auth, db } from "../firebase-config";
-import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import Breadcrumbs from "./breadcrumbs";
 import {
-  addDoc,
-  collection,
-  doc,
-  getDocs,
-  onSnapshot,
-  setDoc,
-  query,
-  where,
-  collectionGroup,
-  getDoc,
-} from "firebase/firestore";
-import { v4 as uuidv4 } from "uuid";
+  getCurrentUser,
+  logout as logoutUser,
+} from "../api/auth";
+
+const API_BASE =
+  process.env.REACT_APP_API_BASE ||
+  process.env.NX_API_BASE ||
+  "http://localhost:3001";
 
 const Dashboard = () => {
-  const [user, setUser] = useState({});
+  const [user, setUser] = useState(null);
   const [leagues, setLeagues] = useState([]);
   const [newLeague, setNewLeague] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showJoinForm, setShowJoinForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const navigate = useNavigate();
-  const leaguesRef = collection(db, "leagues");
 
-  const addLeague = async () => {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const current = await getCurrentUser();
+        const userId = current && (current.id || current.userId);
+        if (!userId) {
+          console.warn("No user id found on current user", current);
+          if (!cancelled) {
+            navigate("/");
+          }
+          return;
+        }
+
+        if (!current) {
+          // No user in local auth state; send them back to sign-in.
+          if (!cancelled) {
+            navigate("/");
+          }
+          return;
+        }
+
+        if (cancelled) return;
+        setUser({ ...current, id: current.id || current.userId });
+
+        // Fetch leagues for this user from the backend.
+        // Expects backend to expose GET /users/:userId/leagues.
+        const res = await fetch(
+          `${API_BASE}/users/${userId}/leagues`,
+          {
+            credentials: "include",
+          }
+        );
+
+        if (!res.ok) {
+          throw new Error(
+            `Failed to load leagues (status ${res.status})`
+          );
+        }
+
+        const data = await res.json();
+        if (!cancelled) {
+          setLeagues(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard data", err);
+        if (!cancelled) {
+          setError(
+            err && err.message
+              ? err.message
+              : "Failed to load dashboard"
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
+  const logout = async () => {
     try {
-      const accessCode = uuidv4();
-      const newLeagueRef = await addDoc(leaguesRef, {
-        name: newLeague,
-        uid: user.uid,
-        accessCode: accessCode,
+      await logoutUser();
+    } catch (err) {
+      console.error("Logout error", err);
+    } finally {
+      navigate("/");
+    }
+  };
+
+  // Wire create league to backend leagues endpoints.
+  const addLeague = async () => {
+    const name = newLeague.trim();
+    if (!name) return;
+    console.log(user);
+    const userId = user && (user.id || user.userId);
+    if (!userId) {
+      console.warn("Cannot create league: user is not loaded");
+      return;
+    }
+
+    try {
+      setError("");
+
+      // 1. Create the league
+      const createRes = await fetch(`${API_BASE}/leagues`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name }),
       });
 
-      const memberRef = doc(db, "leagues", newLeagueRef.id, "members", user.uid);
-      await setDoc(memberRef, {
-        uid: user.uid,
-        role: "admin",
-        displayName: user.displayName,
-        email: user.email,
-      });
+      if (!createRes.ok) {
+        throw new Error(`Failed to create league (status ${createRes.status})`);
+      }
 
-      navigate(`/league/${newLeagueRef.id}`);
-    } catch (error) {
-      console.log(error.message);
+      const createdLeague = await createRes.json();
+
+      // 2. Add current user as an admin/member of the league
+      try {
+        const memberRes = await fetch(
+          `${API_BASE}/leagues/${createdLeague.id || createdLeague.leagueId}/users`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ userId, role: "admin" }),
+          }
+        );
+
+        if (!memberRes.ok) {
+          // Not fatal for league existence, but log it so it can be fixed.
+          console.error(
+            "Failed to add user to league after creation",
+            memberRes.status
+          );
+        }
+      } catch (err) {
+        console.error("Error while adding user to league", err);
+      }
+
+      // 3. Refresh the leagues list for this user
+      try {
+        const leaguesRes = await fetch(
+          `${API_BASE}/users/${userId}/leagues`,
+          {
+            credentials: "include",
+          }
+        );
+        if (leaguesRes.ok) {
+          const data = await leaguesRes.json();
+          setLeagues(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        console.error("Failed to refresh leagues list", err);
+      }
+
+      setNewLeague("");
+      setShowCreateForm(false);
+    } catch (err) {
+      console.error("Failed to create league", err);
+      setError(
+        err && err.message ? err.message : "Failed to create league"
+      );
     }
   };
 
   const joinLeague = async () => {
+    const code = joinCode.trim();
+    if (!code) return;
+
+    const userId = user && (user.id || user.userId);
+    if (!userId) {
+      console.warn("Cannot join league: user is not loaded");
+      return;
+    }
+
     try {
-      const q = query(leaguesRef, where("accessCode", "==", joinCode));
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        const leagueDoc = querySnapshot.docs[0];
-        const memberRef = doc(db, "leagues", leagueDoc.id, "members", user.uid);
-        await setDoc(memberRef, {
-          uid: user.uid,
-          role: "player",
-          displayName: user.displayName,
-          email: user.email,
-        });
+      setError("");
+
+      // 1. Attempt to add the current user to the league by code/id.
+      // For now, we treat `code` as the league id.
+      const memberRes = await fetch(
+        `${API_BASE}/leagues/${code}/users`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ userId, role: "player" }),
+        }
+      );
+
+      if (!memberRes.ok) {
+        throw new Error(
+          `Failed to join league (status ${memberRes.status})`
+        );
       }
-    } catch (error) {
-      console.log(error.message);
+
+      // 2. Refresh the leagues list for this user.
+      try {
+        const leaguesRes = await fetch(
+          `${API_BASE}/users/${userId}/leagues`,
+          {
+            credentials: "include",
+          }
+        );
+        if (leaguesRes.ok) {
+          const data = await leaguesRes.json();
+          setLeagues(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        console.error("Failed to refresh leagues list after join", err);
+      }
+
+      setJoinCode("");
+      setShowJoinForm(false);
+    } catch (err) {
+      console.error("Failed to join league", err);
+      setError(
+        err && err.message ? err.message : "Failed to join league"
+      );
     }
   };
 
-  useEffect(() => {
-    const authUnsub = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-
-    return () => authUnsub();
-  }, []);
-
-  useEffect(() => {
-    if (!user?.uid) return;
-
-    const membersQuery = query(
-      collectionGroup(db, "members"),
-      where("uid", "==", user.uid)
+  if (loading) {
+    return (
+      <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
+        <Breadcrumbs items={[{ label: "Dashboard" }]} />
+        <p>Loading your dashboard...</p>
+      </div>
     );
-    const unsub = onSnapshot(
-      membersQuery,
-      async (snapShot) => {
-        const leaguePromises = snapShot.docs.map(async (memberDoc) => {
-          const leagueRef = memberDoc.ref.parent.parent;
-          const leagueSnap = await getDoc(leagueRef);
-          return {
-            id: leagueSnap.id,
-            role: memberDoc.data().role,
-            ...leagueSnap.data(),
-          };
-        });
-        const leagueList = await Promise.all(leaguePromises);
-        setLeagues(leagueList);
-      },
-      (error) => {
-        console.log(error);
-      }
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
+        <Breadcrumbs items={[{ label: "Dashboard" }]} />
+        <h2 className="text-2xl font-bold">Something went wrong</h2>
+        <p className="text-red-500">{error}</p>
+        <button
+          className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
+          onClick={() => navigate("/")}
+        >
+          Return to Sign In
+        </button>
+      </div>
     );
-
-    return () => unsub && unsub();
-  }, [user]);
-
-  const logout = async () => {
-    try {
-      await signOut(auth);
-      navigate("/");
-    } catch (error) {
-      console.log(error.message);
-    }
-  };
+  }
 
   return (
     <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
       <Breadcrumbs items={[{ label: "Dashboard" }]} />
       <h2 className="text-2xl font-bold">Welcome to Your Dashboard</h2>
-      <h3 className="text-xl">{user.email}</h3>
+      <h3 className="text-xl">{user?.email ?? ""}</h3>
       <button
         className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
         onClick={logout}
       >
         Sign Out
       </button>
-      <h4 className="text-lg font-semibold">Leagues:</h4>
-      {leagues.map((league) => (
-        <div
-          key={league.id}
-          className="flex items-center justify-between p-4 mb-2 rounded bg-[#3a465b]/50"
-        >
-          <p className="font-semibold">{league.name}</p>
-          <p>{league.role === "admin" ? "Admin" : "Player"}</p>
-          <button
-            className="px-3 py-1 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
-            onClick={() => navigate(`/league/${league.id}`)}
-          >
-            View
-          </button>
-        </div>
-      ))}
 
-      <div className="flex gap-4">
+      <h4 className="text-lg font-semibold mt-4">Leagues:</h4>
+      {leagues.length === 0 && (
+        <p className="text-sm text-gray-300">
+          You are not a member of any leagues yet.
+        </p>
+      )}
+      {leagues.map((league) => {
+        const role =
+          league.role || league.membershipRole || league.userRole || "Player";
+        return (
+          <div
+            key={league.id || league.leagueId}
+            className="flex items-center justify-between p-4 mb-2 rounded bg-[#3a465b]/50"
+          >
+            <p className="font-semibold">
+              {league.name || league.leagueName || "Unnamed League"}
+            </p>
+            <p>{role === "admin" ? "Admin" : role}</p>
+            <button
+              className="px-3 py-1 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
+              onClick={() =>
+                navigate(`/league/${league.id || league.leagueId}`)
+              }
+            >
+              View
+            </button>
+          </div>
+        );
+      })}
+
+      <div className="flex gap-4 mt-4">
         <button
           className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
           onClick={() => setShowCreateForm(!showCreateForm)}

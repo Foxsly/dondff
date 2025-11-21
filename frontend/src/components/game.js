@@ -1,8 +1,12 @@
 import React, { useEffect, useState, useCallback} from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { auth, db } from "../firebase-config";
-import { doc, setDoc, getDoc } from "firebase/firestore";
 import { getPlayers, generateCases } from './util';
+import { getCurrentUser } from "../api/auth";
+
+const API_BASE =
+  process.env.REACT_APP_API_BASE ||
+  process.env.NX_API_BASE ||
+  "http://localhost:3001";
 
 // Game component that can accept a specific uid or default to the current user
 const Game = ({ uid, onComplete }) => {
@@ -10,7 +14,8 @@ const Game = ({ uid, onComplete }) => {
 
   const { leagueId, season, week } = useLocation().state
   const navigate = useNavigate()
-  const currentUid = uid || auth.currentUser?.uid
+  const [currentUser, setCurrentUser] = useState(null);
+  const currentUid = uid || currentUser?.id || currentUser?.userId || currentUser?.email;
   const [currentName, setCurrentName] = useState(currentUid)
 
   const [cases, setCases] = useState(null)
@@ -35,23 +40,79 @@ const Game = ({ uid, onComplete }) => {
   const [resetUsed, setResetUsed] = useState({ RB: false, WR: false })
 
   useEffect(() => {
-    const fetchName = async () => {
-      if (!currentUid) return
-      if (uid) {
-        try {
-          const memberRef = doc(db, "leagues", leagueId, "members", currentUid)
-          const memberSnap = await getDoc(memberRef)
-          const data = memberSnap.data()
-          setCurrentName(data?.displayName || data?.name || data?.uid || currentUid)
-        } catch (e) {
-          setCurrentName(currentUid)
+    let cancelled = false;
+
+    const loadUserAndName = async () => {
+      try {
+        // Load current user from backend-backed auth
+        const user = await getCurrentUser();
+        if (!cancelled) {
+          setCurrentUser(user || null);
         }
-      } else {
-        setCurrentName(auth.currentUser?.displayName || auth.currentUser?.email || currentUid)
+
+        const effectiveUid = uid || user?.id || user?.userId || user?.email;
+        if (!effectiveUid) return;
+
+        if (uid) {
+          // Group game: try to resolve a friendly name from the league users API
+          try {
+            const membersRes = await fetch(
+              `${API_BASE}/leagues/${leagueId}/users`,
+              { credentials: "include" }
+            );
+            if (membersRes.ok) {
+              const members = await membersRes.json();
+              const member =
+                Array.isArray(members)
+                  ? members.find((m) => {
+                      const email =
+                        m.email || m.userEmail || m.username || m.name;
+                      const id =
+                        m.id || m.userId || m.uid;
+                      return (
+                        email === effectiveUid ||
+                        id === effectiveUid
+                      );
+                    })
+                  : null;
+              if (!cancelled) {
+                setCurrentName(
+                  member?.displayName ||
+                    member?.name ||
+                    member?.email ||
+                    effectiveUid
+                );
+              }
+            } else if (!cancelled) {
+              setCurrentName(effectiveUid);
+            }
+          } catch (e) {
+            if (!cancelled) {
+              setCurrentName(effectiveUid);
+            }
+          }
+        } else {
+          // Default case: use the backend user shape
+          if (!cancelled) {
+            setCurrentName(
+              user?.name ||
+                user?.fullName ||
+                user?.email ||
+                effectiveUid
+            );
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load current user/name for game", err);
       }
-    }
-    fetchName()
-  }, [uid, currentUid, leagueId])
+    };
+
+    loadUserAndName();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [uid, leagueId])
 
   const buildCases = useCallback(async () => {
     setCases(generateCases(pool, 10))
@@ -61,19 +122,19 @@ const Game = ({ uid, onComplete }) => {
     let copy = [...cases]
     function shuffle(array) {
       let currentIndex = array.length,  randomIndex;
-    
+
       // While there remain elements to shuffle.
       while (currentIndex !== 0) {
-    
+
         // Pick a remaining element.
         randomIndex = Math.floor(Math.random() * currentIndex);
         currentIndex--;
-    
+
         // And swap it with the current element.
         [array[currentIndex], array[randomIndex]] = [
           array[randomIndex], array[currentIndex]];
       }
-    
+
       return array;
     }
     shuffle(copy)
@@ -93,13 +154,13 @@ const Game = ({ uid, onComplete }) => {
           }
         })
       }
-      
+
       return copyPool
     }
     const realLeftovers = await genLeftovers(cases)
     //console.log("leftover cases generated: ", realLeftovers)
     setLeftovers(realLeftovers)
-    
+
   }
 
   const removeOfferFromLeftovers = (offer) => {
@@ -123,7 +184,7 @@ const Game = ({ uid, onComplete }) => {
     setMidway(false)
     setLineUp(prev => ({ ...prev, [position]: { name: "awaiting game..." } }))
   }
-  
+
   const removeCases = (arr, n) => {
     var result = new Array(n),
         len = arr.length,
@@ -137,7 +198,7 @@ const Game = ({ uid, onComplete }) => {
     }
     return result
   }
-  
+
   const selectCase = (box) => {
     setCaseSelected(box)
     const copy = [...cases]
@@ -169,7 +230,7 @@ const Game = ({ uid, onComplete }) => {
       await setGameCases(copy)
       //console.log("intercepting...new game cases are: ", gameCases)
 
-      
+
       copyOrigCases = copyOrigCases.map((box) => {
         if(box.name === removed[i].name) {
           return {...box, opened: true}
@@ -183,8 +244,8 @@ const Game = ({ uid, onComplete }) => {
         }
         return box
       })
-      
-      
+
+
     }
     //console.log("the new copy of cases should be:", copyOrigCases)
     setCases(copyOrigCases)
@@ -207,7 +268,7 @@ const Game = ({ uid, onComplete }) => {
     console.log(offer)
     //console.log("leftovers to select offer from", leftovers)
 
-    const getClosestPoints = (data, target) => 
+    const getClosestPoints = (data, target) =>
       data.reduce((acc, obj) =>
         Math.abs(target - obj.points) < Math.abs(target - acc.points) ? obj : acc
     );
@@ -221,7 +282,7 @@ const Game = ({ uid, onComplete }) => {
   const cleanUpCaseDisplay = useCallback(async (lastRemaining) => {
     let copyCases = cases
     let copyDisplayCases = displayCases
-    
+
       copyCases = copyCases.map((box) => {
         if(box.name === lastRemaining.name) {
             return {...box, opened: true}
@@ -235,7 +296,7 @@ const Game = ({ uid, onComplete }) => {
         }
         return box
       })
-    
+
     setCases(copyCases)
     setDisplayCases(copyDisplayCases)
   }, [cases, displayCases])
@@ -243,7 +304,7 @@ const Game = ({ uid, onComplete }) => {
   const cleanAllCases = useCallback(async (lastRemaining) => {
     let copyCases = cases
     let copyDisplayCases = displayCases
-    
+
       copyCases = copyCases.map((box) => {
             return {...box, opened: true}
         })
@@ -284,7 +345,7 @@ const Game = ({ uid, onComplete }) => {
     cleanAllCases()
     setRound(5)
   }
-  
+
   const swapPosition = () => {
     setPool([])
     setType("WR")
@@ -295,17 +356,136 @@ const Game = ({ uid, onComplete }) => {
   }
 
   const submitLineup = async () => {
-    const docRef = doc(db, "leagues", leagueId, "seasons", season, "weeks", week, "entries", currentUid)
-    await setDoc(docRef, {
-      name: currentName,
-      lineUp: lineUp
-    })
-    if(onComplete) {
-      onComplete()
-    } else {
-      navigate(-1)
+    try {
+      // Ensure we have a user; if not yet loaded, try to fetch again
+      let user = currentUser;
+      if (!user) {
+        try {
+          user = await getCurrentUser();
+          setCurrentUser(user || null);
+        } catch (e) {
+          console.error("Failed to resolve current user before submitLineup", e);
+        }
+      }
+
+      const userId = user?.id || user?.userId;
+      if (!userId) {
+        console.error("No user id available for submitLineup", user);
+        alert("Unable to determine your user account. Please sign in again.");
+        return;
+      }
+
+      if (!leagueId || !season || !week) {
+        console.error("Missing league/season/week context for submitLineup", {
+          leagueId,
+          season,
+          week,
+        });
+        alert("Missing league/season/week information. Please navigate back and try again.");
+        return;
+      }
+
+      // 1. Find an existing team for this user/league/season/week via getLeagueTeams
+      let teamId = null;
+      try {
+        const teamsRes = await fetch(`${API_BASE}/leagues/${leagueId}/teams`, {
+          credentials: "include",
+        });
+        if (teamsRes.ok) {
+          const teams = await teamsRes.json();
+          if (Array.isArray(teams)) {
+            const existing = teams.find((t) => {
+              return (
+                String(t.leagueId) === String(leagueId) &&
+                String(t.userId) === String(userId) &&
+                Number(t.seasonYear) === Number(season) &&
+                Number(t.week) === Number(week)
+              );
+            });
+            if (existing) {
+              teamId = existing.teamId || existing.id;
+            }
+          }
+        } else {
+          console.warn(
+            "Failed to load teams for league when submitting lineup",
+            teamsRes.status
+          );
+        }
+      } catch (err) {
+        console.error("Error fetching league teams before submitLineup", err);
+      }
+
+      // 2. If no existing team, create one via TeamsController.create
+      if (!teamId) {
+        try {
+          const createRes = await fetch(`${API_BASE}/teams`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              leagueId,
+              userId,
+              seasonYear: Number(season),
+              week: Number(week),
+            }),
+          });
+          if (!createRes.ok) {
+            throw new Error(`Failed to create team (status ${createRes.status})`);
+          }
+          const createdTeam = await createRes.json();
+          teamId = createdTeam.teamId || createdTeam.id;
+        } catch (err) {
+          console.error("Failed to create team for lineup submission", err);
+          alert("Could not create your team entry. Please try again.");
+          return;
+        }
+      }
+
+      if (!teamId) {
+        console.error("submitLineup: teamId could not be resolved or created");
+        alert("Could not resolve a team to attach your lineup to.");
+        return;
+      }
+
+      // 3. Upsert RB/WR players into the team via upsertTeamPlayer
+      const rb = lineUp.RB;
+      const wr = lineUp.WR;
+
+      const upsertPlayer = async (position, player) => {
+        if (!player || !player.playerId || !player.name) return;
+        const dto = {
+          teamId,
+          position,
+          playerId: Number(player.playerId),
+          playerName: player.name,
+        };
+        const res = await fetch(`${API_BASE}/teams/${teamId}/players`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(dto),
+        });
+        if (!res.ok) {
+          throw new Error(
+            `Failed to upsert ${position} for team ${teamId} (status ${res.status})`
+          );
+        }
+      };
+
+      await upsertPlayer("RB", rb);
+      await upsertPlayer("WR", wr);
+
+      if (onComplete) {
+        onComplete();
+      } else {
+        navigate(-1);
+      }
+    } catch (err) {
+      console.error("Unexpected error during submitLineup", err);
+      alert("There was a problem saving your lineup. Please try again.");
     }
-  }
+  };
 
 
   useEffect(() => {

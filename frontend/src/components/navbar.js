@@ -1,22 +1,42 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from '../firebase-config';
+import { getCurrentUser, logout as logoutUser } from '../api/auth';
 
 function Navbar() {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (current) => {
-      setUser(current);
-    });
-    return () => unsubscribe();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const current = await getCurrentUser();
+        if (!cancelled) {
+          setUser(current);
+        }
+      } catch (err) {
+        console.error('Failed to load current user', err);
+        if (!cancelled) {
+          setUser(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const logout = async () => {
-    await signOut(auth);
-    navigate('/');
+    try {
+      await logoutUser();
+    } catch (err) {
+      console.error('Logout error', err);
+    } finally {
+      setUser(null);
+      navigate('/');
+    }
   };
 
   return (
@@ -35,16 +55,16 @@ function Navbar() {
         {!user ? (
           <>
             <Link
-              to="/login"
+              to="/"
               className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-bold rounded"
             >
               Sign In
             </Link>
             <Link
-              to="/login"
+              to="/"
               className={
-                "px-4 py-2 border-2 border-emerald-500 text-emerald-500 font-bold rounded " +
-                "hover:bg-emerald-500 hover:text-gray-900"
+                'px-4 py-2 border-2 border-emerald-500 text-emerald-500 font-bold rounded ' +
+                'hover:bg-emerald-500 hover:text-gray-900'
               }
             >
               Create Account
@@ -52,7 +72,9 @@ function Navbar() {
           </>
         ) : (
           <>
-            <span className="font-semibold">{user.email || user.displayName}</span>
+            <span className="font-semibold">
+              {user.email || user.name}
+            </span>
             <button
               onClick={logout}
               className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-bold rounded"

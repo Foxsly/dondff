@@ -1,56 +1,166 @@
-import React, { useState } from "react";
-import {auth, db} from "../firebase-config";
-import { collection, doc, setDoc } from "firebase/firestore";
-import { useCollectionData } from "react-firebase-hooks/firestore";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { getCurrentUser } from "../api/auth";
+
+const API_BASE =
+  process.env.REACT_APP_API_BASE ||
+  process.env.NX_API_BASE ||
+  "http://localhost:3001";
 
 const Seasons = ({ leagueId }) => {
-  const user = auth.currentUser;
-  const [year, setYear] = useState("");
+  const navigate = useNavigate();
 
-  const leagueCollection = collection(db, "leagues", leagueId, "seasons");
-  const [docs, loading] = useCollectionData(leagueCollection);
+  const [seasons, setSeasons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const membersCollection = collection(db, "leagues", leagueId, "members");
-  const [members] = useCollectionData(membersCollection, { idField: "id" });
-  const currentMember = members?.find((m) => m.uid === user?.uid);
-  const isAdmin = currentMember?.role === "admin";
+  useEffect(() => {
+    let cancelled = false;
 
-  const addSeason = async (year) => {
-    setYear(year);
-    try {
-      const docRef = doc(db, "leagues", leagueId, "seasons", year);
-      await setDoc(docRef, {
-        season: year,
-      });
-    } catch (error) {
-      console.log(error);
+    async function load() {
+      try {
+        setError("");
+        setLoading(true);
+
+        const current = await getCurrentUser();
+        if (!current) {
+          if (!cancelled) {
+            navigate("/");
+          }
+          return;
+        }
+
+        const userId = current.id || current.userId;
+        if (!userId) {
+          console.warn("No user id found on current user", current);
+          if (!cancelled) {
+            navigate("/");
+          }
+          return;
+        }
+
+        // Fetch all teams and the current Sleeper state in parallel.
+        // We derive seasons from teams belonging to this league,
+        // then append the current NFL season from Sleeper if not present.
+        const [teamsRes, stateRes] = await Promise.all([
+          fetch(`${API_BASE}/teams`, {
+            credentials: "include",
+          }),
+          fetch(`${API_BASE}/sleeper/state`, {
+            credentials: "include",
+          }),
+        ]);
+
+        if (!teamsRes.ok) {
+          throw new Error(`Failed to load teams (status ${teamsRes.status})`);
+        }
+        if (!stateRes.ok) {
+          throw new Error(
+            `Failed to load Sleeper state (status ${stateRes.status})`
+          );
+        }
+
+        const teams = await teamsRes.json();
+        const sleeperState = await stateRes.json();
+
+        if (cancelled) return;
+
+        const seasonSet = new Set();
+
+        if (Array.isArray(teams)) {
+          const leagueTeams = teams.filter((team) => {
+            const teamLeagueId = team.leagueId || team.league_id || team.league;
+            return (
+              teamLeagueId &&
+              String(teamLeagueId) === String(leagueId)
+            );
+          });
+
+          leagueTeams.forEach((team) => {
+            const value =
+              team.season ??
+              team.year ??
+              team.seasonYear ??
+              team.season_id ??
+              null;
+            if (value != null) {
+              seasonSet.add(String(value));
+            }
+          });
+        }
+
+        // Append current season from Sleeper state if not already present.
+        if (sleeperState) {
+          const currentSeason =
+            sleeperState.season ??
+            sleeperState.year ??
+            sleeperState.seasonId ??
+            sleeperState.current_season ??
+            null;
+          if (currentSeason != null) {
+            seasonSet.add(String(currentSeason));
+          }
+        }
+
+        const derivedSeasons = Array.from(seasonSet);
+        // Sort seasons in ascending order; if they are numeric-like, this will still be reasonable.
+        derivedSeasons.sort();
+
+        setSeasons(derivedSeasons);
+      } catch (err) {
+        console.error("Failed to load seasons", err);
+        if (!cancelled) {
+          setError(
+            err && err.message ? err.message : "Failed to load seasons"
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
     }
-  };
+
+    if (leagueId) {
+      load();
+    } else {
+      setLoading(false);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [leagueId, navigate]);
+
+  if (loading) {
+    return (
+      <div className="mx-auto p-4 space-y-4">
+        <p>Loading seasons...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto p-4 space-y-4">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto p-4 space-y-4">
-      {loading && "Loading..."}
       <div className="flex flex-wrap gap-2">
-        {docs?.map((doc) => (
+        {seasons.map((season) => (
           <Link
-            key={doc.season}
-            to={`/league/${leagueId}/season/${doc.season}`}
+            key={season}
+            to={`/league/${leagueId}/season/${season}`}
             className="px-3 py-1 rounded bg-[#3a465b] hover:bg-[#3ab4cc]"
           >
-            {doc.season}
+            {season}
           </Link>
         ))}
       </div>
-
-      {isAdmin && !docs?.find((season) => season.season === "2025") && (
-        <button
-          className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
-          onClick={() => addSeason("2025")}
-        >
-          Add 2025 Season
-        </button>
-      )}
     </div>
   );
 };

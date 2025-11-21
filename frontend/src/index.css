@@ -985,3 +985,13 @@ code {
     line-height: 2rem;
   }
 }
+
+/* Ensure form fields are readable: dark background + light text */
+
+input,
+select,
+textarea {
+  background-color: #020617;
+  color: #ffffff;
+  border-color: #374151;
+}
