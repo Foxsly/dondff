@@ -1,55 +1,55 @@
-import React, { useEffect, useState } from 'react'
-import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
-import { auth } from '../firebase-config'
-import { Navigate, useNavigate } from 'react-router-dom'
+import React, {useEffect, useState} from 'react';
+import {createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut} from 'firebase/auth';
+import {auth} from '../firebase-config';
+import {Navigate, useNavigate} from 'react-router-dom';
 
 const SignUp = () => {
 
-  const [registerEmail, setRegisterEmail] = useState("")
-  const [registerPassword, setRegisterPassword] = useState("")
-  const [loginEmail, setLoginEmail] = useState("")
-  const [loginPassword, setLoginPassword] = useState("")
-  const [registerError, setRegisterError] = useState("")
-  const [loginError, setLoginError] = useState("")
-  const [user, setUser] = useState({})
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [registerError, setRegisterError] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [user, setUser] = useState({});
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   useEffect(() => {
     onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
+      setUser(currentUser);
     });
-  }, [])
+  }, []);
 
   const register = async () => {
     try {
-      const user = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword)
-      console.log(user)
-      navigate("/dashboard")
-      setRegisterError("")
+      const user = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
+      console.log(user);
+      navigate("/dashboard");
+      setRegisterError("");
     } catch (error) {
-      setRegisterError(error.message)
+      setRegisterError(error.message);
     }
-  }
+  };
 
   const login = async () => {
     try {
-      const user = await signInWithEmailAndPassword(auth, loginEmail, loginPassword)
-      console.log(user)
-      navigate("/dashboard")
-      setLoginError("")
+      const user = await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      console.log(user);
+      navigate("/dashboard");
+      setLoginError("");
     } catch (error) {
-      setLoginError(error.message)
+      setLoginError(error.message);
     }
-  }
+  };
 
   const logout = async () => {
     try {
-      await signOut(auth)
+      await signOut(auth);
     } catch (error) {
-      console.log(error.message)
+      console.log(error.message);
     }
-  }
+  };
 
   if (user) {
     return (
@@ -137,6 +137,6 @@ const SignUp = () => {
     );
   }
 
-}
+};
 
-export default SignUp
+export default SignUp;
