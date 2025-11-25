@@ -16,6 +16,7 @@ dist
 .DS_Store
 *.swp
 *.log
+.idea
 
 # Local databases
 *.db
@@ -30,3 +31,6 @@ dist
 .git
 coverage
 jest-*
+
+*.zip
+*.out

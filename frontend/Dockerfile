@@ -21,7 +21,7 @@ RUN npm run build
 #  Stage 2: Runtime (distroless Node, non-root)
 #  - Serves static files from /app/build with a tiny Node server
 # ==========================================================
-FROM gcr.io/distroless/nodejs20-debian11:nonroot
+FROM gcr.io/distroless/nodejs20-debian12:nonroot
 
 WORKDIR /app
 

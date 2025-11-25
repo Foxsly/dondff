@@ -29,7 +29,7 @@ RUN npm prune --omit=dev
 
 
 # ---------- Stage 2: Runner (Distroless, Rootless) ----------
-FROM gcr.io/distroless/nodejs20-debian12 AS runner
+FROM gcr.io/distroless/nodejs20-debian12:nonroot AS runner
 
 # Non-root user
 USER 65532:65532
