@@ -1,9 +1,8 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16-alpine
     container_name: dondff-postgres
+    #    profiles: [dondff]
     environment:
       POSTGRES_DB: appdb
       POSTGRES_USER: postgres
@@ -18,12 +17,14 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      - dondff
+
 
   backend:
-    build:
-      context: .
-      dockerfile: ./backend/Dockerfile
+    image: dondff-backend:latest
     container_name: dondff-backend
+    #    profiles: [dondff]
     user: "65532:65532"
     depends_on:
       postgres:
@@ -43,7 +44,30 @@ services:
       retries: 5
       start_period: 15s
     restart: unless-stopped
+    networks:
+      - dondff
+      - internal
+
+  frontend:
+    image: dondff-frontend:latest
+    container_name: dondff-frontend
+    #    profiles: [dondff]
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      API_BASE_URL: ${API_BASE_URL}
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - dondff
+      - internal
 
 volumes:
   pgdata:
     driver: local
+
+networks:
+  dondff:

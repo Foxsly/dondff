@@ -1,7 +1,6 @@
 const API_BASE =
-  process.env.REACT_APP_API_BASE ||
-  process.env.NX_API_BASE ||
-  'http://localhost:3001'; // adjust if your backend runs elsewhere
+  (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
+  "http://localhost:3001"; // fallback only for local dev
 
 async function request(path, options = {}) {
   const {

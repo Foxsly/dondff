@@ -1,4 +1,6 @@
-const API_BASE = process.env.REACT_APP_API_BASE;
+const API_BASE =
+  (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
+  "http://localhost:3001"; // fallback only for local dev
 
 export const getPlayers = async (week, position, seasonYear, playerLimit, callback) => {
     console.log("calling getPlayers with " + week + " " + position + " " + seasonYear + " " + playerLimit)

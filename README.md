@@ -14,3 +14,9 @@ belcheti@Tims-MacBook-Pro dondff % npx github:seriousme/fastify-openapi-glue -b 
 
 LoopBack4
 npm i -g @loopback/cli
+
+Building locally (apple silicon):
+```
+docker buildx create --name dondff-builder --use
+docker buildx inspect --bootstrap
+```

@@ -15,14 +15,14 @@ async function withDb<T>(fn: (db: Kysely<any>) => Promise<T>) {
 }
 
 async function getMigrator(db: Kysely<any>) {
-  const migrationsFolder = path.resolve(process.cwd(), 'src/infrastructure/database/migrations');
+  const migrationFolder = path.join(__dirname, "migrations");
   return new Migrator({
     db,
     provider: new FileMigrationProvider({
       fs,
       path,
       // All *.ts files that export `up` and `down`
-      migrationFolder: migrationsFolder,
+      migrationFolder,
     }),
   });
 }

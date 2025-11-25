@@ -3,9 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { getCurrentUser } from "../api/auth";
 
 const API_BASE =
-  process.env.REACT_APP_API_BASE ||
-  process.env.NX_API_BASE ||
-  "http://localhost:3001";
+  (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
+  "http://localhost:3001"; // fallback only for local dev
 
 const Seasons = ({ leagueId }) => {
   const navigate = useNavigate();
