@@ -59,11 +59,33 @@ It reflects the patterns and reasoning that have evolved across the codebase —
 
 All timestamps are stored and represented as **ISO strings** for consistency.
 
+
 ### 6. Testing Philosophy
 - **Unit tests** mock repositories and validate logic in isolation.
 - **E2E tests** verify controller + service integration using real Nest modules.
 - External dependencies (e.g., Sleeper API) are **mocked via `nock`** in E2E tests.
 - SQLite is used for local integration tests to mirror production behavior with minimal setup.
+
+#### E2E Coverage Workflow (Required)
+Whenever you **add or modify an API route** (i.e., a controller method with `@TypedRoute`):
+
+1. **Add/extend E2E tests** for that route under the matching module spec
+   - File: `src/<module>/<module>.e2e.spec.ts`
+   - Cover: happy path, basic negatives (404, 400), and any domain invariants that must hold
+   - If auth/roles apply, include at least one forbidden/unauthorized case
+2. **Regenerate the functional SDK** if the contract changed
+   - `npm run sdk` (or the repository’s standard command)
+3. **Update the E2E TODO tracker** at `backend/e2e-todo.md`
+   - ✅ Mark covered use cases with `[x]`
+   - ⏭️ Add any newly identified edge cases as `[ ]`
+4. **Keep factories current**
+   - If new DTOs are introduced, add a factory in `infrastructure/test/factories.ts`
+   - Prefer DTO-shaped factories over entities for request inputs
+5. **Validation & error contract**
+   - Ensure `typia` validation is enforced at the boundary
+   - Errors should conform to `{ statusCode, message }`
+
+> **PR Gate**: Pull requests that add/modify routes must include the matching E2E tests and an updated `backend/e2e-todo.md` section. Otherwise, the PR is not merge-ready.
 
 ### 7. Environment and Database Strategy
 - Local: SQLite (fast, simple, ephemeral)
