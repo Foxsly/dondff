@@ -51,7 +51,7 @@ const Game = ({teamUser, onComplete}) => {
     };
 
     loadUserAndName();
-  }, [teamUser, currentUser, leagueId]);
+  }, [teamUser, leagueId]);
 
   const buildCases = useCallback(async () => {
     setCases(generateCases(pool, 10));
