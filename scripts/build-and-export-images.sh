@@ -3,7 +3,14 @@ set -euo pipefail
 
 ### CONFIG ##############################################################
 
-VERSION="${1:-latest}"   # allow: ./script.sh 2025-01-01
+TARGET="${1:-both}"   # backend | frontend | both
+VERSION="${2:-latest}"
+
+if [[ "${TARGET}" != "backend" && "${TARGET}" != "frontend" && "${TARGET}" != "both" ]]; then
+  echo "Usage: $0 [backend|frontend|both] [version]"
+  exit 1
+fi
+
 REMOTE_USER="docker"
 REMOTE_HOST="sh2"
 REMOTE_DIR="/home/docker/docker/dondff/images"
@@ -20,26 +27,40 @@ FRONTEND_IMAGE="dondff-frontend:${VERSION}"
 ###
 
 # Build for linux/amd64 so it runs on the server
-echo "==> Building backend image: ${BACKEND_IMAGE}"
-docker buildx build --platform linux/amd64 -t "${BACKEND_IMAGE}" --load ./backend
+if [[ "${TARGET}" == "backend" || "${TARGET}" == "both" ]]; then
+  echo "==> Building backend image: ${BACKEND_IMAGE}"
+  docker buildx build --platform linux/amd64 -t "${BACKEND_IMAGE}" --load ./backend
+fi
 
-echo "==> Building frontend image: ${FRONTEND_IMAGE}"
-docker buildx build --platform linux/amd64 -t "${FRONTEND_IMAGE}" --load ./frontend
+if [[ "${TARGET}" == "frontend" || "${TARGET}" == "both" ]]; then
+  echo "==> Building frontend image: ${FRONTEND_IMAGE}"
+  docker buildx build --platform linux/amd64 -t "${FRONTEND_IMAGE}" --load ./frontend
+fi
 
 mkdir -p ./deploy
 
-BACKEND_TAR="./deploy/dondff-backend_${VERSION}.tar"
-FRONTEND_TAR="./deploy/dondff-frontend_${VERSION}.tar"
+if [[ "${TARGET}" == "backend" || "${TARGET}" == "both" ]]; then
+  BACKEND_TAR="./deploy/dondff-backend_${VERSION}.tar"
+  echo "==> Saving backend image to tar file"
+  docker save -o "${BACKEND_TAR}" "${BACKEND_IMAGE}"
+fi
 
-echo "==> Saving images to tar files"
-docker save -o "${BACKEND_TAR}"   "${BACKEND_IMAGE}"
-docker save -o "${FRONTEND_TAR}"  "${FRONTEND_IMAGE}"
+if [[ "${TARGET}" == "frontend" || "${TARGET}" == "both" ]]; then
+  FRONTEND_TAR="./deploy/dondff-frontend_${VERSION}.tar"
+  echo "==> Saving frontend image to tar file"
+  docker save -o "${FRONTEND_TAR}" "${FRONTEND_IMAGE}"
+fi
 
 echo "==> Copying image files to server: ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}"
 ssh "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p ${REMOTE_DIR}"
 
-scp "${BACKEND_TAR}"  "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
-scp "${FRONTEND_TAR}" "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
+if [[ "${TARGET}" == "backend" || "${TARGET}" == "both" ]]; then
+  scp "${BACKEND_TAR}" "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
+fi
+
+if [[ "${TARGET}" == "frontend" || "${TARGET}" == "both" ]]; then
+  scp "${FRONTEND_TAR}" "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
+fi
 
 echo "==> Done!"
-echo "Now SSH to your server and run: docker/dondff/load-images-and-up.sh ${VERSION}"
+echo "Now SSH to your server and run: docker/dondff/load-images-and-up.sh ${TARGET} ${VERSION}"
