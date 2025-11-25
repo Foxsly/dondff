@@ -316,11 +316,12 @@ const Entries = ({leagueId, season, week, actualWeek}) => {
       const updatedEntries = entries.map((entry) => {
         const rbId = entry.lineUp?.RB?.playerId;
         const wrId = entry.lineUp?.WR?.playerId;
+        //TODO should the type in the JSON response just be a number to avoid this type coercion?
         const rb = finalStats.find(
-          (player) => player.player_id === rbId
+          (player) => Number(player.player_id) === rbId
         );
         const wr = finalStats.find(
-          (player) => player.player_id === wrId
+          (player) => Number(player.player_id) === wrId
         );
 
         const rbScore =
