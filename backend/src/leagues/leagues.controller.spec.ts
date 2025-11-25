@@ -126,7 +126,7 @@ describe('LeaguesController', () => {
     it('should return league teams', () => {
       const teams = [{ teamId: 'team1', leagueId: 'uuid1', name: 'T1' }] as any;
       service.getLeagueTeams.mockReturnValue(teams);
-      expect(controller.getLeagueTeams('uuid1')).toBe(teams);
+      expect(controller.getLeagueTeams('uuid1', 2025, 1)).toBe(teams);
     });
   });
 });

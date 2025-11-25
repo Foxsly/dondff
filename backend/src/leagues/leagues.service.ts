@@ -86,7 +86,17 @@ export class LeaguesService {
     return found;
   }
 
-  async getLeagueTeams(leagueId: string): Promise<ITeam[]> {
-    return await this.leaguesRepository.findLeagueTeams(leagueId);
+  async getLeagueTeams(leagueId: string, season?: number, week?: number): Promise<ITeam[]> {
+    let teams = await this.leaguesRepository.findLeagueTeams(leagueId);
+    return Array.from(teams).filter((team) => {
+      let matches = true;
+      if(season) {
+        matches = matches && team.seasonYear == season;
+      }
+      if(week) {
+        matches = matches && team.week == week;
+      }
+      return matches
+    });
   }
 }

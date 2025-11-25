@@ -1,6 +1,6 @@
-import { Controller, Body } from '@nestjs/common';
+import { Controller, Body, Query } from '@nestjs/common';
 import { LeaguesService } from './leagues.service';
-import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
+import { TypedBody, TypedParam, TypedRoute, TypedQuery } from '@nestia/core';
 import type {
   AddLeagueUserDto,
   ILeagueUser,
@@ -78,8 +78,10 @@ export class LeaguesController {
    * Get all teams/entries for a league
    */
   @TypedRoute.Get(':id/teams')
-  getLeagueTeams(@TypedParam('id') leagueId: string): Promise<ITeam[]> {
-    return this.leaguesService.getLeagueTeams(leagueId);
+  getLeagueTeams(@TypedParam('id') leagueId: string,
+                 @Query('season') season: number,
+                 @Query('week') week: number): Promise<ITeam[]> {
+    return this.leaguesService.getLeagueTeams(leagueId, season, week);
   }
 
   /**

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { getCurrentUser } from "../api/auth";
+import React, {useEffect, useState} from "react";
+import {Link} from "react-router-dom";
+import {getCurrentUser} from "../api/auth";
 
 const API_BASE =
   process.env.REACT_APP_API_BASE ||
@@ -11,7 +11,7 @@ function roundToTwo(number) {
   return Math.round(number * 100) / 100;
 }
 
-const Entries = ({ leagueId, season, week, actualWeek }) => {
+const Entries = ({leagueId, season, week, actualWeek}) => {
   const [user, setUser] = useState(null);
   const [entries, setEntries] = useState([]);
   const [members, setMembers] = useState([]);
@@ -49,7 +49,7 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
         // - TeamsController.findOne         => GET /teams/:id
         // - LeaguesController.findLeagueUsers => GET /leagues/:id/users
         const [teamsRes, membersRes, rbProjRes, wrProjRes] = await Promise.all([
-          fetch(`${API_BASE}/leagues/${leagueId}/teams`, {
+          fetch(`${API_BASE}/leagues/${leagueId}/teams?season=${season}&week=${week}`, {
             credentials: "include",
           }),
           fetch(`${API_BASE}/leagues/${leagueId}/users`, {
@@ -124,72 +124,25 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
 
         if (cancelled) return;
 
-        setMembers(Array.isArray(membersData) ? membersData : []);
-
-        const allTeams = Array.isArray(teamsData) ? teamsData : [];
-
-        // Filter to teams that belong to this league + season + week
-        // using the concrete ITeam shape:
-        //   teamId: string;
-        //   leagueId: string;
-        //   userId: string;
-        //   seasonYear: number;
-        //   week: number;
-        const filteredTeams = allTeams.filter((team) => {
-          const matchesLeague =
-            team.leagueId &&
-            String(team.leagueId) === String(leagueId);
-
-          const matchesSeason =
-            season != null &&
-            season !== "" &&
-            Number(team.seasonYear) === Number(season);
-
-          const matchesWeek =
-            week != null &&
-            week !== "" &&
-            Number(team.week) === Number(week);
-
-          return matchesLeague && matchesSeason && matchesWeek;
-        });
-
-        // For each filtered team, call TeamsController.findOne to get full details.
-        const detailedTeams = await Promise.all(
-          filteredTeams.map(async (team) => {
-            const teamId = team.id || team.teamId || team.team_id;
-            if (!teamId) return team;
-
-            try {
-              const res = await fetch(`${API_BASE}/teams/${teamId}`, {
-                credentials: "include",
-              });
-              if (!res.ok) {
-                console.warn(
-                  `Failed to load team details for ${teamId} (status ${res.status})`
-                );
-                return team;
-              }
-              const fullTeam = await res.json();
-              return fullTeam || team;
-            } catch (err) {
-              console.error(
-                `Error loading team details for ${teamId}`,
-                err
-              );
-              return team;
-            }
-          })
-        );
-
-        // Derive "entries" from teams. We treat each team as a weekly entry.
-        const derivedEntries = await Promise.all(detailedTeams.map(async (team) => {
-          const memberRes = await fetch(`${API_BASE}/users/${team.userId}`, {
+        // Build out a more detailed members list
+        const fullMembers = await Promise.all(membersData.map(async (leagueMember) => {
+          const memberRes = await fetch(`${API_BASE}/users/${leagueMember.userId}`, {
             credentials: "include",
           });
           const member = await memberRes.json();
-          const ownerEmail =
-            member.name ||
-            null;
+          return {
+            ...leagueMember,
+            user: member
+          }
+        }));
+
+        setMembers(fullMembers);
+
+        const teams = Array.isArray(teamsData) ? teamsData : [];
+
+        // Derive "entries" from teams. We treat each team as a weekly entry.
+        const derivedEntries = teams.map((team) => {
+          const member = fullMembers.find(user => user.userId === team.userId);
 
           // Try to infer a lineup shape similar to the old Firestore docs
           //TODO this won't exist?
@@ -203,10 +156,8 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
           const rb = team.players.find(player => player.position === 'RB') || null;
           const wr = team.players.find(player => player.position === 'WR') || null;
 
-          const rbId =
-            (rb && (rb.playerId)) || null;
-          const wrId =
-            (wr && (wr.playerId)) || null;
+          const rbId = (rb && (rb.playerId)) || null;
+          const wrId = (wr && (wr.playerId)) || null;
 
           const rbProjection = rbId
             ? rbProjections.get(String(rbId)) ?? 0
@@ -229,9 +180,9 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
             null;
 
           return {
-            id: team.id || team.teamId || team.team_id || ownerEmail,
-            name: ownerEmail,
-            email: ownerEmail,
+            ...team,
+            name: member.name,
+            email: member.email,
             lineUp: {
               RB: rbWithProjection,
               WR: wrWithProjection,
@@ -239,7 +190,7 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
             },
             finalScore,
           };
-        }));
+        });
 
         setEntries(derivedEntries);
       } catch (err) {
@@ -279,14 +230,12 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
   };
 
   const membersWithEntries = new Set(
-    (entries ?? []).map(
-      (entry) => entry.name || entry.userEmail || entry.email
-    )
+    (entries ?? []).map((entry) => entry.userId)
   );
+
   const unplayedMembers =
     members?.filter((member) => {
-      const key = member.email || member.userEmail || member.uid;
-      return key && !membersWithEntries.has(key);
+      return member.userId && !membersWithEntries.has(member.userId);
     }) ?? [];
 
   const hasEntry = !!(entries ?? []).some(
@@ -294,12 +243,8 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
       entry.name === user?.name
   );
 
-  const currentMember =
-    members?.find(
-      (member) =>
-        member.email === user?.email ||
-        member.userEmail === user?.email
-    ) ?? null;
+  const currentMember = members?.find((member) => member.userId === user?.userId) ?? null;
+
   const isAdmin = currentMember?.role === "admin";
 
   const toggleUid = (uid) => {
@@ -326,11 +271,13 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
 
   const showResults = !isCurrentWeek && allHaveFinal;
 
-  function logStuff () {
+  function logStuff() {
     console.log(entries);
     console.log(hasEntry);
     console.log(user);
     console.log(unplayedMembers);
+    console.log(isAdmin);
+    console.log(members);
   }
 
   const projectedTotal = (entry) =>
@@ -342,8 +289,8 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
       const rbUrl = `${API_BASE}/sleeper/stats/${season}/${week}?position=RB`;
       const wrUrl = `${API_BASE}/sleeper/stats/${season}/${week}?position=WR`;
       const [rbResponse, wrResponse] = await Promise.all([
-        fetch(rbUrl, { credentials: "include" }),
-        fetch(wrUrl, { credentials: "include" }),
+        fetch(rbUrl, {credentials: "include"}),
+        fetch(wrUrl, {credentials: "include"}),
       ]);
 
       if (!rbResponse.ok || !wrResponse.ok) {
@@ -408,7 +355,7 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
     }
   };
 
-  function ResultsTable({ entries }) {
+  function ResultsTable({entries}) {
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full text-left border border-[#3a465b]">
@@ -468,7 +415,7 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
     );
   }
 
-  function ProjectionsTable({ entries }) {
+  function ProjectionsTable({entries}) {
     console.log(entries);
     return (
       <div className="overflow-x-auto">
@@ -534,9 +481,9 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
   return (
     <div className="space-y-4">
       {showResults ? (
-        <ResultsTable entries={sortedEntries} />
+        <ResultsTable entries={sortedEntries}/>
       ) : (
-        <ProjectionsTable entries={sortedEntries} />
+        <ProjectionsTable entries={sortedEntries}/>
       )}
       {logStuff()}
       {entries &&
@@ -560,15 +507,15 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
         <>
           <div className="space-y-4">
             {unplayedMembers.map((member) => (
-              <div key={member.email || member.userEmail}>
+              <div key={member.user.name}>
                 <input
                   type="checkbox"
                   className="mr-2"
                   onChange={() =>
-                    toggleUid(member.email || member.userEmail)
+                    toggleUid(member.userId)
                   }
                 />
-                {member.email || member.userEmail}
+                {member.user.name}
               </div>
             ))}
             <Link
