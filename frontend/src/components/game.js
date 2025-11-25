@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback} from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { getPlayers, generateCases } from './util';
-import { getCurrentUser } from "../api/auth";
+import React, {useEffect, useState, useCallback} from 'react';
+import {useLocation, useNavigate} from 'react-router-dom';
+import {getPlayers, generateCases} from './util';
+import {getCurrentUser} from "../api/auth";
 
 const API_BASE =
   process.env.REACT_APP_API_BASE ||
@@ -9,31 +9,31 @@ const API_BASE =
   "http://localhost:3001";
 
 // Game component that can accept a specific uid or default to the current user
-const Game = ({ teamUser, onComplete }) => {
-  const { leagueId, season, week } = useLocation().state
-  const navigate = useNavigate()
+const Game = ({teamUser, onComplete}) => {
+  const {leagueId, season, week} = useLocation().state;
+  const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(teamUser.user);
-  const [currentName, setCurrentName] = useState(teamUser.user.name)
-  const [cases, setCases] = useState(null)
-  const [caseSelected, setCaseSelected] = useState(null)
-  const [gameCases, setGameCases] = useState(null)
-  const [round, setRound] = useState(0)
-  const [thinking, setThinking] = useState(false)
-  const [removedCases, setRemovedCases] = useState(null)
-  const [offer, setOffer] = useState(null)
-  const [reset, setReset] = useState(false)
-  const [leftovers, setLeftovers] = useState(null)
-  const [displayCases, setDisplayCases] = useState(null)
-  const [finished, setFinished] = useState(false)
-  const [midway, setMidway] = useState(false)
-  const [type, setType] = useState("RB")
-  const [limit, setLimit] = useState(65)
-  const [pool, setPool] = useState([])
+  const [currentName, setCurrentName] = useState(teamUser.user.name);
+  const [cases, setCases] = useState(null);
+  const [caseSelected, setCaseSelected] = useState(null);
+  const [gameCases, setGameCases] = useState(null);
+  const [round, setRound] = useState(0);
+  const [thinking, setThinking] = useState(false);
+  const [removedCases, setRemovedCases] = useState(null);
+  const [offer, setOffer] = useState(null);
+  const [reset, setReset] = useState(false);
+  const [leftovers, setLeftovers] = useState(null);
+  const [displayCases, setDisplayCases] = useState(null);
+  const [finished, setFinished] = useState(false);
+  const [midway, setMidway] = useState(false);
+  const [type, setType] = useState("RB");
+  const [limit, setLimit] = useState(65);
+  const [pool, setPool] = useState([]);
   const [lineUp, setLineUp] = useState({
-    RB: { name: "awaiting game..." },
-    WR: { name: "awaiting game..." },
-  })
-  const [resetUsed, setResetUsed] = useState({ RB: false, WR: false })
+    RB: {name: "awaiting game..."},
+    WR: {name: "awaiting game..."},
+  });
+  const [resetUsed, setResetUsed] = useState({RB: false, WR: false});
 
   useEffect(() => {
     const loadUserAndName = () => {
@@ -49,16 +49,17 @@ const Game = ({ teamUser, onComplete }) => {
     };
 
     loadUserAndName();
-  }, [teamUser, currentUser, leagueId])
+  }, [teamUser, currentUser, leagueId]);
 
   const buildCases = useCallback(async () => {
-    setCases(generateCases(pool, 10))
-  }, [pool])
+    setCases(generateCases(pool, 10));
+  }, [pool]);
 
   const buildDisplayCases = () => {
-    let copy = [...cases]
+    let copy = [...cases];
+
     function shuffle(array) {
-      let currentIndex = array.length,  randomIndex;
+      let currentIndex = array.length, randomIndex;
 
       // While there remain elements to shuffle.
       while (currentIndex !== 0) {
@@ -74,223 +75,224 @@ const Game = ({ teamUser, onComplete }) => {
 
       return array;
     }
-    shuffle(copy)
-    setDisplayCases(copy)
-  }
+
+    shuffle(copy);
+    setDisplayCases(copy);
+  };
 
   const buildLeftovers = async () => {
     const genLeftovers = (arr) => {
       //console.log("genLeftovers fired, state is gonna set")
-      let copyPool = [...pool]
-      let copyCases = arr
+      let copyPool = [...pool];
+      let copyCases = arr;
 
-      for(let item of copyCases) {
+      for (let item of copyCases) {
         copyPool = copyPool.filter((player) => {
           if (player.name !== item.name) {
-            return player
+            return player;
           }
-        })
+        });
       }
 
-      return copyPool
-    }
-    const realLeftovers = await genLeftovers(cases)
+      return copyPool;
+    };
+    const realLeftovers = await genLeftovers(cases);
     //console.log("leftover cases generated: ", realLeftovers)
-    setLeftovers(realLeftovers)
+    setLeftovers(realLeftovers);
 
-  }
+  };
 
   const removeOfferFromLeftovers = (offer) => {
     let offerToRemoveIndex = leftovers.findIndex(player => player.playerId == offer.playerId);
     if (offerToRemoveIndex !== -1) {
       leftovers.splice(offerToRemoveIndex, 1);
     }
-  }
+  };
 
   const resetGameHandler = () => {
     resetGame(true, type);
   };
 
   const resetGame = (consume = true, position) => {
-    if (consume && (caseSelected || resetUsed[position])) return
+    if (consume && (caseSelected || resetUsed[position])) return;
     if (consume) {
       resetUsed[position] = true;
       setResetUsed(resetUsed);
     }
-    setReset(true)
-    setMidway(false)
-    setLineUp(prev => ({ ...prev, [position]: { name: "awaiting game..." } }))
-  }
+    setReset(true);
+    setMidway(false);
+    setLineUp(prev => ({...prev, [position]: {name: "awaiting game..."}}));
+  };
 
   const removeCases = (arr, n) => {
     var result = new Array(n),
-        len = arr.length,
-        taken = new Array(len);
+      len = arr.length,
+      taken = new Array(len);
     if (n > len)
-        throw new RangeError("getRandom: more elements taken than available");
+      throw new RangeError("getRandom: more elements taken than available");
     while (n--) {
-        var x = Math.floor(Math.random() * len);
-        result[n] = arr[x in taken ? taken[x] : x];
-        taken[x] = --len in taken ? taken[len] : len;
+      var x = Math.floor(Math.random() * len);
+      result[n] = arr[x in taken ? taken[x] : x];
+      taken[x] = --len in taken ? taken[len] : len;
     }
-    return result
-  }
+    return result;
+  };
 
   const selectCase = (box) => {
-    setCaseSelected(box)
-    const copy = [...cases]
-    const index = copy.indexOf(box)
-    copy.splice(index, 1)
-    setGameCases(copy)
-    setRound(1)
-  }
+    setCaseSelected(box);
+    const copy = [...cases];
+    const index = copy.indexOf(box);
+    copy.splice(index, 1);
+    setGameCases(copy);
+    setRound(1);
+  };
 
   const elimCases = useCallback(async (num) => {
-    setThinking(true)
-    const latestCases = gameCases
-    const removed = removeCases(latestCases, num)
-    setThinking(false)
+    setThinking(true);
+    const latestCases = gameCases;
+    const removed = removeCases(latestCases, num);
+    setThinking(false);
     if (removedCases) {
       for (let item of removed) {
-        setRemovedCases(removedCases => [...removedCases, item])
+        setRemovedCases(removedCases => [...removedCases, item]);
       }
     } else {
-      setRemovedCases(removed)
+      setRemovedCases(removed);
     }
-    let copyOrigCases = cases
-    let copyDisplayCases = displayCases
-    for(let i= 0; i<removed.length; i++) {
-      let copy = gameCases
-      let index = copy.indexOf(removed[i])
-      copy.splice(index, 1)
+    let copyOrigCases = cases;
+    let copyDisplayCases = displayCases;
+    for (let i = 0; i < removed.length; i++) {
+      let copy = gameCases;
+      let index = copy.indexOf(removed[i]);
+      copy.splice(index, 1);
       //console.log("found item at index: ", index)
-      await setGameCases(copy)
+      await setGameCases(copy);
       //console.log("intercepting...new game cases are: ", gameCases)
 
 
       copyOrigCases = copyOrigCases.map((box) => {
-        if(box.name === removed[i].name) {
-          return {...box, opened: true}
+        if (box.name === removed[i].name) {
+          return {...box, opened: true};
         }
-        return box
-      })
+        return box;
+      });
 
       copyDisplayCases = copyDisplayCases.map((box) => {
-        if(box.name === removed[i].name) {
-          return {...box, opened: true}
+        if (box.name === removed[i].name) {
+          return {...box, opened: true};
         }
-        return box
-      })
+        return box;
+      });
 
 
     }
     //console.log("the new copy of cases should be:", copyOrigCases)
-    setCases(copyOrigCases)
-    setDisplayCases(copyDisplayCases)
+    setCases(copyOrigCases);
+    setDisplayCases(copyDisplayCases);
 
-    if(round <= 3) {
-    buildOffer(gameCases, caseSelected)
+    if (round <= 3) {
+      buildOffer(gameCases, caseSelected);
     }
-  }, [gameCases, removedCases, round, cases, displayCases, caseSelected])
+  }, [gameCases, removedCases, round, cases, displayCases, caseSelected]);
 
   const buildOffer = async (arr, toAdd) => {
-    const latestCases = [...arr, toAdd]
-    const len = latestCases.length
+    const latestCases = [...arr, toAdd];
+    const len = latestCases.length;
     //console.log("the cases used for calculating offer are: ", latestCases)
     let offer = latestCases.reduce((prev, curr) => {
-      return prev + Math.pow(curr.points, 2)
-    }, 0)
-    offer = Math.sqrt(offer/len)
-    offer = Math.round(offer * 100) / 100
-    console.log(offer)
+      return prev + Math.pow(curr.points, 2);
+    }, 0);
+    offer = Math.sqrt(offer / len);
+    offer = Math.round(offer * 100) / 100;
+    console.log(offer);
     //console.log("leftovers to select offer from", leftovers)
 
     const getClosestPoints = (data, target) =>
       data.reduce((acc, obj) =>
         Math.abs(target - obj.points) < Math.abs(target - acc.points) ? obj : acc
-    );
-    const playerOffer = getClosestPoints(leftovers, offer)
+      );
+    const playerOffer = getClosestPoints(leftovers, offer);
     //console.log("your selected case is: ", caseSelected)
-    console.log("the player to be offered is: ", playerOffer)
+    console.log("the player to be offered is: ", playerOffer);
 
-    setOffer(playerOffer)
-  }
+    setOffer(playerOffer);
+  };
 
   const cleanUpCaseDisplay = useCallback(async (lastRemaining) => {
-    let copyCases = cases
-    let copyDisplayCases = displayCases
+    let copyCases = cases;
+    let copyDisplayCases = displayCases;
 
-      copyCases = copyCases.map((box) => {
-        if(box.name === lastRemaining.name) {
-            return {...box, opened: true}
-        }
-          return box
-        })
+    copyCases = copyCases.map((box) => {
+      if (box.name === lastRemaining.name) {
+        return {...box, opened: true};
+      }
+      return box;
+    });
 
-      copyDisplayCases = copyDisplayCases.map((box) => {
-        if(box.name === lastRemaining.name) {
-          return {...box, opened: true}
-        }
-        return box
-      })
+    copyDisplayCases = copyDisplayCases.map((box) => {
+      if (box.name === lastRemaining.name) {
+        return {...box, opened: true};
+      }
+      return box;
+    });
 
-    setCases(copyCases)
-    setDisplayCases(copyDisplayCases)
-  }, [cases, displayCases])
+    setCases(copyCases);
+    setDisplayCases(copyDisplayCases);
+  }, [cases, displayCases]);
 
   const cleanAllCases = useCallback(async (lastRemaining) => {
-    let copyCases = cases
-    let copyDisplayCases = displayCases
+    let copyCases = cases;
+    let copyDisplayCases = displayCases;
 
-      copyCases = copyCases.map((box) => {
-            return {...box, opened: true}
-        })
+    copyCases = copyCases.map((box) => {
+      return {...box, opened: true};
+    });
 
-        copyDisplayCases = copyDisplayCases.map((box) => {
-          return {...box, opened: true}
-        })
+    copyDisplayCases = copyDisplayCases.map((box) => {
+      return {...box, opened: true};
+    });
 
-    setCases(copyCases)
-    setDisplayCases(copyDisplayCases)
-  }, [cases])
+    setCases(copyCases);
+    setDisplayCases(copyDisplayCases);
+  }, [cases]);
 
   const declineOffer = () => {
     removeOfferFromLeftovers(offer);
-    setRound(round + 1)
-  }
+    setRound(round + 1);
+  };
 
   const keep = useCallback(async () => {
-    const lastRemaining = gameCases[0]
-    setRemovedCases(removedCases => [...removedCases, lastRemaining])
-    cleanUpCaseDisplay(lastRemaining)
-    setRound(round + 1)
-  }, [gameCases, round, cases])
+    const lastRemaining = gameCases[0];
+    setRemovedCases(removedCases => [...removedCases, lastRemaining]);
+    cleanUpCaseDisplay(lastRemaining);
+    setRound(round + 1);
+  }, [gameCases, round, cases]);
 
   const swap = useCallback(async () => {
-    const lastRemaining = gameCases[0]
-    const ogSelected = caseSelected
-    setRemovedCases(removedCases => [...removedCases, ogSelected])
-    setCaseSelected(lastRemaining)
-    cleanUpCaseDisplay(ogSelected)
-    setRound(round + 1)
-  }, [gameCases, round, cases])
+    const lastRemaining = gameCases[0];
+    const ogSelected = caseSelected;
+    setRemovedCases(removedCases => [...removedCases, ogSelected]);
+    setCaseSelected(lastRemaining);
+    cleanUpCaseDisplay(ogSelected);
+    setRound(round + 1);
+  }, [gameCases, round, cases]);
 
   const acceptOffer = () => {
-    const accepted = offer
-    setRemovedCases(cases)
-    setCaseSelected(accepted)
-    cleanAllCases()
-    setRound(5)
-  }
+    const accepted = offer;
+    setRemovedCases(cases);
+    setCaseSelected(accepted);
+    cleanAllCases();
+    setRound(5);
+  };
 
   const swapPosition = () => {
-    setPool([])
-    setType("WR")
+    setPool([]);
+    setType("WR");
     console.log("TYPE", type);
-    setLimit(95)
-    resetGame(false, "WR")
-    setFinished(true)
-  }
+    setLimit(95);
+    resetGame(false, "WR");
+    setFinished(true);
+  };
 
   const submitLineup = async () => {
     try {
@@ -358,7 +360,7 @@ const Game = ({ teamUser, onComplete }) => {
         try {
           const createRes = await fetch(`${API_BASE}/teams`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {"Content-Type": "application/json"},
             credentials: "include",
             body: JSON.stringify({
               leagueId,
@@ -399,7 +401,7 @@ const Game = ({ teamUser, onComplete }) => {
         };
         const res = await fetch(`${API_BASE}/teams/${teamId}/players`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {"Content-Type": "application/json"},
           credentials: "include",
           body: JSON.stringify(dto),
         });
@@ -425,111 +427,110 @@ const Game = ({ teamUser, onComplete }) => {
   };
 
   useEffect(() => {
-    if(type === "WR") {
-      setLimit(95)
+    if (type === "WR") {
+      setLimit(95);
     }
-    if(type === "RB") {
-      setLimit(65)
-      console.log("position group is ", type)
+    if (type === "RB") {
+      setLimit(65);
+      console.log("position group is ", type);
     }
-  }, [type])
-
+  }, [type]);
 
 
   useEffect(() => {
-    if(limit) {
+    if (limit) {
       getPlayers(week, type, season, limit, setPool);
     }
-  }, [limit])
+  }, [limit]);
 
   useEffect(() => {
-    if(pool.length > 0 && !cases) {
-      console.log("pool when cases try to build", pool)
-      buildCases()
+    if (pool.length > 0 && !cases) {
+      console.log("pool when cases try to build", pool);
+      buildCases();
 
     }
-  }, [cases, pool])
-
-  useEffect(() => {
-    if(cases && leftovers === null) {
-      buildLeftovers()
-    }
-  }, [cases, leftovers])
+  }, [cases, pool]);
 
   useEffect(() => {
-    if(cases && !displayCases) {
-      buildDisplayCases()
+    if (cases && leftovers === null) {
+      buildLeftovers();
     }
-  }, [cases, displayCases])
+  }, [cases, leftovers]);
 
   useEffect(() => {
-    if(round === 1) {
-      elimCases(3)
-      console.log("eliminating first 3 fired. AND STOP TRYING TO CHEAT!")
+    if (cases && !displayCases) {
+      buildDisplayCases();
     }
-    if(round === 2) {
-      elimCases(2)
+  }, [cases, displayCases]);
+
+  useEffect(() => {
+    if (round === 1) {
+      elimCases(3);
+      console.log("eliminating first 3 fired. AND STOP TRYING TO CHEAT!");
+    }
+    if (round === 2) {
+      elimCases(2);
       //console.log("eliminating second 2 fired")
     }
-    if(round === 3) {
-      elimCases(2)
+    if (round === 3) {
+      elimCases(2);
       //console.log("eliminating next 2 fired")
     }
-    if(round === 4) {
-      elimCases(1)
+    if (round === 4) {
+      elimCases(1);
       //console.log("eliminating last fired")
     }
 
-    if(round === 5) {
-      setLineUp(prev => ({ ...prev, [type]: caseSelected }))
-      setMidway(true)
+    if (round === 5) {
+      setLineUp(prev => ({...prev, [type]: caseSelected}));
+      setMidway(true);
     }
-  }, [round, caseSelected, type])
+  }, [round, caseSelected, type]);
 
   useEffect(() => {
-    if(reset) {
-      setLeftovers(null)
-      setCases(null)
-      setCaseSelected(null)
-      setGameCases(null)
-      setRound(0)
-      setThinking(false)
-      setRemovedCases(null)
-      setOffer(null)
-      setDisplayCases(null)
-      setReset(false)
+    if (reset) {
+      setLeftovers(null);
+      setCases(null);
+      setCaseSelected(null);
+      setGameCases(null);
+      setRound(0);
+      setThinking(false);
+      setRemovedCases(null);
+      setOffer(null);
+      setDisplayCases(null);
+      setReset(false);
 
     }
-  }, [reset])
+  }, [reset]);
 
   const render = () => {
-    if(cases && caseSelected) {
-      return(
+    if (cases && caseSelected) {
+      return (
         <>
-        { cases.map((box,index) => ( box.opened === true ?
-          <div className="box opened" key={index}>
-            {box.number}<br />
-            {box.name}({box.points})
-          </div>
-          :
-          <div className="box" key={index}>
-            <span className="num">{box.number}</span>
-          </div>
-        ))}
+          {cases.map((box, index) => (box.opened === true ?
+              <div className="box opened" key={index}>
+                {box.number}<br/>
+                {box.name}({box.points})
+              </div>
+              :
+              <div className="box" key={index}>
+                <span className="num">{box.number}</span>
+              </div>
+          ))}
         </>
-      )
-    } else if(cases) {
-      return(
+      );
+    } else if (cases) {
+      return (
         <>
-        { cases.map((box,index) =>
-          <div className="box" key={index} onClick={() => selectCase(cases[index])}>
-            <span className="num">{box.number}</span>
-          </div>
-        )}
+          {cases.map((box, index) =>
+            <div className="box" key={index} onClick={() => selectCase(cases[index])}>
+              <span className="num">{box.number}</span>
+            </div>
+          )}
         </>
-      )
+      );
     }
-  }
+  };
 
   const renderCaseDisplay = () => {
     if (displayCases) {
@@ -537,59 +538,62 @@ const Game = ({ teamUser, onComplete }) => {
         <div className="display-cases">
           Players in cases:
           {displayCases.map((item, index) => (
-            item.opened?
-            <div className="list-player eliminated">{item.name} <span className="status">{item.team} {item.status}</span><br />
-            <span className="proj">Proj: {item.points} Opp: {item.opponent}</span></div>
-            :
-            <div className="list-player">{item.name} <span className="status">{item.team} {item.status}</span><br />
-            <span className="proj">Proj: {item.points} Opp: {item.opponent}</span></div>
-          )
+              item.opened ?
+                <div className="list-player eliminated">{item.name} <span
+                  className="status">{item.team} {item.status}</span><br/>
+                  <span className="proj">Proj: {item.points} Opp: {item.opponent}</span></div>
+                :
+                <div className="list-player">{item.name} <span className="status">{item.team} {item.status}</span><br/>
+                  <span className="proj">Proj: {item.points} Opp: {item.opponent}</span></div>
+            )
           )}
         </div>
-      )
+      );
     }
-  }
+  };
 
   const renderInfo = () => {
-    if(!caseSelected) {
+    if (!caseSelected) {
       return (
         <>
           <div>To begin select a case.</div>
           {renderCaseDisplay()}
         </>
-      )
+      );
     }
-      if(caseSelected) {
+    if (caseSelected) {
       return (
         <>
           <div className="case-selected-text">You have selected case #{caseSelected.number}</div>
-          {thinking? <div>Eliminating Cases...</div> : <div></div>}
+          {thinking ? <div>Eliminating Cases...</div> : <div></div>}
 
-          {!thinking && displayCases?
+          {!thinking && displayCases ?
             <>{renderCaseDisplay()}</> : null
           }
         </>
-        )
-      }
+      );
+    }
 
-  }
+  };
 
   const renderActions = () => {
-    if(offer && round <= 3) {
+    if (offer && round <= 3) {
       return (
         <div className="action-box">
           <div className="offer-box">The Banker offers you:
-            <div className="list-player">{offer.name} <span className="status">{offer.team} {offer.status}</span><br />
-            <span className="proj">Proj: {offer.points} Opp: {offer.opponent}</span></div>
+            <div className="list-player">{offer.name} <span className="status">{offer.team} {offer.status}</span><br/>
+              <span className="proj">Proj: {offer.points} Opp: {offer.opponent}</span></div>
           </div>
           <div className="action-buttons">
             <button className="btn" onClick={acceptOffer}>Accept</button>
             <button className="btn" onClick={declineOffer}>Decline</button>
-            <button className="btn" onClick={resetGameHandler} disabled={caseSelected !== null || resetUsed[type]}>Reset</button>
+            <button className="btn" onClick={resetGameHandler}
+                    disabled={caseSelected !== null || resetUsed[type]}>Reset
+            </button>
           </div>
         </div>
-      )
-    } else if (offer && round === 4){
+      );
+    } else if (offer && round === 4) {
       return (
         <div className="action-box">
           <div className="offer-box">
@@ -599,32 +603,40 @@ const Game = ({ teamUser, onComplete }) => {
           <div className="action-buttons">
             <button className="btn" onClick={keep}>Keep</button>
             <button className="btn" onClick={swap}>Swap</button>
-            <button className="btn" onClick={resetGameHandler} disabled={caseSelected !== null || resetUsed[type]}>Reset</button>
+            <button className="btn" onClick={resetGameHandler}
+                    disabled={caseSelected !== null || resetUsed[type]}>Reset
+            </button>
           </div>
         </div>
-      )
+      );
     } else if (offer && round === 5) {
       return (
         <div className="action-box">
           <div className="offer-box">
-            {caseSelected.number? <p>Your Final case is case#{caseSelected.number}</p> : <p>You accepted the Banker's offer.</p> }
+            {caseSelected.number ? <p>Your Final case is case#{caseSelected.number}</p> :
+              <p>You accepted the Banker's offer.</p>}
             <p>Congratulations!! Your player is {caseSelected.name}. His projected points are {caseSelected.points}</p>
           </div>
           <div className="action-buttons">
-            <button className="btn" onClick={resetGameHandler} disabled={caseSelected !== null || resetUsed[type]}>Reset</button>
-            {midway ? (finished ? <button className="btn" onClick={submitLineup}>Submit Lineup</button> : <button className="btn" onClick={swapPosition}>Switch Position Group</button>) : null}
+            <button className="btn" onClick={resetGameHandler}
+                    disabled={caseSelected !== null || resetUsed[type]}>Reset
+            </button>
+            {midway ? (finished ? <button className="btn" onClick={submitLineup}>Submit Lineup</button> :
+              <button className="btn" onClick={swapPosition}>Switch Position Group</button>) : null}
           </div>
         </div>
-      )
+      );
     } else {
       return (
         <div className="action-buttons">
-            <button className="btn" onClick={resetGameHandler} disabled={caseSelected !== null || resetUsed[type]}>Reset</button>
-            {midway ? (finished ? <button className="btn" onClick={submitLineup}>Submit Lineup</button> : <button className="btn" onClick={swapPosition}>Switch Position Group</button>) : null}
-          </div>
-      )
+          <button className="btn" onClick={resetGameHandler} disabled={caseSelected !== null || resetUsed[type]}>Reset
+          </button>
+          {midway ? (finished ? <button className="btn" onClick={submitLineup}>Submit Lineup</button> :
+            <button className="btn" onClick={swapPosition}>Switch Position Group</button>) : null}
+        </div>
+      );
     }
-  }
+  };
 
   return (
     <>
@@ -646,7 +658,7 @@ const Game = ({ teamUser, onComplete }) => {
         </div>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default Game
+export default Game;
