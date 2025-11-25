@@ -1,10 +1,10 @@
-import React, { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, {useState} from "react";
+import {useLocation, useNavigate} from "react-router-dom";
 import Game from "./game";
 
 const GroupGame = () => {
   const navigate = useNavigate();
-  const { leagueId, season, week, participants } = useLocation().state;
+  const {participants} = useLocation().state;
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const handleComplete = () => {
