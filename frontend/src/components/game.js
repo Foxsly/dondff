@@ -11,8 +11,8 @@ const API_BASE =
 const Game = ({teamUser, onComplete}) => {
   const {leagueId, season, week} = useLocation().state;
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState(teamUser.user);
-  const [currentName, setCurrentName] = useState(teamUser.user.name);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [currentName, setCurrentName] = useState(null);
   const [cases, setCases] = useState(null);
   const [caseSelected, setCaseSelected] = useState(null);
   const [gameCases, setGameCases] = useState(null);
@@ -35,13 +35,16 @@ const Game = ({teamUser, onComplete}) => {
   const [resetUsed, setResetUsed] = useState({RB: false, WR: false});
 
   useEffect(() => {
-    const loadUserAndName = () => {
+    const loadUserAndName = async () => {
       try {
-        console.log(teamUser);
-        const effectiveUid = teamUser.userId;
-        if (!effectiveUid) return;
-        setCurrentUser(teamUser.user);
-        setCurrentName(teamUser.user.name);
+        if(teamUser) {
+          setCurrentUser(teamUser.user);
+          setCurrentName(teamUser.user.name);
+        } else {
+          const currentUser = await getCurrentUser();
+          setCurrentUser(currentUser);
+          setCurrentName(currentUser.name);
+        }
       } catch (err) {
         console.error("Failed to load current user/name for game", err);
       }
@@ -395,7 +398,7 @@ const Game = ({teamUser, onComplete}) => {
         const dto = {
           teamId,
           position,
-          playerId: Number(player.playerId),
+          playerId: player.playerId,
           playerName: player.name,
         };
         const res = await fetch(`${API_BASE}/teams/${teamId}/players`, {
