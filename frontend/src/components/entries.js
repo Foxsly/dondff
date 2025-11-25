@@ -291,7 +291,7 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
 
   const hasEntry = !!(entries ?? []).some(
     (entry) =>
-      (entry.name || entry.userEmail || entry.email) === user?.email
+      entry.name === user?.name
   );
 
   const currentMember =
@@ -330,6 +330,7 @@ const Entries = ({ leagueId, season, week, actualWeek }) => {
     console.log(entries);
     console.log(hasEntry);
     console.log(user);
+    console.log(unplayedMembers);
   }
 
   const projectedTotal = (entry) =>
