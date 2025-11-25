@@ -4,7 +4,7 @@ import { Selectable } from 'kysely';
 export interface ITeamPlayer {
   teamId: string & tags.Format<'uuid'>;
   position: string & tags.Pattern<'^(QB|RB|WR|TE)$'>;
-  playerId: number;
+  playerId: string & tags.MinLength<1>;
   playerName: string & tags.MinLength<1>;
 }
 

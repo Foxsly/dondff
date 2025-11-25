@@ -47,7 +47,7 @@ export const teamPlayerFactory = (
 ): CreateTeamPlayerDto => ({
   teamId: overrides.teamId ?? crypto.randomUUID(),
   position: overrides.position ?? 'QB',
-  playerId: overrides.playerId ?? Math.floor(Math.random() * 10000),
+  playerId: overrides.playerId ?? String(Math.floor(Math.random() * 10000)),
   playerName: overrides.playerName ?? `Player ${Math.random().toString(36).slice(2, 6)}`,
 });
 
