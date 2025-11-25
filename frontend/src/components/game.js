@@ -9,15 +9,11 @@ const API_BASE =
   "http://localhost:3001";
 
 // Game component that can accept a specific uid or default to the current user
-const Game = ({ uid, onComplete }) => {
-
-
+const Game = ({ teamUser, onComplete }) => {
   const { leagueId, season, week } = useLocation().state
   const navigate = useNavigate()
-  const [currentUser, setCurrentUser] = useState(null);
-  const currentUid = uid || currentUser?.id || currentUser?.userId || currentUser?.email;
-  const [currentName, setCurrentName] = useState(currentUid)
-
+  const [currentUser, setCurrentUser] = useState(teamUser.user);
+  const [currentName, setCurrentName] = useState(teamUser.user.name)
   const [cases, setCases] = useState(null)
   const [caseSelected, setCaseSelected] = useState(null)
   const [gameCases, setGameCases] = useState(null)
@@ -40,79 +36,20 @@ const Game = ({ uid, onComplete }) => {
   const [resetUsed, setResetUsed] = useState({ RB: false, WR: false })
 
   useEffect(() => {
-    let cancelled = false;
-
-    const loadUserAndName = async () => {
+    const loadUserAndName = () => {
       try {
-        // Load current user from backend-backed auth
-        const user = await getCurrentUser();
-        if (!cancelled) {
-          setCurrentUser(user || null);
-        }
-
-        const effectiveUid = uid || user?.id || user?.userId || user?.email;
+        console.log(teamUser);
+        const effectiveUid = teamUser.userId;
         if (!effectiveUid) return;
-
-        if (uid) {
-          // Group game: try to resolve a friendly name from the league users API
-          try {
-            const membersRes = await fetch(
-              `${API_BASE}/leagues/${leagueId}/users`,
-              { credentials: "include" }
-            );
-            if (membersRes.ok) {
-              const members = await membersRes.json();
-              const member =
-                Array.isArray(members)
-                  ? members.find((m) => {
-                      const email =
-                        m.email || m.userEmail || m.username || m.name;
-                      const id =
-                        m.id || m.userId || m.uid;
-                      return (
-                        email === effectiveUid ||
-                        id === effectiveUid
-                      );
-                    })
-                  : null;
-              if (!cancelled) {
-                setCurrentName(
-                  member?.displayName ||
-                    member?.name ||
-                    member?.email ||
-                    effectiveUid
-                );
-              }
-            } else if (!cancelled) {
-              setCurrentName(effectiveUid);
-            }
-          } catch (e) {
-            if (!cancelled) {
-              setCurrentName(effectiveUid);
-            }
-          }
-        } else {
-          // Default case: use the backend user shape
-          if (!cancelled) {
-            setCurrentName(
-              user?.name ||
-                user?.fullName ||
-                user?.email ||
-                effectiveUid
-            );
-          }
-        }
+        setCurrentUser(teamUser.user);
+        setCurrentName(teamUser.user.name);
       } catch (err) {
         console.error("Failed to load current user/name for game", err);
       }
     };
 
     loadUserAndName();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [uid, leagueId])
+  }, [teamUser, currentUser, leagueId])
 
   const buildCases = useCallback(async () => {
     setCases(generateCases(pool, 10))
@@ -487,7 +424,6 @@ const Game = ({ uid, onComplete }) => {
     }
   };
 
-
   useEffect(() => {
     if(type === "WR") {
       setLimit(95)
@@ -497,7 +433,7 @@ const Game = ({ uid, onComplete }) => {
       console.log("position group is ", type)
     }
   }, [type])
-  
+
 
 
   useEffect(() => {
@@ -561,17 +497,16 @@ const Game = ({ uid, onComplete }) => {
       setRemovedCases(null)
       setOffer(null)
       setDisplayCases(null)
-      setReset(false) 
-      
+      setReset(false)
+
     }
   }, [reset])
-
 
   const render = () => {
     if(cases && caseSelected) {
       return(
         <>
-        { cases.map((box,index) => ( box.opened === true ? 
+        { cases.map((box,index) => ( box.opened === true ?
           <div className="box opened" key={index}>
             {box.number}<br />
             {box.name}({box.points})
@@ -586,7 +521,7 @@ const Game = ({ uid, onComplete }) => {
     } else if(cases) {
       return(
         <>
-        { cases.map((box,index) => 
+        { cases.map((box,index) =>
           <div className="box" key={index} onClick={() => selectCase(cases[index])}>
             <span className="num">{box.number}</span>
           </div>
@@ -600,14 +535,14 @@ const Game = ({ uid, onComplete }) => {
     if (displayCases) {
       return (
         <div className="display-cases">
-          Players in cases: 
+          Players in cases:
           {displayCases.map((item, index) => (
-            item.opened? 
+            item.opened?
             <div className="list-player eliminated">{item.name} <span className="status">{item.team} {item.status}</span><br />
-            <span className="proj">Proj: {item.points} Opp: {item.opponent}</span></div> 
+            <span className="proj">Proj: {item.points} Opp: {item.opponent}</span></div>
             :
             <div className="list-player">{item.name} <span className="status">{item.team} {item.status}</span><br />
-            <span className="proj">Proj: {item.points} Opp: {item.opponent}</span></div> 
+            <span className="proj">Proj: {item.points} Opp: {item.opponent}</span></div>
           )
           )}
         </div>
@@ -615,10 +550,6 @@ const Game = ({ uid, onComplete }) => {
     }
   }
 
-
-  
-    
-    
   const renderInfo = () => {
     if(!caseSelected) {
       return (
@@ -634,25 +565,25 @@ const Game = ({ uid, onComplete }) => {
           <div className="case-selected-text">You have selected case #{caseSelected.number}</div>
           {thinking? <div>Eliminating Cases...</div> : <div></div>}
 
-          {!thinking && displayCases?     
+          {!thinking && displayCases?
             <>{renderCaseDisplay()}</> : null
           }
         </>
         )
       }
-  
+
   }
 
   const renderActions = () => {
     if(offer && round <= 3) {
       return (
         <div className="action-box">
-          <div className="offer-box">The Banker offers you: 
+          <div className="offer-box">The Banker offers you:
             <div className="list-player">{offer.name} <span className="status">{offer.team} {offer.status}</span><br />
-            <span className="proj">Proj: {offer.points} Opp: {offer.opponent}</span></div> 
+            <span className="proj">Proj: {offer.points} Opp: {offer.opponent}</span></div>
           </div>
           <div className="action-buttons">
-            <button className="btn" onClick={acceptOffer}>Accept</button> 
+            <button className="btn" onClick={acceptOffer}>Accept</button>
             <button className="btn" onClick={declineOffer}>Decline</button>
             <button className="btn" onClick={resetGameHandler} disabled={caseSelected !== null || resetUsed[type]}>Reset</button>
           </div>
@@ -694,8 +625,6 @@ const Game = ({ uid, onComplete }) => {
       )
     }
   }
-    
-  
 
   return (
     <>

@@ -15,7 +15,7 @@ const Entries = ({leagueId, season, week, actualWeek}) => {
   const [user, setUser] = useState(null);
   const [entries, setEntries] = useState([]);
   const [members, setMembers] = useState([]);
-  const [selectedUids, setSelectedUids] = useState([]);
+  const [selectedMembers, setSelectedMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -181,8 +181,8 @@ const Entries = ({leagueId, season, week, actualWeek}) => {
 
           return {
             ...team,
-            name: member.name,
-            email: member.email,
+            name: member.user.name,
+            email: member.user.email,
             lineUp: {
               RB: rbWithProjection,
               WR: wrWithProjection,
@@ -247,12 +247,24 @@ const Entries = ({leagueId, season, week, actualWeek}) => {
 
   const isAdmin = currentMember?.role === "admin";
 
-  const toggleUid = (uid) => {
-    setSelectedUids((prev) =>
-      prev.includes(uid)
-        ? prev.filter((id) => id !== uid)
-        : [...prev, uid]
+  const toggleSelectedMember = (member) => {
+    // const memberExists = selectedMembers.some((selectedMember) => {return selectedMember.userId === member.userId});
+    // if(memberExists) {
+    //   setSelectedMembers(selectedMembers.filter((selectedMember) => selectedMember.userId !== member.userId));
+    // } else {
+    //   setSelectedMembers([...selectedMembers, member]);
+    // }
+
+    setSelectedMembers((currentlySelectedMembers) =>
+      currentlySelectedMembers.some((selectedMember) => {
+        console.log("selectedMember", selectedMember);
+        console.log("member", member);
+        return selectedMember.userId === member.userId
+      })
+        ? currentlySelectedMembers.filter((selectedMember) => selectedMember.userId !== member.userId)
+        : [...currentlySelectedMembers, member]
     );
+    console.log('Selected', selectedMembers);
   };
 
   const sortedEntries = entries
@@ -512,7 +524,7 @@ const Entries = ({leagueId, season, week, actualWeek}) => {
                   type="checkbox"
                   className="mr-2"
                   onChange={() =>
-                    toggleUid(member.userId)
+                    toggleSelectedMember(member)
                   }
                 />
                 {member.user.name}
@@ -524,12 +536,12 @@ const Entries = ({leagueId, season, week, actualWeek}) => {
                 leagueId: leagueId,
                 season: season,
                 week: week,
-                participants: selectedUids,
+                participants: selectedMembers,
               }}
             >
               <button
                 className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80 disabled:opacity-50"
-                disabled={selectedUids.length === 0}
+                disabled={selectedMembers.length === 0}
               >
                 Start Group Game
               </button>

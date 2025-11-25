@@ -18,7 +18,7 @@ const GroupGame = () => {
   return (
     <Game
       key={participants[currentIndex]}
-      uid={participants[currentIndex]}
+      teamUser={participants[currentIndex]}
       onComplete={handleComplete}
     />
   );
