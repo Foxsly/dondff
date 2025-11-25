@@ -14,10 +14,6 @@ RUN npm ci
 # Copy the rest of the source
 COPY . .
 
-# API base for CRA at build-time (can be overridden via build args)
-ARG REACT_APP_API_BASE=http://backend:3001
-ENV REACT_APP_API_BASE=${REACT_APP_API_BASE}
-
 # Create production build (Tailwind + CRA)
 RUN npm run build
 
