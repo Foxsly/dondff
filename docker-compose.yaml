@@ -1,12 +1,12 @@
 services:
-  postgres:
+  dondff-postgres:
     image: postgres:16-alpine
     container_name: dondff-postgres
     #    profiles: [dondff]
     environment:
-      POSTGRES_DB: appdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -21,19 +21,19 @@ services:
       - dondff
 
 
-  backend:
+  dondff-backend:
     image: dondff-backend:latest
     container_name: dondff-backend
     #    profiles: [dondff]
     user: "65532:65532"
     depends_on:
-      postgres:
+      dondff-postgres:
         condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: "3001"
       DB_ENGINE: postgres
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/appdb
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@dondff-postgres:5432/${POSTGRES_DB}
       RUN_SEED: "false"
     ports:
       - "3001:3001"
@@ -48,12 +48,12 @@ services:
       - dondff
       - internal
 
-  frontend:
+  dondff-frontend:
     image: dondff-frontend:latest
     container_name: dondff-frontend
     #    profiles: [dondff]
     depends_on:
-      backend:
+      dondff-backend:
         condition: service_healthy
     environment:
       NODE_ENV: production
