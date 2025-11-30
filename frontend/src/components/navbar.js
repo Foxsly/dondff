@@ -55,13 +55,13 @@ function Navbar() {
         {!user ? (
           <>
             <Link
-              to="/"
+              to="/login"
               className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-bold rounded"
             >
               Sign In
             </Link>
             <Link
-              to="/"
+              to="/login"
               className={
                 'px-4 py-2 border-2 border-emerald-500 text-emerald-500 font-bold rounded ' +
                 'hover:bg-emerald-500 hover:text-gray-900'
