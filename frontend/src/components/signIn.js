@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import React, {useContext, useEffect, useState} from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   getCurrentUser,
   register as registerUser,
   login as loginUser,
-  logout as logoutUser,
 } from '../api/auth';
+import {AuthContext} from "./AuthContext";
 
 const SignUp = () => {
+  const { setUser } = useContext(AuthContext);
   const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
@@ -15,7 +16,6 @@ const SignUp = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [registerError, setRegisterError] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
   const navigate = useNavigate();
@@ -36,7 +36,7 @@ const SignUp = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [setUser]);
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -78,15 +78,6 @@ const SignUp = () => {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await logoutUser();
-    } finally {
-      setUser(null);
-      navigate('/');
-    }
-  };
-
   if (loadingUser) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#020617] text-white">
@@ -94,11 +85,13 @@ const SignUp = () => {
       </div>
     );
   }
+/*
 
   if (user) {
     // If already logged in, redirect to dashboard (or show a small panel)
     return <Navigate to="/dashboard" replace />;
   }
+*/
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#020617]">
@@ -210,15 +203,6 @@ const SignUp = () => {
             </button>
           </form>
         </div>
-
-        {/* Optional: logout button if you decide to show this even on the sign-in page */}
-        {/* <button
-          type="button"
-          className="w-full px-4 py-2 mt-4 text-sm font-medium text-gray-200 border border-gray-700 rounded hover:bg-[#020617]/60"
-          onClick={handleLogout}
-        >
-          Logout
-        </button> */}
       </div>
     </div>
   );

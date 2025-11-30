@@ -1,10 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, {useState, useEffect} from "react";
+import {useNavigate} from "react-router-dom";
 import Breadcrumbs from "./breadcrumbs";
-import {
-  getCurrentUser,
-  logout as logoutUser,
-} from "../api/auth";
+import {getCurrentUser} from "../api/auth";
 
 const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
@@ -46,7 +43,7 @@ const Dashboard = () => {
         }
 
         if (cancelled) return;
-        setUser({ ...current, id: current.id || current.userId });
+        setUser({...current, id: current.id || current.userId});
 
         // Fetch leagues for this user from the backend.
         // Expects backend to expose GET /users/:userId/leagues.
@@ -90,16 +87,6 @@ const Dashboard = () => {
     };
   }, [navigate]);
 
-  const logout = async () => {
-    try {
-      await logoutUser();
-    } catch (err) {
-      console.error("Logout error", err);
-    } finally {
-      navigate("/");
-    }
-  };
-
   // Wire create league to backend leagues endpoints.
   const addLeague = async () => {
     const name = newLeague.trim();
@@ -117,9 +104,9 @@ const Dashboard = () => {
       // 1. Create the league
       const createRes = await fetch(`${API_BASE}/leagues`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
         credentials: "include",
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({name}),
       });
 
       if (!createRes.ok) {
@@ -134,9 +121,9 @@ const Dashboard = () => {
           `${API_BASE}/leagues/${createdLeague.id || createdLeague.leagueId}/users`,
           {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: {"Content-Type": "application/json"},
             credentials: "include",
-            body: JSON.stringify({ userId, role: "admin" }),
+            body: JSON.stringify({userId, role: "admin"}),
           }
         );
 
@@ -196,9 +183,9 @@ const Dashboard = () => {
         `${API_BASE}/leagues/${code}/users`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {"Content-Type": "application/json"},
           credentials: "include",
-          body: JSON.stringify({ userId, role: "player" }),
+          body: JSON.stringify({userId, role: "player"}),
         }
       );
 
@@ -237,7 +224,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
-        <Breadcrumbs items={[{ label: "Dashboard" }]} />
+        <Breadcrumbs items={[{label: "Dashboard"}]}/>
         <p>Loading your dashboard...</p>
       </div>
     );
@@ -246,7 +233,7 @@ const Dashboard = () => {
   if (error) {
     return (
       <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
-        <Breadcrumbs items={[{ label: "Dashboard" }]} />
+        <Breadcrumbs items={[{label: "Dashboard"}]}/>
         <h2 className="text-2xl font-bold">Something went wrong</h2>
         <p className="text-red-500">{error}</p>
         <button
@@ -261,15 +248,9 @@ const Dashboard = () => {
 
   return (
     <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
-      <Breadcrumbs items={[{ label: "Dashboard" }]} />
+      <Breadcrumbs items={[{label: "Dashboard"}]}/>
       <h2 className="text-2xl font-bold">Welcome to Your Dashboard</h2>
       <h3 className="text-xl">{user?.email ?? ""}</h3>
-      <button
-        className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
-        onClick={logout}
-      >
-        Sign Out
-      </button>
 
       <h4 className="text-lg font-semibold mt-4">Leagues:</h4>
       {leagues.length === 0 && (

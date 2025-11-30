@@ -1,32 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { getCurrentUser, logout as logoutUser } from '../api/auth';
+import React, {useContext, useEffect} from 'react';
+import {Link, useNavigate} from 'react-router-dom';
+import {getCurrentUser, logout as logoutUser} from '../api/auth';
+import {AuthContext} from "./AuthContext";
 
 function Navbar() {
-  const [user, setUser] = useState(null);
+  const {user, setUser} = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
-    let cancelled = false;
-
     (async () => {
       try {
         const current = await getCurrentUser();
-        if (!cancelled) {
-          setUser(current);
-        }
-      } catch (err) {
-        console.error('Failed to load current user', err);
-        if (!cancelled) {
-          setUser(null);
-        }
+        setUser(current);
+      } catch {
+        setUser(null);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [setUser]);
 
   const logout = async () => {
     try {
@@ -54,18 +44,15 @@ function Navbar() {
       <div className="flex items-center space-x-4">
         {!user ? (
           <>
-            <Link
-              to="/login"
-              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-bold rounded"
-            >
+            <Link to="/login"
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-bold rounded">
               Sign In
             </Link>
-            <Link
-              to="/login"
-              className={
-                'px-4 py-2 border-2 border-emerald-500 text-emerald-500 font-bold rounded ' +
-                'hover:bg-emerald-500 hover:text-gray-900'
-              }
+            <Link to="/login"
+                  className={
+                    'px-4 py-2 border-2 border-emerald-500 text-emerald-500 font-bold rounded ' +
+                    'hover:bg-emerald-500 hover:text-gray-900'
+                  }
             >
               Create Account
             </Link>
