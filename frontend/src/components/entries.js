@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useCallback, useEffect, useState} from "react";
 import {Link} from "react-router-dom";
 import {getCurrentUser} from "../api/auth";
 
@@ -7,16 +7,18 @@ const API_BASE =
   "http://localhost:3001"; // fallback only for local dev
 
 function roundToTwo(number) {
-  return Math.round(number * 100) / 100;
+  return number ? Math.round(number * 100) / 100 : 0;
 }
 
-const Entries = ({leagueId, season, week, actualWeek}) => {
+const Entries = ({leagueId, season, week}) => {
   const [user, setUser] = useState(null);
   const [entries, setEntries] = useState([]);
   const [members, setMembers] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [currentNflWeek, setCurrentNflWeek] = useState(null);
+  const [currentNflSeason, setCurrentNflSeason] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,9 +47,16 @@ const Entries = ({leagueId, season, week, actualWeek}) => {
 
         // Use existing backend functionality:
         // - LeaguesController.getLeagueTeams => GET /leagues/:id/teams
-        // - TeamsController.findOne         => GET /teams/:id
-        // - LeaguesController.findLeagueUsers => GET /leagues/:id/users
-        const [teamsRes, membersRes, rbProjRes, wrProjRes] = await Promise.all([
+        // - TeamsController.findOne            => GET /teams/:id
+        // - LeaguesController.findLeagueUsers  => GET /leagues/:id/users
+        // - SleeperController.getState         => GET /sleeper/state
+        const [
+          teamsRes,
+          membersRes,
+          rbProjRes,
+          wrProjRes,
+          stateRes,
+        ] = await Promise.all([
           fetch(`${API_BASE}/leagues/${leagueId}/teams?season=${season}&week=${week}`, {
             credentials: "include",
           }),
@@ -58,6 +67,9 @@ const Entries = ({leagueId, season, week, actualWeek}) => {
             credentials: "include",
           }),
           fetch(`${API_BASE}/sleeper/projections/${season}/${week}?position=WR`, {
+            credentials: "include",
+          }),
+          fetch(`${API_BASE}/sleeper/state`, {
             credentials: "include",
           }),
         ]);
@@ -122,6 +134,41 @@ const Entries = ({leagueId, season, week, actualWeek}) => {
         }
 
         if (cancelled) return;
+
+        // Inspect Sleeper state to understand the "current" NFL week so we can
+        // decide when to show final scores instead of projections.
+        let stateWeekNumber = null;
+        let seasonNumber = null;
+        try {
+          if (stateRes.ok) {
+            const sleeperState = await stateRes.json();
+            if (sleeperState) {
+              // Be defensive about field names from Sleeper
+              const currentWeek = sleeperState.week ?? null;
+              const currentSeason = sleeperState.season ?? null;
+
+              if (currentWeek != null) {
+                stateWeekNumber = Number(currentWeek);
+              }
+              if (currentSeason != null) {
+                seasonNumber = Number(currentSeason);
+              }
+            }
+          } else {
+            console.warn(
+              `Failed to load Sleeper state (status ${stateRes.status})`
+            );
+          }
+        } catch (e) {
+          console.error("Error processing Sleeper state", e);
+        }
+
+        if (!cancelled && stateWeekNumber != null) {
+          setCurrentNflWeek(stateWeekNumber);
+        }
+        if (!cancelled && seasonNumber != null) {
+          setCurrentNflSeason(seasonNumber);
+        }
 
         // Build out a more detailed members list
         const fullMembers = await Promise.all(membersData.map(async (leagueMember) => {
@@ -271,30 +318,32 @@ const Entries = ({leagueId, season, week, actualWeek}) => {
     : [];
 
   const weekNum = Number(week);
-  const actualWeekNum = Number(actualWeek);
-  const isCurrentWeek = weekNum === actualWeekNum;
+  const seasonNum = Number(season);
+  const isPastWeek =
+    currentNflWeek != null && weekNum < currentNflWeek;
+  const isCurrentWeek =
+    currentNflWeek != null && weekNum === currentNflWeek;
+  const isPastSeason = currentNflSeason != null && seasonNum < currentNflSeason;
+  const isCurrentSeason = currentNflSeason != null && seasonNum === currentNflSeason;
 
-  const allHaveFinal =
-    (entries ?? []).length > 0 &&
-    (entries ?? []).every(
-      (e) => typeof e?.finalScore === "number"
-    );
-
-  const showResults = !isCurrentWeek && allHaveFinal;
+  const showResults = isPastWeek && (isCurrentSeason || isPastSeason);
 
   function logStuff() {
-    console.log(entries);
-    console.log(hasEntry);
-    console.log(user);
-    console.log(unplayedMembers);
-    console.log(isAdmin);
-    console.log(members);
+    // console.log(entries);
+    // console.log(hasEntry);
+    // console.log(user);
+    // console.log(unplayedMembers);
+    // console.log(isAdmin);
+    // console.log(members);
+    console.log(week, weekNum, season, seasonNum);
+    console.log(isPastWeek, isCurrentWeek, isPastSeason, isCurrentSeason);
+    console.log(showResults);
   }
 
   const projectedTotal = (entry) =>
     (entry.lineUp?.RB?.points ?? 0) + (entry.lineUp?.WR?.points ?? 0);
 
-  const calculateScores = async () => {
+  const calculateScores = useCallback(async () => {
     if (!entries || entries.length === 0) return;
     try {
       const rbUrl = `${API_BASE}/sleeper/stats/${season}/${week}?position=RB`;
@@ -360,7 +409,21 @@ const Entries = ({leagueId, season, week, actualWeek}) => {
           : "Failed to calculate scores"
       );
     }
-  };
+  }, [entries, season, week]);
+
+  useEffect(() => {
+    // When we should be showing results and entries are missing final scores, automatically calculate them.
+    if (!showResults) return;
+    if (!entries || entries.length === 0) return;
+
+    const needsScores = entries.some(
+      (entry) => typeof entry.finalScore !== "number"
+    );
+
+    if (!needsScores) return;
+
+    void calculateScores();
+  }, [showResults, entries, calculateScores]);
 
   function ResultsTable({entries}) {
     return (
@@ -544,7 +607,7 @@ const Entries = ({leagueId, season, week, actualWeek}) => {
           </div>
         </>
       )}
-      {actualWeek > parseInt(week, 10) && isAdmin && (
+      {isPastWeek && isAdmin && (
         <button
           className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
           onClick={calculateScores}
