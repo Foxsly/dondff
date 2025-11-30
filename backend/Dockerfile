@@ -8,7 +8,6 @@
 
 # ---------- Stage 1: Builder ----------
 FROM node:20-alpine AS builder
-
 WORKDIR /app
 
 # Install dependencies
@@ -18,38 +17,32 @@ RUN npm ci
 RUN npx ts-patch install
 
 # Copy source files and configs
-COPY tsconfig.json tsconfig.build.json nest-cli.json ./
+COPY tsconfig*.json tsconfig.build.json nest-cli.json ./
 COPY src ./src
-
-# Compile (tsc) + alias rewrite (tsc-alias) using project script
 RUN npm run build
 
-# Remove dev dependencies for production
-RUN npm prune --omit=dev
-
-
-# ---------- Stage 2: Runner (Distroless, Rootless) ----------
-FROM gcr.io/distroless/nodejs20-debian12:nonroot AS runner
-
-# Non-root user
-USER 65532:65532
-
+# ---------- Stage 2: Prod deps only ----------
+FROM node:20-alpine AS prod-deps
 WORKDIR /app
 
-# Volume for SQLite exceptions or other runtime data
-VOLUME ["/data"]
+COPY package.json package-lock.json* ./
+# Production install: no dev deps, no lifecycle scripts
+RUN npm ci --omit=dev --omit=optional --ignore-scripts
 
-# Default environment variables
+# ---------- Stage 3: Distroless runtime ----------
+FROM gcr.io/distroless/nodejs20-debian12:nonroot AS runner
+# Non-root user
+USER 65532:65532
+WORKDIR /app
+
 ENV NODE_ENV=production \
     PORT=3001
 
-# Copy build artifacts and production deps
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package.json ./package.json
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=builder   /app/dist        ./dist
+COPY --from=builder   /app/package.json ./package.json
 
 # Expose service port
 EXPOSE 3001
-
 # Launch dist/bootstrap.js (will run migrations + start app)
 CMD ["dist/bootstrap.js"]
