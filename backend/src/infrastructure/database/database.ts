@@ -1,6 +1,5 @@
 import { Kysely, CamelCasePlugin, ParseJSONResultsPlugin } from 'kysely';
 import { SqliteDialect } from 'kysely';
-import Database from 'better-sqlite3';
 import { Pool } from 'pg';
 import { PostgresDialect } from 'kysely';
 import * as path from 'path';
@@ -46,7 +45,17 @@ export function createDb(): Kysely<DB> {
 
   // default: sqlite (for dev)
   const dbPath = process.env.SQLITE_DB_PATH ?? path.resolve(process.cwd(), 'dev.db');
-  const sqlite = new Database(dbPath);
+  let BetterSqlite3: any;
+  try {
+    // Only required when engine is sqlite
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    BetterSqlite3 = require('better-sqlite3');
+  } catch (err) {
+    throw new Error(
+      'better-sqlite3 is not installed. Install it or use DB_ENGINE=postgres for this environment.',
+    );
+  }
+  const sqlite = new BetterSqlite3(dbPath);
   // enforce FK in sqlite
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('foreign_keys = ON');
