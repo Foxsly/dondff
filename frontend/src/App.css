@@ -1,3 +1,10 @@
+.navbar-link-text {
+  font-weight: bold;
+}
+
+.navbar-link-text:hover {
+  color: #34d399; /* emerald-400 */
+}
 
 .content-container {
   width: 100%;
@@ -207,4 +214,33 @@ select {
 button {
   padding: 5px;
   margin: 3px;
+}
+
+.btn-primary {
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  background-color: #10b981; /* emerald-500 */
+  color: #111827; /* gray-900 */
+  font-weight: 700;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: #34d399; /* emerald-400 */
+}
+
+.btn-outline-primary {
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  border-width: 2px;
+  border-style: solid;
+  border-color: #10b981; /* emerald-500 */
+  background-color: transparent;
+  color: #10b981;
+  font-weight: 700;
+}
+
+.btn-outline-primary:hover {
+  background-color: #10b981;
+  color: #111827; /* gray-900 */
 }
