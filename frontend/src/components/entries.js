@@ -556,10 +556,7 @@ const Entries = ({leagueId, season, week}) => {
         <ProjectionsTable entries={sortedEntries}/>
       )}
       {logStuff()}
-      {entries &&
-        // entries.length > 0 &&
-        !hasEntry &&
-        user && (
+      {isCurrentSeason && isCurrentWeek && entries && !hasEntry && user && (
           <Link
             to="/game/setting-lineups"
             state={{
@@ -573,7 +570,7 @@ const Entries = ({leagueId, season, week}) => {
             </button>
           </Link>
         )}
-      {isAdmin && unplayedMembers.length > 0 && (
+      {isAdmin && isCurrentSeason && isCurrentWeek && unplayedMembers.length > 0 && (
         <>
           <div className="space-y-4">
             {unplayedMembers.map((member) => (
@@ -606,14 +603,6 @@ const Entries = ({leagueId, season, week}) => {
             </Link>
           </div>
         </>
-      )}
-      {isPastWeek && isAdmin && (
-        <button
-          className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
-          onClick={calculateScores}
-        >
-          Calculate Scores
-        </button>
       )}
     </div>
   );
