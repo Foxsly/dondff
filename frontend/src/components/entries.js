@@ -557,19 +557,19 @@ const Entries = ({leagueId, season, week}) => {
       )}
       {logStuff()}
       {isCurrentSeason && isCurrentWeek && entries && !hasEntry && user && (
-          <Link
-            to="/game/setting-lineups"
-            state={{
-              leagueId: leagueId,
-              season: season,
-              week: week,
-            }}
-          >
-            <button className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80">
-              Play Game
-            </button>
-          </Link>
-        )}
+        <Link
+          to="/game/setting-lineups"
+          state={{
+            leagueId: leagueId,
+            season: season,
+            week: week,
+          }}
+        >
+          <button className="btn-primary">
+            Play Game
+          </button>
+        </Link>
+      )}
       {isAdmin && isCurrentSeason && isCurrentWeek && unplayedMembers.length > 0 && (
         <>
           <div className="space-y-4">
@@ -595,7 +595,7 @@ const Entries = ({leagueId, season, week}) => {
               }}
             >
               <button
-                className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80 disabled:opacity-50"
+                className="btn-primary"
                 disabled={selectedMembers.length === 0}
               >
                 Start Group Game

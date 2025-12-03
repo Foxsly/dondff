@@ -229,6 +229,11 @@ button {
   background-color: #34d399; /* emerald-400 */
 }
 
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-outline-primary {
   padding: 0.5rem 1rem;
   border-radius: 0.25rem;

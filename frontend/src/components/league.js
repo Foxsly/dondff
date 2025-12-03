@@ -135,7 +135,7 @@ const League = () => {
         <h2 className="text-2xl font-bold">Something went wrong</h2>
         <p className="text-red-500">{error}</p>
         <button
-          className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
+          className="btn-primary"
           onClick={() => navigate("/dashboard")}
         >
           Return to Dashboard
@@ -170,7 +170,7 @@ const League = () => {
               week: league.currentWeek,
             }}
           >
-            <button className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80">
+            <button className="btn-primary">
               Go To Weekly Game
             </button>
           </Link>

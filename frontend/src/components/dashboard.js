@@ -237,7 +237,7 @@ const Dashboard = () => {
         <h2 className="text-2xl font-bold">Something went wrong</h2>
         <p className="text-red-500">{error}</p>
         <button
-          className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
+          className="btn-primary"
           onClick={() => navigate("/")}
         >
           Return to Sign In
@@ -284,13 +284,13 @@ const Dashboard = () => {
 
       <div className="flex gap-4 mt-4">
         <button
-          className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
+          className="btn-primary"
           onClick={() => setShowCreateForm(!showCreateForm)}
         >
           Create League
         </button>
         <button
-          className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
+          className="btn-primary"
           onClick={() => setShowJoinForm(!showJoinForm)}
         >
           Join League
@@ -306,7 +306,7 @@ const Dashboard = () => {
             onChange={(e) => setNewLeague(e.target.value)}
           />
           <button
-            className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
+            className="btn-primary"
             onClick={addLeague}
           >
             Submit
@@ -323,7 +323,7 @@ const Dashboard = () => {
             onChange={(e) => setJoinCode(e.target.value)}
           />
           <button
-            className="px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
+            className="btn-primary"
             onClick={joinLeague}
           >
             Submit

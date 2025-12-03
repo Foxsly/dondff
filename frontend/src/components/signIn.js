@@ -152,7 +152,7 @@ const SignUp = () => {
             )}
             <button
               type="submit"
-              className="w-full px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
+              className="w-full btn-primary"
             >
               Register
             </button>
@@ -197,7 +197,7 @@ const SignUp = () => {
             )}
             <button
               type="submit"
-              className="w-full px-4 py-2 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
+              className="w-full btn-primary"
             >
               Login
             </button>
