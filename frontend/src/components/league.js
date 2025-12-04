@@ -12,7 +12,6 @@ const League = () => {
   const { leagueId } = useParams();
   const navigate = useNavigate();
 
-  const [user, setUser] = useState(null);
   const [league, setLeague] = useState({});
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -44,9 +43,6 @@ const League = () => {
         }
 
         if (cancelled) return;
-        // Normalize user shape to always have an `id` field.
-        setUser({ ...current, id: userId });
-
         // Fetch league and league users in parallel
         const [leagueRes, usersRes] = await Promise.all([
           fetch(`${API_BASE}/leagues/${leagueId}`, {

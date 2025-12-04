@@ -335,9 +335,9 @@ const Entries = ({leagueId, season, week}) => {
     // console.log(unplayedMembers);
     // console.log(isAdmin);
     // console.log(members);
-    console.log(week, weekNum, season, seasonNum);
-    console.log(isPastWeek, isCurrentWeek, isPastSeason, isCurrentSeason);
-    console.log(showResults);
+    // console.log(week, weekNum, season, seasonNum);
+    // console.log(isPastWeek, isCurrentWeek, isPastSeason, isCurrentSeason);
+    // console.log(showResults);
   }
 
   const projectedTotal = (entry) =>
@@ -426,7 +426,6 @@ const Entries = ({leagueId, season, week}) => {
   }, [showResults, entries, calculateScores]);
 
   function ResultsTable({entries}) {
-    {console.log(entries)}
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full text-left border border-[#3a465b]">
@@ -487,7 +486,6 @@ const Entries = ({leagueId, season, week}) => {
   }
 
   function ProjectionsTable({entries}) {
-    console.log(entries);
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full text-left border border-[#3a465b]">
