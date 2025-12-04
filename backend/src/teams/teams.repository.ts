@@ -7,9 +7,6 @@ import { DB } from '@/infrastructure/database/types';
 import { DB_PROVIDER } from '@/infrastructure/database/database.module';
 import { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.entity';
 
-export const TEAMS_REPOSITORY = Symbol('TEAMS_REPOSITORY');
-
-// Repository contract
 export abstract class TeamsRepository {
   abstract create(team: CreateTeamDto): Promise<Team>;
   abstract findAll(): Promise<ITeam[]>;
@@ -26,10 +23,7 @@ export class DatabaseTeamsRepository extends TeamsRepository {
   }
 
   async create(team: CreateTeamDto): Promise<Team> {
-    //TODO SHOULD THIS CONTAIN A RESET FLAG, OR DOES THAT GO ON TeamPlayer?
-    //DO WE STORE THE PLAYERS IN THE BOXES IN CASE SOMEONE TRIES THE REFRESH WORKAROUND?
-    //CREATE SEPARATE TeamPlayerBoxes TABLE THAT AUDITS THE PLAYERS IN THE BOXES?
-    return await this.db
+    const row = await this.db
       .insertInto('team')
       .values({
         teamId: crypto.randomUUID(),
@@ -40,25 +34,27 @@ export class DatabaseTeamsRepository extends TeamsRepository {
       })
       .returningAll()
       .executeTakeFirstOrThrow();
+    return row as Team;
   }
 
   async findAll(): Promise<ITeam[]> {
-    return await this.db
+    const rows = await this.db
       .selectFrom('team')
       .selectAll()
       .select((eb) => [withPlayers(eb)])
       .execute();
+    return rows as ITeam[];
   }
 
   async findOne(teamId: string): Promise<ITeam | null> {
-    const teamRow = await this.db
+    const row = await this.db
       .selectFrom('team')
       .selectAll()
       .select((eb) => [withPlayers(eb)])
       .where('teamId', '=', teamId)
       .executeTakeFirst();
 
-    return teamRow ? teamRow : null;
+    return row ? row : null;
   }
 
   async update(id: string, team: Partial<Team>): Promise<Team | null> {
