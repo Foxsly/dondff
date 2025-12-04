@@ -1,4 +1,4 @@
-import { CreateLeagueDto, League, League as LeagueEntity } from './entities/league.entity';
+import { CreateLeagueDto, League, ILeague } from './entities/league.entity';
 import { Inject, Injectable } from '@nestjs/common';
 import { Kysely } from 'kysely';
 import { DB } from '@/infrastructure/database/types';
@@ -12,9 +12,9 @@ import {
 } from '@/leagues/entities/league-settings.entity';
 
 export abstract class LeaguesRepository {
-  abstract createLeague(league: CreateLeagueDto): Promise<LeagueEntity>;
-  abstract findAllLeagues(): Promise<LeagueEntity[]>;
-  abstract findOneLeague(id: string): Promise<League | null>;
+  abstract createLeague(league: CreateLeagueDto): Promise<ILeague>;
+  abstract findAllLeagues(): Promise<ILeague[]>;
+  abstract findOneLeague(id: string): Promise<ILeague | null>;
   abstract updateLeague(id: string, league: Partial<League>): Promise<League | null>;
   abstract deleteLeague(id: string): Promise<boolean>;
   abstract findLeagueUsers(id: string): Promise<ILeagueUser[]>;
@@ -43,8 +43,8 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
     super();
   }
 
-  async createLeague(league: CreateLeagueDto): Promise<LeagueEntity> {
-    return await this.db
+  async createLeague(league: CreateLeagueDto): Promise<ILeague> {
+    const row = await this.db
       .insertInto('league')
       .values({
         leagueId: crypto.randomUUID(),
@@ -52,20 +52,22 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
       })
       .returningAll()
       .executeTakeFirstOrThrow();
+    return row as ILeague;
   }
 
-  async findAllLeagues(): Promise<LeagueEntity[]> {
-    return await this.db.selectFrom('league').selectAll().execute();
+  async findAllLeagues(): Promise<ILeague[]> {
+    const row = await this.db.selectFrom('league').selectAll().execute();
+    return row as ILeague[];
   }
 
-  async findOneLeague(id: string): Promise<League | null> {
+  async findOneLeague(id: string): Promise<ILeague | null> {
     const row = await this.db
       .selectFrom('league')
       .selectAll()
       .where('leagueId', '=', id)
       .executeTakeFirst();
 
-    return row ? row : null;
+    return row ? row as ILeague : null;
   }
 
   async updateLeague(id: string, league: Partial<League>): Promise<League | null> {
@@ -87,11 +89,12 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
   }
 
   async findLeagueUsers(id: string): Promise<ILeagueUser[]> {
-    return await this.db.selectFrom('leagueUser').selectAll().where('leagueId', '=', id).execute();
+    const row = await this.db.selectFrom('leagueUser').selectAll().where('leagueId', '=', id).execute();
+    return row as ILeagueUser[];
   }
 
   async addLeagueUser(leagueId: string, addLeagueUserDto: AddLeagueUserDto): Promise<ILeagueUser> {
-    return await this.db
+    const row = await this.db
       .insertInto('leagueUser')
       .values({
         leagueId: leagueId,
@@ -100,6 +103,7 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
       })
       .returningAll()
       .executeTakeFirstOrThrow();
+    return row as ILeagueUser;
   }
 
   async removeLeagueUser(leagueId: string, userId: string): Promise<boolean> {
@@ -117,7 +121,7 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
     userId: string,
     updateLeagueUserDto: UpdateLeagueUserDto,
   ): Promise<ILeagueUser> {
-    return await this.db
+    const row = await this.db
       .updateTable('leagueUser')
       .set({
         role: updateLeagueUserDto.role,
@@ -126,15 +130,17 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
       .where('userId', '=', userId)
       .returningAll()
       .executeTakeFirstOrThrow();
+    return row as ILeagueUser;
   }
 
   async findLeagueTeams(leagueId: string): Promise<ITeam[]> {
-    return await this.db
+    const row = await this.db
       .selectFrom('team')
       .selectAll()
       .select((eb) => [withPlayers(eb)])
       .where('leagueId', '=', leagueId)
       .execute();
+    return row as ITeam[];
   }
 
   async createLeagueSettings(

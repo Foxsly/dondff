@@ -1,4 +1,4 @@
-import { CreateUserDto, IUser, User, UserLeagues } from './entities/user.entity';
+import { CreateUserDto, IUser, UserLeagues } from './entities/user.entity';
 import { Inject, Injectable } from '@nestjs/common';
 import { Kysely } from 'kysely';
 import { DB } from '@/infrastructure/database/types';
@@ -8,9 +8,9 @@ export const USERS_REPOSITORY = Symbol('USERS_REPOSITORY');
 
 export abstract class UsersRepository {
   abstract create(user: CreateUserDto): Promise<IUser>;
-  abstract findAll(): Promise<User[]>;
-  abstract findOne(id: string): Promise<User | null>;
-  abstract update(id: string, user: Partial<User>): Promise<User | null>;
+  abstract findAll(): Promise<IUser[]>;
+  abstract findOne(id: string): Promise<IUser | null>;
+  abstract update(id: string, user: Partial<IUser>): Promise<IUser | null>;
   abstract remove(id: string): Promise<boolean>;
   abstract getLeagues(userId: string): Promise<UserLeagues[]>;
 }
@@ -22,7 +22,7 @@ export class DatabaseUsersRepository extends UsersRepository {
   }
 
   async create(user: CreateUserDto): Promise<IUser> {
-    return await this.db
+    const row = await this.db
       .insertInto('dondUser')
       .values({
         userId: crypto.randomUUID(),
@@ -31,13 +31,15 @@ export class DatabaseUsersRepository extends UsersRepository {
       })
       .returningAll()
       .executeTakeFirstOrThrow();
+    return row as IUser;
   }
 
-  async findAll(): Promise<User[]> {
-    return await this.db.selectFrom('dondUser').selectAll().execute();
+  async findAll(): Promise<IUser[]> {
+    const rows = await this.db.selectFrom('dondUser').selectAll().execute();
+    return rows as IUser[];
   }
 
-  async findOne(id: string): Promise<User | null> {
+  async findOne(id: string): Promise<IUser | null> {
     const row = await this.db
       .selectFrom('dondUser')
       .selectAll()
@@ -47,7 +49,7 @@ export class DatabaseUsersRepository extends UsersRepository {
     return row ? row : null;
   }
 
-  async update(id: string, user: Partial<User>): Promise<User | null> {
+  async update(id: string, user: Partial<IUser>): Promise<IUser | null> {
     const result = await this.db
       .updateTable('dondUser')
       .set({
@@ -67,11 +69,12 @@ export class DatabaseUsersRepository extends UsersRepository {
   }
 
   async getLeagues(userId: string): Promise<UserLeagues[]> {
-    return await this.db
+    const rows = await this.db
       .selectFrom('leagueUser')
       .innerJoin('league', 'league.leagueId', 'leagueUser.leagueId')
       .select(['leagueUser.leagueId', 'leagueUser.role', 'league.name as leagueName'])
       .where('leagueUser.userId', '=', userId)
       .execute();
+    return rows as UserLeagues[];
   }
 }
