@@ -1,3 +1,7 @@
+import {
+  DatabaseTeamEntryRepository,
+  TeamEntryRepository,
+} from '@/teams/teams-entry.repository';
 import { Module } from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import { TeamsController } from './teams.controller';
@@ -17,6 +21,10 @@ import { DatabaseModule } from '@/infrastructure/database/database.module';
       provide: TeamsRepository,
       useClass: DatabaseTeamsRepository,
     },
+    {
+      provide: TeamEntryRepository,
+      useClass: DatabaseTeamEntryRepository,
+    }
   ],
   imports: [DatabaseModule],
 })

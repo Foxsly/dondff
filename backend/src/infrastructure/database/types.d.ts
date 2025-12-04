@@ -1,3 +1,9 @@
+import {
+  ITeamEntry,
+  ITeamEntryAudit,
+  ITeamEntryEvent,
+  ITeamEntryOffer,
+} from '@/teams/entities/team-entry.entity';
 import { IUser } from '@/users/entities/user.entity';
 import { Team } from '@/teams/entities/team.entity';
 import { ILeague } from '@/leagues/entities/league.entity';
@@ -13,4 +19,8 @@ export interface DB {
   team: Team;
   dondUser: IUser;
   teamPlayer: ITeamPlayer;
+  teamEntry: ITeamEntry;
+  teamEntryAudit: ITeamEntryAudit;
+  teamEntryOffer: ITeamEntryOffer;
+  teamEntryEvent: ITeamEntryEvent;
 }
