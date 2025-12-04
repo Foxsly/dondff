@@ -426,6 +426,7 @@ const Entries = ({leagueId, season, week}) => {
   }, [showResults, entries, calculateScores]);
 
   function ResultsTable({entries}) {
+    {console.log(entries)}
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full text-left border border-[#3a465b]">
@@ -452,7 +453,7 @@ const Entries = ({leagueId, season, week}) => {
                 {memberLabel(entry.name || entry.email)}
               </td>
               <td className="p-2 border-b border-[#3a465b]">
-                {entry.lineUp?.RB?.name ?? ""}
+                {entry.lineUp?.RB?.playerName ?? ""}
               </td>
               <td className="p-2 border-b border-[#3a465b]">
                 {roundToTwo(entry.lineUp?.RB?.points) ?? 0}
@@ -461,7 +462,7 @@ const Entries = ({leagueId, season, week}) => {
                 {roundToTwo(entry.lineUp?.RB?.pprScore) ?? 0}
               </td>
               <td className="p-2 border-b border-[#3a465b]">
-                {entry.lineUp?.WR?.name ?? ""}
+                {entry.lineUp?.WR?.playerName ?? ""}
               </td>
               <td className="p-2 border-b border-[#3a465b]">
                 {roundToTwo(entry.lineUp?.WR?.points) ?? 0}
