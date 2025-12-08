@@ -24,10 +24,7 @@ export class TeamsController {
   }
 
   @TypedRoute.Patch(':id')
-  async update(
-    @TypedParam('id') id: string,
-    @Body() updateTeamDto: UpdateTeamDto,
-  ): Promise<Team> {
+  async update(@TypedParam('id') id: string, @Body() updateTeamDto: UpdateTeamDto): Promise<Team> {
     return this.teamsService.update(id, updateTeamDto);
   }
 
@@ -37,10 +34,7 @@ export class TeamsController {
   }
 
   @TypedRoute.Put(':teamId/players')
-  upsertTeamPlayer(
-    @TypedParam('teamId') teamId: string,
-    @TypedBody() dto: CreateTeamPlayerDto,
-  ): Promise<TeamPlayer> {
+  upsertTeamPlayer(@TypedParam('teamId') teamId: string, @TypedBody() dto: CreateTeamPlayerDto,): Promise<TeamPlayer> {
     return this.teamsService.upsertTeamPlayer(teamId, dto);
   }
 }
