@@ -9,6 +9,7 @@ export type TeamEntryEventType =
   | 'reset'
   | 'boxes_generated'
   | 'box_selected'
+  | 'box_auto_selected'
   | 'box_eliminated'
   | 'offer_made'
   | 'offer_accepted'
@@ -91,3 +92,44 @@ export type TeamEntryTable = ITeamEntry & AuditableTable;
 export type TeamEntryAuditTable = ITeamEntryAudit & AuditableTable;
 export type TeamEntryOfferTable = ITeamEntryOffer & AuditableTable;
 export type TeamEntryEventTable = ITeamEntryEvent & AuditableTable;
+
+/**
+ * Lightweight metadata for a team-entry “case set” used by
+ * GET /teams/:teamId/cases.
+ *
+ * This is intentionally derived from the core entity so that
+ * changes to ITeamEntry propagate here automatically.
+ */
+export type TeamEntryCasesMetaDto = Pick<
+  ITeamEntry,
+  'teamEntryId' | 'teamId' | 'position' | 'leagueSettingsId' | 'resetCount' | 'status'
+>;
+
+/**
+ * A single case “box” as exposed to the API layer.
+ *
+ * NOTE: This only exposes structural information about the box
+ * (its number and status), not the underlying player mapping.
+ * That mapping lives only in the audit rows and the server-side
+ * game logic, to prevent front-end cheating.
+ */
+export type TeamEntryCaseBoxDto = Pick<ITeamEntryAudit, 'boxNumber' | 'boxStatus'>;
+
+/**
+ * Player summary used when building the “players in cases” list
+ * for the UI. This is derived from the audit rows but deliberately
+ * omits boxNumber so the client cannot infer which player is in
+ * which case.
+ */
+export type TeamEntryCasePlayerDto = Pick<
+  ITeamEntryAudit,
+  'playerId' | 'playerName' | 'projectedPoints' | 'injuryStatus'
+>;
+
+/**
+ * Combined DTO shape returned by GET /teams/:teamId/cases.
+ */
+export interface TeamEntryCasesResponseDto extends TeamEntryCasesMetaDto {
+  boxes: TeamEntryCaseBoxDto[];
+  players: TeamEntryCasePlayerDto[];
+}

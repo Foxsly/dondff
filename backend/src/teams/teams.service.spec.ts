@@ -1,3 +1,4 @@
+import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeamsService } from './teams.service';
 import { NotFoundException } from '@nestjs/common';
@@ -9,16 +10,29 @@ describe('TeamsService', () => {
   let repo: jest.Mocked<TeamsRepository>;
 
   beforeEach(async () => {
-    const mockRepo: jest.Mocked<TeamsRepository> = {
+    const mockTeamsRepository: jest.Mocked<TeamsRepository> = {
       create: jest.fn(),
       findAll: jest.fn(),
       findOne: jest.fn(),
       update: jest.fn(),
       remove: jest.fn(),
     } as any;
+    const mockTeamsEntryRepository: jest.Mocked<TeamsEntryRepository> = {
+      createEntry: jest.fn(),
+      findEntryById: jest.fn(),
+      findLatestEntryForTeamPosition: jest.fn(),
+      updateEntry: jest.fn(),
+      insertAuditSnapshots: jest.fn(),
+      createOffer: jest.fn(),
+      updateOfferStatus: jest.fn(),
+      appendEvent: jest.fn(),
+      listEventsForEntry: jest.fn(),
+      findAuditsForEntry: jest.fn(),
+    } as any;
+
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [TeamsService, { provide: TeamsRepository, useValue: mockRepo }],
+      providers: [TeamsService, { provide: TeamsRepository, useValue: mockTeamsRepository }, {provide:TeamsEntryRepository, useValue: mockTeamsEntryRepository}],
     }).compile();
 
     service = module.get<TeamsService>(TeamsService);

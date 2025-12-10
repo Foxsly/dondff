@@ -29,8 +29,8 @@
     "jest:config": "jest --showConfig",
     "jest:clearCache": "jest --clearCache",
     "postinstall": "ts-patch install || true",
-    "sdk": "nestia sdk -c src/infrastructure/test/nestia.config.ts",
-    "e2e:sdk": "nestia e2e -c src/infrastructure/test/nestia.config.ts"
+    "sdk": "nestia sdk --config src/infrastructure/test/nestia.config.ts",
+    "e2e:sdk": "nestia e2e --config src/infrastructure/test/nestia.config.ts"
   },
   "dependencies": {
     "@nestia/core": "^8.0.8",

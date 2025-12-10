@@ -16,6 +16,7 @@ import type {
 } from "../../../../../teams/entities/team.entity";
 
 export * as players from "./players/index";
+export * as cases from "./cases/index";
 
 /**
  * @controller TeamsController.create

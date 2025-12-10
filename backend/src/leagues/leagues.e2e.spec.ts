@@ -295,7 +295,7 @@ describe('Leagues E2E', () => {
   describe.skip('GET /leagues/:id/teams — empty state', () => {
     it('returns an empty list when a league has no teams', async () => {
       const league = await ensureLeague(conn);
-      const teams = await Leagues.teams.getLeagueTeams(conn, league.leagueId);
+      const teams = await Leagues.teams.getLeagueTeams(conn, league.leagueId, 2025, 1);
       expect(Array.isArray(teams)).toBe(true);
       expect(teams.length).toBe(0);
     });

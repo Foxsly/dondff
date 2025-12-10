@@ -19,7 +19,7 @@ import {
  * This is intentionally separate from TeamsRepository to keep the team aggregate
  * (roster, membership, etc.) distinct from the game / entry lifecycle and its audit trail.
  */
-export abstract class TeamEntryRepository {
+export abstract class TeamsEntryRepository {
   abstract createEntry(teamId: string, position: string, leagueSettingsId: string): Promise<ITeamEntry>;
 
   abstract findEntryById(teamEntryId: string): Promise<ITeamEntry | null>;
@@ -47,10 +47,12 @@ export abstract class TeamEntryRepository {
   abstract appendEvent(event: Omit<ITeamEntryEvent, 'eventId'>): Promise<ITeamEntryEvent>;
 
   abstract listEventsForEntry(teamEntryId: string): Promise<ITeamEntryEvent[]>;
+
+  abstract findAuditsForEntry(teamEntryId: string): Promise<ITeamEntryAudit[]>;
 }
 
 @Injectable()
-export class DatabaseTeamEntryRepository extends TeamEntryRepository {
+export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
   constructor(@Inject(DB_PROVIDER) private readonly db: Kysely<DB>) {
     super();
   }
@@ -186,5 +188,16 @@ export class DatabaseTeamEntryRepository extends TeamEntryRepository {
       .execute();
 
     return rows as TeamEntryEvent[];
+  }
+
+  async findAuditsForEntry(teamEntryId: string): Promise<ITeamEntryAudit[]> {
+    const rows = await this.db
+      .selectFrom('teamEntryAudit')
+      .selectAll()
+      .where('teamEntryAudit.teamEntryId', '=', teamEntryId)
+      .orderBy('teamEntryAudit.boxNumber', 'asc')
+      .execute();
+
+    return rows as ITeamEntryAudit[];
   }
 }

@@ -8,6 +8,7 @@ import type { IConnection } from "@nestia/fetcher";
 import { PlainFetcher } from "@nestia/fetcher/lib/PlainFetcher";
 import type { Primitive } from "typia";
 
+export * as health from "./health/index";
 export * as users from "./users/index";
 export * as leagues from "./leagues/index";
 export * as teams from "./teams/index";
