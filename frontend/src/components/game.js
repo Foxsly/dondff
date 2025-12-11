@@ -33,6 +33,8 @@ const Game = ({teamUser, onComplete}) => {
     WR: {name: "awaiting game..."},
   });
   const [resetUsed, setResetUsed] = useState({RB: false, WR: false});
+  const [teamId, setTeamId] = useState(null);
+  const hasEnsuredTeamRef = React.useRef(false);
 
   useEffect(() => {
     const loadUserAndName = async () => {
@@ -52,6 +54,94 @@ const Game = ({teamUser, onComplete}) => {
 
     loadUserAndName();
   }, [teamUser, leagueId]);
+
+  const ensureTeamForContext = useCallback(
+    async (user) => {
+      if (!user || !leagueId || !season || !week) {
+        return null;
+      }
+
+      const userId = user.id || user.userId;
+      if (!userId) return null;
+
+      let resolvedTeamId = null;
+
+      // 1. Try to find an existing team for this user/league/season/week
+      try {
+        const teamsRes = await fetch(`${API_BASE}/leagues/${leagueId}/teams`, {
+          credentials: "include",
+        });
+        if (teamsRes.ok) {
+          const teams = await teamsRes.json();
+          if (Array.isArray(teams)) {
+            const existing = teams.find((t) => {
+              return (
+                String(t.leagueId) === String(leagueId) &&
+                String(t.userId) === String(userId) &&
+                Number(t.seasonYear) === Number(season) &&
+                Number(t.week) === Number(week)
+              );
+            });
+            if (existing) {
+              resolvedTeamId = existing.teamId || existing.id;
+            }
+          }
+        } else {
+          console.warn(
+            "Failed to load teams for league in ensureTeamForContext",
+            teamsRes.status
+          );
+        }
+      } catch (err) {
+        console.error("Error fetching league teams in ensureTeamForContext", err);
+      }
+
+      // 2. If no existing team, create one
+      if (!resolvedTeamId) {
+        try {
+          const createRes = await fetch(`${API_BASE}/teams`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "include",
+            body: JSON.stringify({
+              leagueId,
+              userId,
+              seasonYear: Number(season),
+              week: Number(week),
+            }),
+          });
+          if (!createRes.ok) {
+            throw new Error(`Failed to create team (status ${createRes.status})`);
+          }
+          const createdTeam = await createRes.json();
+          resolvedTeamId = createdTeam.teamId || createdTeam.id;
+        } catch (err) {
+          console.error("Failed to create team in ensureTeamForContext", err);
+          return null;
+        }
+      }
+
+      return resolvedTeamId;
+    },
+    [leagueId, season, week]
+  );
+
+  useEffect(() => {
+    // Only run once per mount when we have user + context
+    if (hasEnsuredTeamRef.current) return;
+    if (!currentUser || !leagueId || !season || !week) return;
+
+    hasEnsuredTeamRef.current = true;
+
+    (async () => {
+      const id = await ensureTeamForContext(currentUser);
+      if (id) {
+        setTeamId(id);
+      } else {
+        console.warn("ensureTeamForContext did not resolve a teamId");
+      }
+    })();
+  }, [currentUser, leagueId, season, week, ensureTeamForContext]);
 
   const buildCases = useCallback(async () => {
     setCases(generateCases(pool, 10));
@@ -324,63 +414,6 @@ const Game = ({teamUser, onComplete}) => {
         });
         alert("Missing league/season/week information. Please navigate back and try again.");
         return;
-      }
-
-      // 1. Find an existing team for this user/league/season/week via getLeagueTeams
-      let teamId = null;
-      try {
-        const teamsRes = await fetch(`${API_BASE}/leagues/${leagueId}/teams`, {
-          credentials: "include",
-        });
-        if (teamsRes.ok) {
-          const teams = await teamsRes.json();
-          if (Array.isArray(teams)) {
-            const existing = teams.find((t) => {
-              return (
-                String(t.leagueId) === String(leagueId) &&
-                String(t.userId) === String(userId) &&
-                Number(t.seasonYear) === Number(season) &&
-                Number(t.week) === Number(week)
-              );
-            });
-            if (existing) {
-              teamId = existing.teamId || existing.id;
-            }
-          }
-        } else {
-          console.warn(
-            "Failed to load teams for league when submitting lineup",
-            teamsRes.status
-          );
-        }
-      } catch (err) {
-        console.error("Error fetching league teams before submitLineup", err);
-      }
-
-      // 2. If no existing team, create one via TeamsController.create
-      if (!teamId) {
-        try {
-          const createRes = await fetch(`${API_BASE}/teams`, {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            credentials: "include",
-            body: JSON.stringify({
-              leagueId,
-              userId,
-              seasonYear: Number(season),
-              week: Number(week),
-            }),
-          });
-          if (!createRes.ok) {
-            throw new Error(`Failed to create team (status ${createRes.status})`);
-          }
-          const createdTeam = await createRes.json();
-          teamId = createdTeam.teamId || createdTeam.id;
-        } catch (err) {
-          console.error("Failed to create team for lineup submission", err);
-          alert("Could not create your team entry. Please try again.");
-          return;
-        }
       }
 
       if (!teamId) {
