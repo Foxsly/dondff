@@ -3,12 +3,15 @@ import { LeaguesService } from '@/leagues/leagues.service';
 import { SleeperProjectionResponse } from '@/sleeper/entities/sleeper.entity';
 import { SleeperService } from '@/sleeper/sleeper.service';
 import { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.entity';
+import { ITeamStatus } from '@/teams/entities/team-status.entity';
 import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
 import { TeamsRepository } from '@/teams/teams.repository';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   ITeamEntry,
   ITeamEntryAudit,
+  ITeamEntryEvent,
+  TeamEntry,
   TeamEntryCaseBoxDto,
   TeamEntryCasePlayerDto,
   TeamEntryCasesResponseDto,
@@ -94,6 +97,24 @@ export class TeamsService {
 
   async upsertTeamPlayer(teamId: string, dto: CreateTeamPlayerDto): Promise<TeamPlayer> {
     return this.teamsRepository.upsertTeamPlayer(teamId, dto);
+  }
+
+  async getTeamEntry(teamId: string, position: string): Promise<ITeamEntry> {
+    let teamEntry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
+    if(!teamEntry) {
+      throw new NotFoundException(`TeamEntry for team with id ${teamId} and position ${position} not found`);
+    }
+    return teamEntry;
+  }
+
+  //TODO make this pull from the league settings and derive the positions from there
+  async getTeamStatus(teamId: string): Promise<ITeamStatus> {
+    let rbTeamEntry: ITeamEntry = await this.getTeamEntry(teamId, 'RB');
+    let wrTeamEntry: ITeamEntry = await this.getTeamEntry(teamId, 'WR');
+    let playable = !(rbTeamEntry.status === 'finished' && wrTeamEntry.status === 'finished');
+    return {
+      playable: playable,
+    } as ITeamStatus;
   }
 
   /**

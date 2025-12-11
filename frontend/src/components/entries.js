@@ -50,6 +50,7 @@ const Entries = ({leagueId, season, week}) => {
         // - TeamsController.findOne            => GET /teams/:id
         // - LeaguesController.findLeagueUsers  => GET /leagues/:id/users
         // - SleeperController.getState         => GET /sleeper/state
+        // - TeamsController.getTeamStatus      => GET /teams/:teamId/status
         const [
           teamsRes,
           membersRes,
@@ -187,17 +188,11 @@ const Entries = ({leagueId, season, week}) => {
         const teams = Array.isArray(teamsData) ? teamsData : [];
 
         // Derive "entries" from teams. We treat each team as a weekly entry.
-        const derivedEntries = teams.map((team) => {
+        const derivedEntries = await Promise.all(teams.map(async (team) => {
           const member = fullMembers.find(user => user.userId === team.userId);
+          const teamStatusResponse = await fetch(`${API_BASE}/teams/${team.teamId}/status`, {credentials: "include"});
+          const teamStatus = await teamStatusResponse.json();
 
-          // Try to infer a lineup shape similar to the old Firestore docs
-          //TODO this won't exist?
-          const lineupSource =
-            team.lineUp ||
-            team.lineup ||
-            team.lineupState ||
-            team.entry ||
-            {};
 
           const rb = team.players.find(player => player.position === 'RB') || null;
           const wr = team.players.find(player => player.position === 'WR') || null;
@@ -222,7 +217,6 @@ const Entries = ({leagueId, season, week}) => {
           const finalScore =
             team.finalScore ??
             team.result?.finalScore ??
-            lineupSource.finalScore ??
             null;
 
           return {
@@ -235,8 +229,9 @@ const Entries = ({leagueId, season, week}) => {
               finalScore,
             },
             finalScore,
+            playable: teamStatus.playable,
           };
-        });
+        }));
 
         setEntries(derivedEntries);
       } catch (err) {
@@ -275,18 +270,18 @@ const Entries = ({leagueId, season, week}) => {
     );
   };
 
-  const membersWithEntries = new Set(
-    (entries ?? []).map((entry) => entry.userId)
+  const membersWithPlayedEntries = new Set(
+    (entries ?? []).filter((entry) => !entry.playable).map((entry) => entry.userId)
   );
 
-  const unplayedMembers =
+  const playersWithPlayableEntries =
     members?.filter((member) => {
-      return member.userId && !membersWithEntries.has(member.userId);
+      return member.userId && !membersWithPlayedEntries.has(member.userId);
     }) ?? [];
 
-  const hasEntry = !!(entries ?? []).some(
+  const isEntryPlayable = (entries ?? []).some(
     (entry) =>
-      entry.name === user?.name
+      !(entry.name === user?.name && !entry.playable)
   );
 
   const currentMember = members?.find((member) => member.userId === user?.userId) ?? null;
@@ -555,7 +550,7 @@ const Entries = ({leagueId, season, week}) => {
         <ProjectionsTable entries={sortedEntries}/>
       )}
       {logStuff()}
-      {isCurrentSeason && isCurrentWeek && entries && !hasEntry && user && (
+      {isCurrentSeason && isCurrentWeek && entries && isEntryPlayable && user && (
         <Link
           to="/game/setting-lineups"
           state={{
@@ -569,10 +564,10 @@ const Entries = ({leagueId, season, week}) => {
           </button>
         </Link>
       )}
-      {isAdmin && isCurrentSeason && isCurrentWeek && unplayedMembers.length > 0 && (
+      {isAdmin && isCurrentSeason && isCurrentWeek && playersWithPlayableEntries.length > 0 && (
         <>
           <div className="space-y-4">
-            {unplayedMembers.map((member) => (
+            {playersWithPlayableEntries.map((member) => (
               <div key={member.user.name}>
                 <input
                   type="checkbox"

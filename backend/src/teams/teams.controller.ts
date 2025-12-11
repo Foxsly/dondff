@@ -1,4 +1,5 @@
-import { TeamEntryCasesResponseDto } from '@/teams/entities/team-entry.entity';
+import { ITeamEntry, TeamEntryCasesResponseDto } from '@/teams/entities/team-entry.entity';
+import { ITeamStatus } from '@/teams/entities/team-status.entity';
 import { Controller, Body, Query } from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
@@ -35,8 +36,24 @@ export class TeamsController {
   }
 
   @TypedRoute.Put(':teamId/players')
-  upsertTeamPlayer(@TypedParam('teamId') teamId: string, @TypedBody() dto: CreateTeamPlayerDto,): Promise<TeamPlayer> {
+  upsertTeamPlayer(
+    @TypedParam('teamId') teamId: string,
+    @TypedBody() dto: CreateTeamPlayerDto,
+  ): Promise<TeamPlayer> {
     return this.teamsService.upsertTeamPlayer(teamId, dto);
+  }
+
+  @TypedRoute.Get(':teamId/entry')
+  findTeamEntry(
+    @TypedParam('teamId') teamId: string,
+    @Query('position') position: string,
+  ): Promise<ITeamEntry> {
+    return this.teamsService.getTeamEntry(teamId, position);
+  }
+
+  @TypedRoute.Get(':teamId/status')
+  getTeamStatus(@TypedParam('teamId') teamId: string): Promise<ITeamStatus> {
+    return this.teamsService.getTeamStatus(teamId);
   }
 
   /**
