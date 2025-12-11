@@ -237,11 +237,6 @@ describe('Leagues E2E', () => {
     it('returns 404 for latest and by-id when not found, and 400 on invalid payload', async () => {
       const league = await ensureLeague(conn);
 
-      // latest when none exist -> NotFound
-      await expect(
-        Leagues.settings.latest.getLatestLeagueSettings(conn, league.leagueId),
-      ).rejects.toBeDefined();
-
       // by id unknown -> NotFound
       await expect(
         Leagues.settings.getLeagueSettingsById(conn, '00000000-0000-0000-0000-000000000000'),
@@ -323,11 +318,6 @@ describe('Leagues E2E', () => {
       // Server must honor path param: result should belong to league A, not B
       expect(createdA1.leagueId).toBe(leagueA.leagueId);
       expect(createdA1.leagueId).not.toBe(leagueB.leagueId);
-
-      // League B "latest" should not see A's settings
-      await expect(
-        Leagues.settings.latest.getLatestLeagueSettings(conn, leagueB.leagueId),
-      ).rejects.toBeDefined();
 
       // By-id read returns the entity; ensure it still belongs to A (not B)
       const roundtrip = await Leagues.settings.getLeagueSettingsById(

@@ -6,14 +6,29 @@ import { LeaguesRepository } from '@/leagues/leagues.repository';
 import {
   CreateLeagueSettingsDto,
   ILeagueSettings,
+  ScoringType,
 } from '@/leagues/entities/league-settings.entity';
 
+const DEFAULT_LEAGUE_SETTINGS = {
+  scoringType: 'PPR' as ScoringType,
+  positions: ['RB', 'WR'],
+  rbPoolSize: 64,
+  wrPoolSize: 96,
+  qbPoolSize: 32,
+  tePoolSize: 32,
+};
 @Injectable()
 export class LeaguesService {
   constructor(private readonly leaguesRepository: LeaguesRepository) {}
 
   async create(createLeagueDto: CreateLeagueDto): Promise<League> {
-    return this.leaguesRepository.createLeague(createLeagueDto);
+    let league = await this.leaguesRepository.createLeague(createLeagueDto);
+    // Create a default league settings when creating a league
+    await this.createLeagueSettings(league.leagueId, {
+      ...DEFAULT_LEAGUE_SETTINGS,
+      leagueId: league.leagueId,
+    });
+    return league;
   }
 
   async findAll(): Promise<League[]> {
@@ -90,13 +105,13 @@ export class LeaguesService {
     let teams = await this.leaguesRepository.findLeagueTeams(leagueId);
     return Array.from(teams).filter((team) => {
       let matches = true;
-      if(season) {
+      if (season) {
         matches = matches && team.seasonYear == season;
       }
-      if(week) {
+      if (week) {
         matches = matches && team.week == week;
       }
-      return matches
+      return matches;
     });
   }
 }
