@@ -19,5 +19,6 @@ import { DatabaseModule } from '@/infrastructure/database/database.module';
     },
   ],
   imports: [DatabaseModule],
+  exports: [LeaguesService],
 })
 export class LeaguesModule {}

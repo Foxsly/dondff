@@ -7,5 +7,6 @@ import { HttpModule } from '@nestjs/axios'
   imports: [HttpModule],
   controllers: [SleeperController],
   providers: [SleeperService],
+  exports: [SleeperService],
 })
 export class SleeperModule {}
