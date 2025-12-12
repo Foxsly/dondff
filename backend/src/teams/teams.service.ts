@@ -98,16 +98,23 @@ export class TeamsService {
   }
 
   async getTeamEntry(teamId: string, position: string): Promise<ITeamEntry> {
-    let teamEntry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
-    if(!teamEntry) {
-      throw new NotFoundException(`TeamEntry for team with id ${teamId} and position ${position} not found`);
+    let teamEntry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(
+      teamId,
+      position,
+    );
+    if (!teamEntry) {
+      throw new NotFoundException(
+        `TeamEntry for team with id ${teamId} and position ${position} not found`,
+      );
     }
     return teamEntry;
   }
 
   async getTeamStatus(teamId: string): Promise<ITeamStatus> {
     let team: ITeam = await this.findOne(teamId);
-    let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(team.leagueId);
+    let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
+      team.leagueId,
+    );
     let playable = true;
     for (let position of leagueSettings.positions) {
       let teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
@@ -130,10 +137,14 @@ export class TeamsService {
     const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
 
     if (!entry) {
-      throw new NotFoundException(`No team entry found for team ${teamId} and position ${position}`);
+      throw new NotFoundException(
+        `No team entry found for team ${teamId} and position ${position}`,
+      );
     }
 
-    const audits: ITeamEntryAudit[] = await this.teamsEntryRepository.findAuditsForEntry(entry.teamEntryId);
+    const audits: ITeamEntryAudit[] = await this.teamsEntryRepository.findAuditsForEntry(
+      entry.teamEntryId,
+    );
 
     return {
       teamEntryId: entry.teamEntryId,
@@ -145,5 +156,17 @@ export class TeamsService {
       players: audits as TeamEntryCasePlayerDto[],
       boxes: audits as TeamEntryCaseBoxDto[],
     };
+  }
+
+  async selectCase(teamId: string, position: string, caseNumber: number): Promise<ITeamEntry> {
+    let teamEntry = await this.getTeamEntry(teamId, position);
+    let updatedTeamEntry = await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, {
+      selectedBox: caseNumber,
+      status: 'playing'
+    });
+    if (!updatedTeamEntry) {
+      throw new NotFoundException(`Could not update TeamEntry with id ${teamEntry.teamEntryId}`);
+    }
+    return updatedTeamEntry;
   }
 }

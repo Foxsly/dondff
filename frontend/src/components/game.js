@@ -230,8 +230,19 @@ const Game = ({teamUser, onComplete}) => {
     return result;
   };
 
-  const selectCase = (box) => {
+  const selectCase = async (box) => {
     setCaseSelected(box);
+    const selectCaseDto = {
+      position: type,
+      boxNumber: box.number
+    }
+    const selectCaseResponse = await fetch(`${API_BASE}/teams/${teamId}/cases`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      credentials: "include",
+      body: JSON.stringify(selectCaseDto),
+    });
+
     const copy = [...cases];
     const index = copy.indexOf(box);
     copy.splice(index, 1);
