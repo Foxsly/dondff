@@ -6,7 +6,6 @@ import * as Teams from '@/infrastructure/test/sdk/functional/teams';
 import { ensureTeamWithFKs, resetDatabase, buildTeamUpdateDto } from '@/infrastructure/test/factories';
 import { HttpError } from '../infrastructure/test/sdk/HttpError';
 import { randomUUID } from 'crypto';
-import { SleeperService } from '@/sleeper/sleeper.service';
 import nock from 'nock';
 import projectionsRaw from '@/sleeper/__fixtures__/sleeper-projections.raw.test.json';
 
@@ -27,12 +26,6 @@ describe('Teams E2E', () => {
   beforeAll(async () => {
     app = await createTestApp();
     conn = { host: getBaseUrl(app) };
-
-    // Mock SleeperService API calls using nock
-    nock('https://api.sleeper.app')
-      .get(/\/projections\/nfl\/2025\/1$/)
-      .query(true)
-      .reply(200, projectionsRaw as any);
   });
 
   afterEach(async () => {
@@ -46,6 +39,12 @@ describe('Teams E2E', () => {
   });
 
   async function createTeamWithFKs() {
+    // Mock SleeperService API calls using nock
+    nock('https://api.sleeper.app')
+      .get('/projections/nfl/2025/1')
+      .query(true)
+      .reply(200, projectionsRaw as any)
+      .persist();
     return ensureTeamWithFKs(conn);
   }
 
