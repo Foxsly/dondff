@@ -16,6 +16,11 @@ import {
 } from './entities/team-entry.entity';
 import { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
 
+//yacht-fisher shuffle: https://github.com/queviva/yacht-fisher
+const shuffle = (v, r=[...v]) => v.map(() =>
+  r.splice(~~(Math.random() * r.length), 1)[0]
+);
+
 @Injectable()
 export class TeamsService {
   constructor(
@@ -30,38 +35,8 @@ export class TeamsService {
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       createdTeam.leagueId,
     );
-    const positions = [
-      { position: 'RB', limit: 64 },
-      { position: 'WR', limit: 96 },
-    ];
-    for (const position of positions) {
-      let playerProjections: SleeperProjectionResponse =
-        await this.sleeperService.getPlayerProjections(
-          position.position,
-          createTeamDto.seasonYear,
-          createTeamDto.week,
-        );
-      let teamEntry: ITeamEntry = await this.teamsEntryRepository.createEntry(
-        createdTeam.teamId,
-        position.position,
-        leagueSettings.leagueSettingsId,
-      );
-      let boxNumber = 1;
-      let cases: Array<Omit<ITeamEntryAudit, 'auditId'>> = playerProjections
-        .slice(0, position.limit)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 10)
-        .map((player) => ({
-          teamEntryId: teamEntry.teamEntryId,
-          resetNumber: teamEntry.resetCount,
-          boxNumber: boxNumber++,
-          playerId: player.player_id,
-          playerName: `${player.player.first_name} ${player.player.last_name}`,
-          projectedPoints: player.stats.pts_ppr,
-          injuryStatus: player.player.injury_status,
-          boxStatus: 'available',
-        }));
-      await this.teamsEntryRepository.insertAuditSnapshots(cases);
+    for (const position of leagueSettings.positions) {
+      await this.generateCasesForPosition(createdTeam, position, leagueSettings);
     }
     return createdTeam;
   }
@@ -142,7 +117,7 @@ export class TeamsService {
       );
     }
 
-    const audits: ITeamEntryAudit[] = await this.teamsEntryRepository.findAuditsForEntry(
+    const audits: ITeamEntryAudit[] = await this.teamsEntryRepository.findCurrentAuditsForEntry(
       entry.teamEntryId,
     );
 
@@ -162,11 +137,74 @@ export class TeamsService {
     let teamEntry = await this.getTeamEntry(teamId, position);
     let updatedTeamEntry = await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, {
       selectedBox: caseNumber,
-      status: 'playing'
+      status: 'playing',
     });
     if (!updatedTeamEntry) {
       throw new NotFoundException(`Could not update TeamEntry with id ${teamEntry.teamEntryId}`);
     }
     return updatedTeamEntry;
+  }
+
+  async resetCases(teamId: string, position: string) {
+    let teamEntry = await this.getTeamEntry(teamId, position);
+    //TODO This should not update the reset count; we should be creating a new team entry with an updated resetCount?
+    //Or am I overthinking this - do we need a new entry per reset count, or just new team_entry_audits?
+    //We do not need a new entry per reset count. We should be updating, and there should generally only be one entry per team/position
+    //The only thing that doesn't have a reset_number is team_entry_offer, but you shouldn't be able to reset after getting an offer anyways
+    let updatedTeamEntry = await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, {
+      status: 'pending',
+      resetCount: teamEntry.resetCount + 1,
+    });
+    if (!updatedTeamEntry) {
+      throw new NotFoundException(`Could not update TeamEntry with id ${teamEntry.teamEntryId}`);
+    }
+    let team: Team = await this.findOne(teamId);
+    let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
+      team.leagueId,
+    );
+    await this.generateCasesForPosition(team, position, leagueSettings);
+  }
+
+  async generateCasesForPosition(team: Team, position: string, leagueSettings: ILeagueSettings) {
+    let playerProjections: SleeperProjectionResponse = await this.sleeperService.getPlayerProjections(position, team.seasonYear, team.week);
+    let teamEntry: ITeamEntry = await this.getOrCreateTeamEntry(
+      team.teamId,
+      position,
+      leagueSettings.leagueSettingsId,
+    );
+    let boxNumber = 1;
+
+    let trimmedPlayers = playerProjections.slice(
+      0,
+      leagueSettings[position.toLowerCase() + 'PoolSize'],
+    );
+    let cases: Array<Omit<ITeamEntryAudit, 'auditId'>> = shuffle(trimmedPlayers)
+      .slice(0, 10)
+      .map((player) => ({
+        teamEntryId: teamEntry.teamEntryId,
+        resetNumber: teamEntry.resetCount,
+        boxNumber: boxNumber++,
+        playerId: player.player_id,
+        playerName: `${player.player.first_name} ${player.player.last_name}`,
+        projectedPoints: player.stats.pts_ppr,
+        injuryStatus: player.player.injury_status,
+        boxStatus: 'available',
+      }));
+    await this.teamsEntryRepository.insertAuditSnapshots(cases);
+  }
+
+  async getOrCreateTeamEntry(
+    teamId: string,
+    position: string,
+    leagueSettingsId: string,
+  ): Promise<ITeamEntry> {
+    let teamEntry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(
+      teamId,
+      position,
+    );
+    if (!teamEntry) {
+      teamEntry = await this.teamsEntryRepository.createEntry(teamId, position, leagueSettingsId);
+    }
+    return teamEntry;
   }
 }

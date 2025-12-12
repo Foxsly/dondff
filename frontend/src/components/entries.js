@@ -279,7 +279,7 @@ const Entries = ({leagueId, season, week}) => {
       return member.userId && !membersWithPlayedEntries.has(member.userId);
     }) ?? [];
 
-  const isEntryPlayable = (entries ?? []).some(
+  const isEntryPlayable = entries.length === 0 || entries.some(
     (entry) =>
       !(entry.name === user?.name && !entry.playable)
   );
@@ -325,7 +325,7 @@ const Entries = ({leagueId, season, week}) => {
 
   function logStuff() {
     // console.log(entries);
-    // console.log(hasEntry);
+    // console.log(isEntryPlayable);
     // console.log(user);
     // console.log(unplayedMembers);
     // console.log(isAdmin);

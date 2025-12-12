@@ -94,4 +94,20 @@ export class TeamsController {
     //TODO handle error cases better?
     return this.teamsService.selectCase(teamId, position, caseNumber);
   }
+
+  /**
+   *  Create a new API for `POST /teams/{teamId}/cases/reset`
+   *  Resets the cases for a game - shouldn't be allowed if the reset limit has been reached already, or if a case has already been selected
+   *  Input: position
+   *  Returns: new player list
+   */
+  @TypedRoute.Post(':teamId/cases/reset')
+  async resetCases(
+    @TypedParam('teamId') teamId: string,
+    @TypedBody() dto: any,
+  ): Promise<TeamEntryCasesResponseDto> {
+    //TODO Handle edge cases still - don't allow extra resets, don't allow resets once a box has been selected, etc
+    await this.teamsService.resetCases(teamId, dto.position);
+    return this.teamsService.getTeamCases(teamId, dto.position);
+  }
 }

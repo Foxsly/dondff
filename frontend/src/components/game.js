@@ -205,9 +205,18 @@ const Game = ({teamUser, onComplete}) => {
     resetGame(true, type);
   };
 
-  const resetGame = (consume = true, position) => {
+  const resetGame = async (consume = true, position) => {
     if (consume && (caseSelected || resetUsed[position])) return;
     if (consume) {
+      const resetDto = {
+        position: type,
+      }
+      const resetResponse = await fetch(`${API_BASE}/teams/${teamId}/cases/reset`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify(resetDto),
+      });
       resetUsed[position] = true;
       setResetUsed(resetUsed);
     }

@@ -48,7 +48,7 @@ export abstract class TeamsEntryRepository {
 
   abstract listEventsForEntry(teamEntryId: string): Promise<ITeamEntryEvent[]>;
 
-  abstract findAuditsForEntry(teamEntryId: string): Promise<ITeamEntryAudit[]>;
+  abstract findCurrentAuditsForEntry(teamEntryId: string): Promise<ITeamEntryAudit[]>;
 }
 
 @Injectable()
@@ -190,11 +190,13 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
     return rows as TeamEntryEvent[];
   }
 
-  async findAuditsForEntry(teamEntryId: string): Promise<ITeamEntryAudit[]> {
+  async findCurrentAuditsForEntry(teamEntryId: string): Promise<ITeamEntryAudit[]> {
     const rows = await this.db
       .selectFrom('teamEntryAudit')
-      .selectAll()
+      .innerJoin('teamEntry', 'teamEntry.teamEntryId', 'teamEntryAudit.teamEntryId',)
+      .selectAll('teamEntryAudit')
       .where('teamEntryAudit.teamEntryId', '=', teamEntryId)
+      .whereRef('teamEntryAudit.resetNumber', '=', 'teamEntry.resetCount',)
       .orderBy('teamEntryAudit.boxNumber', 'asc')
       .execute();
 
