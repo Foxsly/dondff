@@ -7,7 +7,8 @@ import { ensureTeamWithFKs, resetDatabase, buildTeamUpdateDto } from '@/infrastr
 import { HttpError } from '../infrastructure/test/sdk/HttpError';
 import { randomUUID } from 'crypto';
 import { SleeperService } from '@/sleeper/sleeper.service';
-import { Test } from '@nestjs/testing';
+import nock from 'nock';
+import projectionsRaw from '@/sleeper/__fixtures__/sleeper-projections.raw.test.json';
 
 function expectHttp404(err: any, method: string) {
   expect(err instanceof HttpError).toBe(true);
@@ -27,31 +28,21 @@ describe('Teams E2E', () => {
     app = await createTestApp();
     conn = { host: getBaseUrl(app) };
 
-    // Mock SleeperService to avoid real API calls
-    const sleeperService = app.get(SleeperService);
-    jest.spyOn(sleeperService, 'getPlayerProjections').mockImplementation(async (position, season, week) => {
-      // Return mock projections data
-      return Array(100).fill(0).map((_, i) => ({
-        player_id: `${position.toLowerCase()}${i}`,
-        stats: {
-          pts_ppr: Math.random() * 30
-        },
-        player: {
-          first_name: `${position}First${i}`,
-          last_name: `${position}Last${i}`,
-          injury_status: null
-        }
-      }));
-    });
+    // Mock SleeperService API calls using nock
+    nock('https://api.sleeper.app')
+      .get(/\/projections\/nfl\/2025\/1$/)
+      .query(true)
+      .reply(200, projectionsRaw as any);
   });
 
   afterEach(async () => {
     await resetDatabase(app);
-    jest.clearAllMocks();
+    nock.cleanAll(); // Clean up nock mocks between tests
   });
 
   afterAll(async () => {
     await closeTestApp(app);
+    nock.restore(); // Restore nock to original state
   });
 
   async function createTeamWithFKs() {
