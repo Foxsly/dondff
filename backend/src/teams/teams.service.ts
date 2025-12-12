@@ -10,8 +10,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   ITeamEntry,
   ITeamEntryAudit,
-  ITeamEntryEvent,
-  TeamEntry,
   TeamEntryCaseBoxDto,
   TeamEntryCasePlayerDto,
   TeamEntryCasesResponseDto,
@@ -107,11 +105,14 @@ export class TeamsService {
     return teamEntry;
   }
 
-  //TODO make this pull from the league settings and derive the positions from there
   async getTeamStatus(teamId: string): Promise<ITeamStatus> {
-    let rbTeamEntry: ITeamEntry = await this.getTeamEntry(teamId, 'RB');
-    let wrTeamEntry: ITeamEntry = await this.getTeamEntry(teamId, 'WR');
-    let playable = !(rbTeamEntry.status === 'finished' && wrTeamEntry.status === 'finished');
+    let team: ITeam = await this.findOne(teamId);
+    let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(team.leagueId);
+    let playable = true;
+    for (let position of leagueSettings.positions) {
+      let teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
+      playable = playable && teamEntry.status !== 'finished';
+    }
     return {
       playable: playable,
     } as ITeamStatus;
