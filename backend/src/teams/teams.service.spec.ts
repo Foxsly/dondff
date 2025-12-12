@@ -1,3 +1,5 @@
+import { LeaguesModule } from '@/leagues/leagues.module';
+import { SleeperModule } from '@/sleeper/sleeper.module';
 import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeamsService } from './teams.service';
@@ -33,6 +35,7 @@ describe('TeamsService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [TeamsService, { provide: TeamsRepository, useValue: mockTeamsRepository }, {provide:TeamsEntryRepository, useValue: mockTeamsEntryRepository}],
+      imports: [SleeperModule, LeaguesModule]
     }).compile();
 
     service = module.get<TeamsService>(TeamsService);
