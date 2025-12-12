@@ -6,6 +6,8 @@ import * as Teams from '@/infrastructure/test/sdk/functional/teams';
 import { ensureTeamWithFKs, resetDatabase, buildTeamUpdateDto } from '@/infrastructure/test/factories';
 import { HttpError } from '../infrastructure/test/sdk/HttpError';
 import { randomUUID } from 'crypto';
+import { SleeperService } from '@/sleeper/sleeper.service';
+import { Test } from '@nestjs/testing';
 
 function expectHttp404(err: any, method: string) {
   expect(err instanceof HttpError).toBe(true);
@@ -24,10 +26,28 @@ describe('Teams E2E', () => {
   beforeAll(async () => {
     app = await createTestApp();
     conn = { host: getBaseUrl(app) };
+
+    // Mock SleeperService to avoid real API calls
+    const sleeperService = app.get(SleeperService);
+    jest.spyOn(sleeperService, 'getPlayerProjections').mockImplementation(async (position, season, week) => {
+      // Return mock projections data
+      return Array(100).fill(0).map((_, i) => ({
+        player_id: `${position.toLowerCase()}${i}`,
+        stats: {
+          pts_ppr: Math.random() * 30
+        },
+        player: {
+          first_name: `${position}First${i}`,
+          last_name: `${position}Last${i}`,
+          injury_status: null
+        }
+      }));
+    });
   });
 
   afterEach(async () => {
     await resetDatabase(app);
+    jest.clearAllMocks();
   });
 
   afterAll(async () => {
