@@ -57,24 +57,6 @@ export class TeamsController {
   }
 
   /**
-   * Create a new API for POST /teams/{teamId}/cases
-   * Updates the TEAM_ENTRY with the selected case
-   * Input: includes an action (selectCase), position, and the case number
-   * Returns: success or failure - error if a case is already selected
-   * @param teamId
-   * @param dto
-   */
-  @TypedRoute.Post(':teamId/cases')
-  selectCases(@TypedParam('teamId') teamId: string, @TypedBody() dto: any): Promise<ITeamEntry> {
-    let action = dto.action;
-    let position = dto.position;
-    let caseNumber = dto.boxNumber;
-
-    //TODO handle error cases better?
-    return this.teamsService.selectCase(teamId, position, caseNumber);
-  }
-
-  /**
    * GET /teams/:teamId/cases?position=RB
    *
    * Returns the current "cases" for the team & position.
@@ -93,5 +75,23 @@ export class TeamsController {
     }
 
     return this.teamsService.getTeamCases(teamId, position);
+  }
+
+  /**
+   * Create a new API for POST /teams/{teamId}/cases
+   * Updates the TEAM_ENTRY with the selected case
+   * Input: includes an action (selectCase), position, and the case number
+   * Returns: success or failure - error if a case is already selected
+   * @param teamId
+   * @param dto
+   */
+  @TypedRoute.Post(':teamId/cases')
+  selectCases(@TypedParam('teamId') teamId: string, @TypedBody() dto: any): Promise<ITeamEntry> {
+    let action = dto.action;
+    let position = dto.position;
+    let caseNumber = dto.boxNumber;
+
+    //TODO handle error cases better?
+    return this.teamsService.selectCase(teamId, position, caseNumber);
   }
 }
