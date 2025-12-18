@@ -108,8 +108,16 @@ export class DatabaseTeamsRepository extends TeamsRepository {
   }
 
   async getCurrentOffer(teamEntryId: string): Promise<ITeamEntryOffer> {
+    const row = await this.db
+      .selectFrom('teamEntryOffer')
+      .selectAll()
+      .where('teamEntryId', '=', teamEntryId)
+      .where('status', '=', 'PENDING')
+      .orderBy('createdAt', 'desc')
+      .limit(1)
+      .executeTakeFirst();
 
-    return Promise.resolve(undefined);
+    return row ? row : null;
   }
 }
 
