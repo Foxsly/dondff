@@ -1,3 +1,4 @@
+import { ITeamEntryOffer } from '@/teams/entities/team-entry.entity';
 import { CreateTeamDto, ITeam, Team } from './entities/team.entity';
 import { Inject, Injectable } from '@nestjs/common';
 import { ExpressionBuilder, Kysely } from 'kysely';
@@ -14,6 +15,7 @@ export abstract class TeamsRepository {
   abstract update(id: string, team: Partial<Team>): Promise<Team | null>;
   abstract remove(id: string): Promise<boolean>;
   abstract upsertTeamPlayer(teamId: string, dto: CreateTeamPlayerDto): Promise<TeamPlayer>;
+  abstract getCurrentOffer(teamEntryId: string): Promise<ITeamEntryOffer>;
 }
 
 @Injectable()
@@ -103,6 +105,11 @@ export class DatabaseTeamsRepository extends TeamsRepository {
       .executeTakeFirstOrThrow();
 
     return row as TeamPlayer;
+  }
+
+  async getCurrentOffer(teamEntryId: string): Promise<ITeamEntryOffer> {
+
+    return Promise.resolve(undefined);
   }
 }
 
