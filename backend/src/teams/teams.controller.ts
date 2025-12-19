@@ -136,7 +136,6 @@ export class TeamsController {
     let action = dto.action;
     let position = dto.position;
 
-    // For now, just return the current offer
-    return await this.teamsService.getCurrentOffer(teamId, position);
+    return await this.teamsService.updateOfferStatus(teamId, position, action);
   }
 }

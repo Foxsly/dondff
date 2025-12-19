@@ -258,6 +258,29 @@ export class TeamsService {
     return this.teamsEntryRepository.createOffer(offer);
   }
 
+  async updateOfferStatus(teamId: string, position: string, action: string): Promise<ITeamEntryOffer> {
+    const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
+    const currentOffer = await this.teamsEntryRepository.getCurrentOffer(teamEntry.teamEntryId);
+    if (!currentOffer) {
+      throw new NotFoundException(`No current offer found for team ${teamId} and position ${position}`);
+    }
+
+    let status: 'accepted' | 'rejected';
+    if (action === 'acceptOffer') {
+      status = 'accepted';
+    } else if (action === 'rejectOffer') {
+      status = 'rejected';
+    } else {
+      throw new Error(`Invalid action: ${action}`);
+    }
+
+    const updatedOffer = await this.teamsEntryRepository.updateOfferStatus(currentOffer.offerId, status);
+    if (!updatedOffer) {
+      throw new NotFoundException(`Could not update offer with id ${currentOffer.offerId}`);
+    }
+    return updatedOffer;
+  }
+
   private async getTeamEntryForTeamId(teamId: string, position: string) {
     const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
 
