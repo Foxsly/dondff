@@ -52,7 +52,7 @@ export abstract class TeamsEntryRepository {
 
   abstract getCurrentOffer(teamEntryId: string): Promise<ITeamEntryOffer | null>;
 
-  abstract getOffer(teamEntryId: string, status?: TeamEntryOfferStatus): Promise<ITeamEntryOffer | null>;
+  abstract getOffers(teamEntryId: string, status?: TeamEntryOfferStatus): Promise<ITeamEntryOffer[]>;
 }
 
 @Injectable()
@@ -219,7 +219,7 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
     return row ? row : null;
   }
 
-  async getOffer(teamEntryId: string, status?: TeamEntryOfferStatus): Promise<ITeamEntryOffer | null> {
+  async getOffers(teamEntryId: string, status?: TeamEntryOfferStatus): Promise<ITeamEntryOffer[]> {
     let query = this.db
       .selectFrom('teamEntryOffer')
       .selectAll()
@@ -229,10 +229,10 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
       query = query.where('status', '=', status);
     }
 
-    const row = await query
-      .limit(1)
-      .executeTakeFirst();
+    const rows = await query
+      .orderBy('createdAt', 'desc')
+      .execute();
 
-    return (row as TeamEntryOffer | undefined) ?? null;
+    return rows as TeamEntryOffer[];
   }
 }
