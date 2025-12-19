@@ -227,18 +227,27 @@ export class TeamsService {
     );
 
     const team: ITeam = await this.findOne(teamEntry.teamId);
-    //TODO need to get season and week from the team. probably add a private method because I'm sure we do this elsewhere.
     const projections = await this.sleeperService.getPlayerProjections(
       teamEntry.position,
       team.seasonYear,
       team.week,
     );
-    //remove players in boxes from the projections
+
+    // Get all previous offers (both accepted and rejected) to filter them out
+    const previousOffers = await this.getOffers(teamEntry.teamId, teamEntry.position);
+    const previousOfferPlayerIds = previousOffers.map(offer => offer.playerId);
+
+    // Remove players in boxes and previously offered players from the projections
     let playerIdsInBoxes = teamEntryAudits.map((entry) => entry.playerId);
     let availableOffers = projections.filter(
-      (player) => !playerIdsInBoxes.includes(player.player_id),
+      (player) => !playerIdsInBoxes.includes(player.player_id) &&
+                 !previousOfferPlayerIds.includes(player.player_id)
     );
-    //TODO also filter out previous offers
+
+    if (availableOffers.length === 0) {
+      throw new Error('No available players left to make an offer');
+    }
+
     const closestOffer = availableOffers.reduce(
       (closest, current) => {
         const currentDiff = Math.abs(current.stats.pts_ppr - finalOfferValue);
