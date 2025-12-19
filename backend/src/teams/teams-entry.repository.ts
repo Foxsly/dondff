@@ -218,4 +218,16 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
 
     return row ? row : null;
   }
+
+  async getOffer(teamEntryId: string, status: TeamEntryOfferStatus): Promise<ITeamEntryOffer | null> {
+    const row = await this.db
+      .selectFrom('teamEntryOffer')
+      .selectAll()
+      .where('teamEntryId', '=', teamEntryId)
+      .where('status', '=', status)
+      .limit(1)
+      .executeTakeFirst();
+
+    return (row as TeamEntryOffer | undefined) ?? null;
+  }
 }
