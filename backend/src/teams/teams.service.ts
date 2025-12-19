@@ -201,8 +201,11 @@ export class TeamsService {
 
   async getCurrentOffer(teamId: string, position: string) {
     const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
-    await this.calculateOffer(teamEntry);
-    //for now, assume there is no offer (need to implement a 'getOffer' in the repository still)
+    const currentOffer = await this.teamsEntryRepository.getCurrentOffer(teamEntry.teamEntryId);
+    if (!currentOffer) {
+      await this.calculateOffer(teamEntry);
+    }
+    return currentOffer;
   }
 
   async calculateOffer(teamEntry: ITeamEntry) {
