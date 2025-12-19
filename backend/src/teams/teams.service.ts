@@ -213,7 +213,9 @@ export class TeamsService {
     let teamEntryAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
     const eligibleCases = teamEntryAudits.filter((entry) => entry.boxStatus === 'available' || entry.boxStatus === 'selected',);
 
-    if (eligibleCases.length === 0) return 0;
+    if (eligibleCases.length === 0) {
+      throw new Error('No eligible cases found for offer calculation');
+    }
 
     const finalOfferValue = Math.sqrt(
       eligibleCases
