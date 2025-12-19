@@ -1,3 +1,6 @@
+# General Guidelines
+- Do not commit changes, just make them in the file so that I can review them
+
 # Backend Architecture
 
 This document describes the backend layering, invariants, and cross-cutting conventions for DONDFF.
