@@ -1,6 +1,5 @@
 import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
 import { LeaguesService } from '@/leagues/leagues.service';
-import { SleeperProjectionResponse } from '@/sleeper/entities/sleeper.entity';
 import { SleeperService } from '@/sleeper/sleeper.service';
 import { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.entity';
 import { ITeamStatus } from '@/teams/entities/team-status.entity';
@@ -158,7 +157,7 @@ export class TeamsService {
   }
 
   async generateCasesForPosition(team: Team, position: string, leagueSettings: ILeagueSettings) {
-    let playerProjections: SleeperProjectionResponse = await this.sleeperService.getPlayerProjections(position, team.seasonYear, team.week);
+    let playerProjections = await this.sleeperService.getPlayerProjections(position, team.seasonYear, team.week);
     let teamEntry: ITeamEntry = await this.getOrCreateTeamEntry(
       team.teamId,
       position,
@@ -210,43 +209,53 @@ export class TeamsService {
   }
 
   async calculateOffer(teamEntry: ITeamEntry): Promise<ITeamEntryOffer> {
-    let teamEntryAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
-    const eligibleCases = teamEntryAudits.filter((entry) => entry.boxStatus === 'available' || entry.boxStatus === 'selected',);
+    let teamEntryAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(
+      teamEntry.teamEntryId,
+    );
+    const eligibleCases = teamEntryAudits.filter(
+      (entry) => entry.boxStatus === 'available' || entry.boxStatus === 'selected',
+    );
 
     if (eligibleCases.length === 0) {
       throw new Error('No eligible cases found for offer calculation');
     }
 
     const finalOfferValue = Math.sqrt(
-      eligibleCases
-        .map((a) => a.projectedPoints ** 2)
-        .reduce((sum, v) => sum + v, 0) / eligibleCases.length,
+      eligibleCases.map((a) => a.projectedPoints ** 2).reduce((sum, v) => sum + v, 0) /
+        eligibleCases.length,
     );
 
     const team: ITeam = await this.findOne(teamEntry.teamId);
     //TODO need to get season and week from the team. probably add a private method because I'm sure we do this elsewhere.
-    const projections = await this.sleeperService.getPlayerProjections(teamEntry.position, team.seasonYear, team.week);
+    const projections = await this.sleeperService.getPlayerProjections(
+      teamEntry.position,
+      team.seasonYear,
+      team.week,
+    );
     //remove players in boxes from the projections
-    let playerIdsInBoxes = teamEntryAudits.map(entry => entry.playerId);
-    let availableOffers = projections.filter(player => !playerIdsInBoxes.includes(player.player_id));
+    let playerIdsInBoxes = teamEntryAudits.map((entry) => entry.playerId);
+    let availableOffers = projections.filter(
+      (player) => !playerIdsInBoxes.includes(player.player_id),
+    );
     //TODO also filter out previous offers
-    const closestOffer = availableOffers.reduce((closest, current) => {
-      const currentDiff = Math.abs(current.stats.pts_ppr - finalOfferValue);
-      const closestDiff = Math.abs(closest.stats.pts_ppr - finalOfferValue);
-
-      return currentDiff < closestDiff ? current : closest;
-    });
+    const closestOffer = availableOffers.reduce(
+      (closest, current) => {
+        const currentDiff = Math.abs(current.stats.pts_ppr - finalOfferValue);
+        const closestDiff = Math.abs(closest.stats.pts_ppr - finalOfferValue);
+        return currentDiff < closestDiff ? current : closest;
+      },
+    );
 
     const offer: Omit<ITeamEntryOffer, 'offerId'> = {
       teamEntryId: teamEntry.teamEntryId,
       playerId: closestOffer.player_id,
       playerName: `${closestOffer.player.first_name} ${closestOffer.player.last_name}`,
+      injuryStatus: closestOffer.player.injury_status,
       projectedPoints: closestOffer.stats.pts_ppr,
       status: 'pending',
     };
 
-    const createdOffer = await this.teamsEntryRepository.createOffer(offer);
-    return createdOffer;
+    return this.teamsEntryRepository.createOffer(offer);
   }
 
   private async getTeamEntryForTeamId(teamId: string, position: string) {

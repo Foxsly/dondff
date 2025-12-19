@@ -74,7 +74,7 @@ export class TeamsController {
       throw new Error('Query parameter "position" is required');
     }
 
-    return this.teamsService.getTeamCases(teamId, position);
+    return this.teamsService.getDisassociatedTeamCases(teamId, position);
   }
 
   /**
@@ -108,6 +108,17 @@ export class TeamsController {
   ): Promise<TeamEntryCasesResponseDto> {
     //TODO Handle edge cases still - don't allow extra resets, don't allow resets once a box has been selected, etc
     await this.teamsService.resetCases(teamId, dto.position);
-    return this.teamsService.getTeamCases(teamId, dto.position);
+    return this.teamsService.getDisassociatedTeamCases(teamId, dto.position);
+  }
+
+  /**
+   * Create a new API for `GET /teams/{teamId}/offers`
+   * Returns the current offer for a TEAM_ENTRY, based on the boxes that have not been eliminated
+   * Includes a query parameter for position
+   */
+
+  @TypedRoute.Get('/:teamId/offers')
+  async getCurrentOffer(@TypedParam('teamId') teamId: string, @Query('position') position: string) {
+    return await this.teamsService.getCurrentOffer(teamId, position);
   }
 }
