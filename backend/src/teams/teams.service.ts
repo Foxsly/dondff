@@ -273,6 +273,11 @@ export class TeamsService {
     return updatedOffer;
   }
 
+  async getOffers(teamId: string, position: string, status?: TeamEntryOfferStatus): Promise<ITeamEntryOffer[]> {
+    const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
+    return this.teamsEntryRepository.getOffers(teamEntry.teamEntryId, status);
+  }
+
   private async getTeamEntryForTeamId(teamId: string, position: string) {
     const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
 
