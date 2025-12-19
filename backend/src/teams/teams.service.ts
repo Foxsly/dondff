@@ -10,6 +10,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   ITeamEntry,
   ITeamEntryAudit,
+  ITeamEntryOffer,
   TeamEntryCaseBoxDto,
   TeamEntryCasePlayerDto,
   TeamEntryCasesResponseDto,
@@ -199,16 +200,16 @@ export class TeamsService {
     return teamEntry;
   }
 
-  async getCurrentOffer(teamId: string, position: string) {
+  async getCurrentOffer(teamId: string, position: string): ITeamEntryOffer {
     const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
     const currentOffer = await this.teamsEntryRepository.getCurrentOffer(teamEntry.teamEntryId);
     if (!currentOffer) {
-      await this.calculateOffer(teamEntry);
+      return this.calculateOffer(teamEntry);
     }
     return currentOffer;
   }
 
-  async calculateOffer(teamEntry: ITeamEntry) {
+  async calculateOffer(teamEntry: ITeamEntry): ITeamEntryOffer {
     let teamEntryAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
     const eligibleCases = teamEntryAudits.filter((entry) => entry.boxStatus === 'available' || entry.boxStatus === 'selected',);
 
@@ -234,6 +235,8 @@ export class TeamsService {
       return currentDiff < closestDiff ? current : closest;
     });
 
+    await this.teamsEntryRepository.createOffer(closestOffer as Omit<ITeamEntryOffer, 'offerId'>);
+    //TODO persist closestOffer
     console.log(closestOffer);
     return closestOffer;
 
