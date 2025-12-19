@@ -237,13 +237,16 @@ export class TeamsService {
       return currentDiff < closestDiff ? current : closest;
     });
 
-    
-    await this.teamsEntryRepository.createOffer(closestOffer as Omit<ITeamEntryOffer, 'offerId'>);
-    //TODO persist closestOffer
-    console.log(closestOffer);
-    return closestOffer;
+    const offer: Omit<ITeamEntryOffer, 'offerId'> = {
+      teamEntryId: teamEntry.teamEntryId,
+      playerId: closestOffer.player_id,
+      playerName: `${closestOffer.player.first_name} ${closestOffer.player.last_name}`,
+      projectedPoints: closestOffer.stats.pts_ppr,
+      status: 'pending',
+    };
 
-    // await this.getDisassociatedTeamCases();
+    const createdOffer = await this.teamsEntryRepository.createOffer(offer);
+    return createdOffer;
   }
 
   private async getTeamEntryForTeamId(teamId: string, position: string) {
