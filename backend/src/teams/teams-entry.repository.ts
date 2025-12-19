@@ -51,6 +51,8 @@ export abstract class TeamsEntryRepository {
   abstract findCurrentAuditsForEntry(teamEntryId: string): Promise<ITeamEntryAudit[]>;
 
   abstract getCurrentOffer(teamEntryId: string): Promise<ITeamEntryOffer | null>;
+
+  abstract getOffer(teamEntryId: string, status: TeamEntryOfferStatus): Promise<ITeamEntryOffer | null>;
 }
 
 @Injectable()
