@@ -229,9 +229,7 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
       query = query.where('status', '=', status);
     }
 
-    const rows = await query
-      .orderBy('createdAt', 'desc')
-      .execute();
+    const rows = await query.execute();
 
     return rows as TeamEntryOffer[];
   }
