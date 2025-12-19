@@ -235,6 +235,7 @@ export class TeamsService {
     });
 
     console.log(closestOffer);
+    return closestOffer;
 
     // await this.getDisassociatedTeamCases();
   }
