@@ -13,6 +13,7 @@ import {
   TeamEntryCaseBoxDto,
   TeamEntryCasePlayerDto,
   TeamEntryCasesResponseDto,
+  TeamEntryOfferStatus,
 } from './entities/team-entry.entity';
 import { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
 
@@ -252,7 +253,7 @@ export class TeamsService {
       playerName: `${closestOffer.player.first_name} ${closestOffer.player.last_name}`,
       injuryStatus: closestOffer.player.injury_status,
       projectedPoints: closestOffer.stats.pts_ppr,
-      status: 'pending',
+      status: 'pending' as TeamEntryOfferStatus,
     };
 
     return this.teamsEntryRepository.createOffer(offer);
@@ -265,7 +266,7 @@ export class TeamsService {
       throw new NotFoundException(`No current offer found for team ${teamId} and position ${position}`);
     }
 
-    let status: 'accepted' | 'rejected';
+    let status: TeamEntryOfferStatus;
     if (action === 'acceptOffer') {
       status = 'accepted';
     } else if (action === 'rejectOffer') {
