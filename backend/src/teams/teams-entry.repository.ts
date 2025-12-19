@@ -52,7 +52,7 @@ export abstract class TeamsEntryRepository {
 
   abstract getCurrentOffer(teamEntryId: string): Promise<ITeamEntryOffer | null>;
 
-  abstract getOffer(teamEntryId: string, status: TeamEntryOfferStatus): Promise<ITeamEntryOffer | null>;
+  abstract getOffer(teamEntryId: string, status?: TeamEntryOfferStatus): Promise<ITeamEntryOffer | null>;
 }
 
 @Injectable()
@@ -219,12 +219,17 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
     return row ? row : null;
   }
 
-  async getOffer(teamEntryId: string, status: TeamEntryOfferStatus): Promise<ITeamEntryOffer | null> {
-    const row = await this.db
+  async getOffer(teamEntryId: string, status?: TeamEntryOfferStatus): Promise<ITeamEntryOffer | null> {
+    let query = this.db
       .selectFrom('teamEntryOffer')
       .selectAll()
-      .where('teamEntryId', '=', teamEntryId)
-      .where('status', '=', status)
+      .where('teamEntryId', '=', teamEntryId);
+
+    if (status !== undefined) {
+      query = query.where('status', '=', status);
+    }
+
+    const row = await query
       .limit(1)
       .executeTakeFirst();
 
