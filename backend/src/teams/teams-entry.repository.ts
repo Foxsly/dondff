@@ -49,6 +49,8 @@ export abstract class TeamsEntryRepository {
   abstract listEventsForEntry(teamEntryId: string): Promise<ITeamEntryEvent[]>;
 
   abstract findCurrentAuditsForEntry(teamEntryId: string): Promise<ITeamEntryAudit[]>;
+
+  abstract getCurrentOffer(teamEntryId: string): Promise<ITeamEntryOffer | null>;
 }
 
 @Injectable()
@@ -201,5 +203,17 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
       .execute();
 
     return rows as ITeamEntryAudit[];
+  }
+
+  async getCurrentOffer(teamEntryId: string): Promise<ITeamEntryOffer | null> {
+    const row = await this.db
+      .selectFrom('teamEntryOffer')
+      .selectAll()
+      .where('teamEntryId', '=', teamEntryId)
+      .where('status', '=', 'pending' as TeamEntryOfferStatus)
+      .limit(1)
+      .executeTakeFirst();
+
+    return row ? row : null;
   }
 }
