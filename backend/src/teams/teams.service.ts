@@ -200,7 +200,7 @@ export class TeamsService {
     return teamEntry;
   }
 
-  async getCurrentOffer(teamId: string, position: string): ITeamEntryOffer {
+  async getCurrentOffer(teamId: string, position: string): Promise<ITeamEntryOffer> {
     const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
     const currentOffer = await this.teamsEntryRepository.getCurrentOffer(teamEntry.teamEntryId);
     if (!currentOffer) {
@@ -209,7 +209,7 @@ export class TeamsService {
     return currentOffer;
   }
 
-  async calculateOffer(teamEntry: ITeamEntry): ITeamEntryOffer {
+  async calculateOffer(teamEntry: ITeamEntry): Promise<ITeamEntryOffer> {
     let teamEntryAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
     const eligibleCases = teamEntryAudits.filter((entry) => entry.boxStatus === 'available' || entry.boxStatus === 'selected',);
 
@@ -237,6 +237,7 @@ export class TeamsService {
       return currentDiff < closestDiff ? current : closest;
     });
 
+    
     await this.teamsEntryRepository.createOffer(closestOffer as Omit<ITeamEntryOffer, 'offerId'>);
     //TODO persist closestOffer
     console.log(closestOffer);
