@@ -5,6 +5,7 @@ import { TeamsService } from './teams.service';
 import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
 import type { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
 import type { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.entity';
+import { TeamEntryOfferStatus } from './entities/team-entry.entity';
 
 @Controller('teams')
 export class TeamsController {
@@ -133,7 +134,7 @@ export class TeamsController {
     @TypedParam('teamId') teamId: string,
     @TypedBody() dto: any,
   ) {
-    let action = dto.action;
+    let action = dto.action as TeamEntryOfferStatus;
     let position = dto.position;
 
     return await this.teamsService.updateOfferStatus(teamId, position, action);
