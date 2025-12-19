@@ -123,8 +123,14 @@ export class TeamsController {
     return await this.teamsService.getCurrentOffer(teamId, position);
   }
 
+  /**
+   * TODO - Returns: case numbers & players to eliminate, new offer
+   * @param teamId
+   * @param dto
+   */
   @TypedRoute.Post(':teamId/offers')
-  async updateOffer(@TypedParam('teamId') teamId: string, @TypedBody() dto: any,) {
+  async updateOffer(@TypedParam('teamId') teamId: string, @TypedBody() dto: any) {
+    let action = dto.action; //'keep' or 'swap'
     let status = dto.status as TeamEntryOfferStatus;
     let position = dto.position;
 
