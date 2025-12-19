@@ -123,20 +123,11 @@ export class TeamsController {
     return await this.teamsService.getCurrentOffer(teamId, position);
   }
 
-  /**
-   * Create a new API for `POST /teams/{teamId}/offers`
-   * Updates the TEAM_ENTRY_OFFER with the accepted/rejected status
-   * Input: includes an action (acceptOffer/rejectOffer) and position
-   * Returns: the updated offer
-   */
   @TypedRoute.Post(':teamId/offers')
-  async updateOffer(
-    @TypedParam('teamId') teamId: string,
-    @TypedBody() dto: any,
-  ) {
-    let action = dto.action as TeamEntryOfferStatus;
+  async updateOffer(@TypedParam('teamId') teamId: string, @TypedBody() dto: any,) {
+    let status = dto.status as TeamEntryOfferStatus;
     let position = dto.position;
 
-    return await this.teamsService.updateOfferStatus(teamId, position, action);
+    return await this.teamsService.updateOfferStatus(teamId, position, status);
   }
 }

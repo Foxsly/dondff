@@ -259,20 +259,11 @@ export class TeamsService {
     return this.teamsEntryRepository.createOffer(offer);
   }
 
-  async updateOfferStatus(teamId: string, position: string, action: string): Promise<ITeamEntryOffer> {
+  async updateOfferStatus(teamId: string, position: string, status: TeamEntryOfferStatus): Promise<ITeamEntryOffer> {
     const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
     const currentOffer = await this.teamsEntryRepository.getCurrentOffer(teamEntry.teamEntryId);
     if (!currentOffer) {
       throw new NotFoundException(`No current offer found for team ${teamId} and position ${position}`);
-    }
-
-    let status: TeamEntryOfferStatus;
-    if (action === 'acceptOffer') {
-      status = 'accepted';
-    } else if (action === 'rejectOffer') {
-      status = 'rejected';
-    } else {
-      throw new Error(`Invalid action: ${action}`);
     }
 
     const updatedOffer = await this.teamsEntryRepository.updateOfferStatus(currentOffer.offerId, status);
