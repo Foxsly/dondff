@@ -17,9 +17,7 @@ import {
 import { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
 
 //yacht-fisher shuffle: https://github.com/queviva/yacht-fisher
-const shuffle = (v, r=[...v]) => v.map(() =>
-  r.splice(~~(Math.random() * r.length), 1)[0]
-);
+const shuffle = (v, r = [...v]) => v.map(() => r.splice(~~(Math.random() * r.length), 1)[0]);
 
 @Injectable()
 export class TeamsService {
@@ -108,19 +106,12 @@ export class TeamsService {
    * - Shapes them into the TeamEntryCasesResponseDto, without exposing
    *   which player is in which case.
    */
-  async getTeamCases(teamId: string, position: string): Promise<TeamEntryCasesResponseDto> {
-    const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
-
-    if (!entry) {
-      throw new NotFoundException(
-        `No team entry found for team ${teamId} and position ${position}`,
-      );
-    }
-
-    const audits: ITeamEntryAudit[] = await this.teamsEntryRepository.findCurrentAuditsForEntry(
-      entry.teamEntryId,
-    );
-
+  async getDisassociatedTeamCases(
+    teamId: string,
+    position: string,
+  ): Promise<TeamEntryCasesResponseDto> {
+    const entry = await this.getTeamEntryForTeamId(teamId, position);
+    const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(entry.teamEntryId);
     return {
       teamEntryId: entry.teamEntryId,
       teamId: entry.teamId,
@@ -206,5 +197,53 @@ export class TeamsService {
       teamEntry = await this.teamsEntryRepository.createEntry(teamId, position, leagueSettingsId);
     }
     return teamEntry;
+  }
+
+  async getCurrentOffer(teamId: string, position: string) {
+    const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
+    await this.calculateOffer(teamEntry);
+    //for now, assume there is no offer (need to implement a 'getOffer' in the repository still)
+  }
+
+  async calculateOffer(teamEntry: ITeamEntry) {
+    let teamEntryAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
+    const eligibleCases = teamEntryAudits.filter((entry) => entry.boxStatus === 'available' || entry.boxStatus === 'selected',);
+
+    if (eligibleCases.length === 0) return 0;
+
+    const finalOfferValue = Math.sqrt(
+      eligibleCases
+        .map((a) => a.projectedPoints ** 2)
+        .reduce((sum, v) => sum + v, 0) / eligibleCases.length,
+    );
+
+    const team: ITeam = await this.findOne(teamEntry.teamId);
+    //TODO need to get season and week from the team. probably add a private method because I'm sure we do this elsewhere.
+    const projections = await this.sleeperService.getPlayerProjections(teamEntry.position, team.seasonYear, team.week);
+    //remove players in boxes from the projections
+    let playerIdsInBoxes = teamEntryAudits.map(entry => entry.playerId);
+    let availableOffers = projections.filter(player => !playerIdsInBoxes.includes(player.player_id));
+    //TODO also filter out previous offers
+    const closestOffer = availableOffers.reduce((closest, current) => {
+      const currentDiff = Math.abs(current.stats.pts_ppr - finalOfferValue);
+      const closestDiff = Math.abs(closest.stats.pts_ppr - finalOfferValue);
+
+      return currentDiff < closestDiff ? current : closest;
+    });
+
+    console.log(closestOffer);
+
+    // await this.getDisassociatedTeamCases();
+  }
+
+  private async getTeamEntryForTeamId(teamId: string, position: string) {
+    const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
+
+    if (!entry) {
+      throw new NotFoundException(
+        `No team entry found for team ${teamId} and position ${position}`,
+      );
+    }
+    return entry;
   }
 }
