@@ -345,7 +345,37 @@ export class TeamsService {
   }
 
   async handleFinalOffer(teamId: string, position: string, decision: TeamEntryAuditFinalDecision): Promise<TeamEntryFinalResponseDto> {
+    const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
+    const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
 
+    // Find the last non-selected box
+    const nonSelectedBoxes = audits.filter(
+      (audit) => audit.boxStatus === 'available' && audit.boxNumber !== teamEntry.selectedBox
+    );
+
+    if (nonSelectedBoxes.length !== 1) {
+      throw new Error('Expected exactly one non-selected box for final decision');
+    }
+
+    const lastNonSelectedBox = nonSelectedBoxes[0];
+
+    // Update the status based on the decision
+    const newStatus = decision === 'keep' ? 'eliminated' : 'swapped';
+    await this.teamsEntryRepository.updateAuditStatus(
+      lastNonSelectedBox.auditId,
+      newStatus as TeamEntryBoxStatus
+    );
+
+    // Update team entry status to finished
+    await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, {
+      status: 'finished',
+    });
+
+    // Return all boxes with updated statuses
+    const updatedAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
+    return {
+      boxes: updatedAudits,
+    };
   }
 
   private async getTeamEntryForTeamId(teamId: string, position: string) {
