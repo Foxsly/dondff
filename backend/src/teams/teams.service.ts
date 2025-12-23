@@ -10,6 +10,7 @@ import {
   ITeamEntry,
   ITeamEntryAudit,
   ITeamEntryOffer,
+  TeamEntryBoxStatus,
   TeamEntryCaseBoxDto,
   TeamEntryCasePlayerDto,
   TeamEntryCasesResponseDto,
@@ -283,7 +284,33 @@ export class TeamsService {
   }
 
   async eliminateCases(teamId: string, position: string): Promise<ITeamEntryAudit[]> {
+    const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
+    const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
 
+    // Filter to only available boxes (excluding selected and already eliminated)
+    const availableAudits = audits.filter(
+      (audit) => audit.boxStatus === 'available' && audit.boxNumber !== teamEntry.selectedBox
+    );
+
+    if (availableAudits.length < 2) {
+      throw new Error('Not enough available cases to eliminate (need at least 2)');
+    }
+
+    // Randomly select 2 audits to eliminate
+    const shuffledAudits = shuffle(availableAudits);
+    const auditsToEliminate = shuffledAudits.slice(0, 2);
+
+    // Update the status of the selected audits to 'eliminated'
+    const updatedAudits = [];
+    for (const audit of auditsToEliminate) {
+      const updatedAudit = await this.teamsEntryRepository.updateAuditStatus(
+        audit.auditId,
+        'eliminated' as TeamEntryBoxStatus
+      );
+      updatedAudits.push(updatedAudit);
+    }
+
+    return updatedAudits;
   }
 
   async getOffers(teamId: string, position: string, status?: TeamEntryOfferStatus): Promise<ITeamEntryOffer[]> {
