@@ -11,10 +11,13 @@ import {
   ITeamEntryAudit,
   ITeamEntryOffer,
   TeamEntry,
+  TeamEntryAuditFinalDecision,
+  TeamEntryAuditFinalDecisionInputDto,
   TeamEntryBoxStatus,
   TeamEntryCaseBoxDto,
   TeamEntryCasePlayerDto,
   TeamEntryCasesResponseDto,
+  TeamEntryFinalResponseDto,
   TeamEntryOfferResponseDto,
   TeamEntryOfferStatus,
 } from './entities/team-entry.entity';
@@ -341,9 +344,9 @@ export class TeamsService {
     }
   }
 
-  // async handleFinalOffer(teamId: string, position: string, keep: boolean): Promise<ITeamEntryOffer> {
-  //
-  // }
+  async handleFinalOffer(teamId: string, position: string, decision: TeamEntryAuditFinalDecision): Promise<TeamEntryFinalResponseDto> {
+
+  }
 
   private async getTeamEntryForTeamId(teamId: string, position: string) {
     const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
