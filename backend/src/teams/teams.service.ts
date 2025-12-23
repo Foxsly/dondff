@@ -287,6 +287,10 @@ export class TeamsService {
     return this.teamsEntryRepository.getOffers(teamEntry.teamEntryId, status);
   }
 
+  async handleFinalOffer(teamId: string, position: string, keep: boolean): Promise<ITeamEntryOffer> {
+
+  }
+
   private async getTeamEntryForTeamId(teamId: string, position: string) {
     const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
 
