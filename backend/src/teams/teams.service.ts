@@ -282,14 +282,18 @@ export class TeamsService {
     return updatedOffer;
   }
 
+  async eliminateCases(teamId: string, position: string): Promise<ITeamEntryAudit[]> {
+
+  }
+
   async getOffers(teamId: string, position: string, status?: TeamEntryOfferStatus): Promise<ITeamEntryOffer[]> {
     const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
     return this.teamsEntryRepository.getOffers(teamEntry.teamEntryId, status);
   }
 
-  async handleFinalOffer(teamId: string, position: string, keep: boolean): Promise<ITeamEntryOffer> {
-
-  }
+  // async handleFinalOffer(teamId: string, position: string, keep: boolean): Promise<ITeamEntryOffer> {
+  //
+  // }
 
   private async getTeamEntryForTeamId(teamId: string, position: string) {
     const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
