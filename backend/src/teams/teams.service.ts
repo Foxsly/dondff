@@ -309,21 +309,27 @@ export class TeamsService {
       (audit) => audit.boxStatus === 'available' && audit.boxNumber !== teamEntry.selectedBox,
     );
 
-    /**
-     * TODO determine current round
-     * 9 remaining: eliminate 3
-     * 6 remaining: eliminate 2
-     * 4 remaining: eliminate 2
-     * 2 remaining: eliminate 1
-     */
-
-    if (availableAudits.length < 2) {
-      throw new Error('Not enough available cases to eliminate (need at least 2)');
+    // Determine number of cases to eliminate based on the round (derived from available cases)
+    let casesToEliminate: number;
+    if (availableAudits.length >= 9) {
+      casesToEliminate = 3; // Round 1: 9 remaining, eliminate 3
+    } else if (availableAudits.length >= 6) {
+      casesToEliminate = 2; // Round 2: 6 remaining, eliminate 2
+    } else if (availableAudits.length >= 4) {
+      casesToEliminate = 2; // Round 3: 4 remaining, eliminate 2
+    } else if (availableAudits.length >= 2) {
+      casesToEliminate = 1; // Round 4: 2 remaining, eliminate 1
+    } else {
+      throw new Error('Not enough available cases to eliminate');
     }
 
-    // Randomly select 2 audits to eliminate
+    if (availableAudits.length < casesToEliminate) {
+      throw new Error(`Not enough available cases to eliminate (need at least ${casesToEliminate})`);
+    }
+
+    // Randomly select the specified number of audits to eliminate
     const shuffledAudits = shuffle(availableAudits);
-    const auditsToEliminate = shuffledAudits.slice(0, 2);
+    const auditsToEliminate = shuffledAudits.slice(0, casesToEliminate);
 
     // Update the status of the selected audits to 'eliminated'
     const updatedAudits: ITeamEntryAudit[] = [];
