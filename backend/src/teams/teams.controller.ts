@@ -135,7 +135,17 @@ export class TeamsController {
     return { position: dto.position };
   }
 
-  //implement a new method `rejectOffer` with path `/:teamId/offers/reject` that is a POST and has `position` in the body. it can just return the position for now
+  /**
+   * POST /teams/{teamId}/offers/reject
+   * Rejects the current offer for a team and position
+   * Input: position in the body
+   * Returns: the position for now
+   */
+  @TypedRoute.Post(':teamId/offers/reject')
+  async rejectOffer(@TypedParam('teamId') teamId: string, @TypedBody() dto: { position: string }) {
+    // For now, just return the position
+    return { position: dto.position };
+  }
 
   /**
    * TODO - Returns: case numbers & players to eliminate, new offer
