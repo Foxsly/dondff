@@ -123,6 +123,8 @@ export class TeamsController {
     return await this.teamsService.getCurrentOffer(teamId, position);
   }
 
+  
+
   /**
    * TODO - Returns: case numbers & players to eliminate, new offer
    * @param teamId
@@ -134,6 +136,10 @@ export class TeamsController {
     let status = dto.status as TeamEntryOfferStatus;
     let position = dto.position;
 
-    return await this.teamsService.updateOfferStatus(teamId, position, status);
+    if (action) {
+
+    } else {
+      return await this.teamsService.updateOfferStatus(teamId, position, status);
+    }
   }
 }
