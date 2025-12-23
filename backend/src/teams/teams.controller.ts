@@ -135,6 +135,8 @@ export class TeamsController {
     return { position: dto.position };
   }
 
+  //implement a new method `rejectOffer` with path `/:teamId/offers/reject` that is a POST and has `position` in the body. it can just return the position for now
+
   /**
    * TODO - Returns: case numbers & players to eliminate, new offer
    * @param teamId
