@@ -313,10 +313,8 @@ export class TeamsService {
     let casesToEliminate: number;
     if (availableAudits.length >= 9) {
       casesToEliminate = 3; // Round 1: 9 remaining, eliminate 3
-    } else if (availableAudits.length >= 6) {
-      casesToEliminate = 2; // Round 2: 6 remaining, eliminate 2
     } else if (availableAudits.length >= 4) {
-      casesToEliminate = 2; // Round 3: 4 remaining, eliminate 2
+      casesToEliminate = 2; // Round 2/3: 6/4 remaining, eliminate 2
     } else if (availableAudits.length >= 2) {
       casesToEliminate = 1; // Round 4: 2 remaining, eliminate 1
     } else {
