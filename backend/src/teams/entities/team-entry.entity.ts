@@ -122,9 +122,10 @@ export type TeamEntryCaseBoxDto = Pick<ITeamEntryAudit, 'boxNumber' | 'boxStatus
  * omits boxNumber so the client cannot infer which player is in
  * which case.
  */
+//TODO - include box status so that you can cross off eliminated players?
 export type TeamEntryCasePlayerDto = Pick<
   ITeamEntryAudit,
-  'playerId' | 'playerName' | 'projectedPoints' | 'injuryStatus'
+  'playerId' | 'playerName' | 'projectedPoints' | 'injuryStatus' | 'boxStatus'
 >;
 
 /**

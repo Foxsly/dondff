@@ -2,6 +2,7 @@ import {
   ITeamEntry,
   TeamEntryAuditFinalDecisionInputDto,
   TeamEntryCasesResponseDto,
+  TeamEntryOfferResponseDto,
 } from '@/teams/entities/team-entry.entity';
 import type { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.entity';
 import { ITeamStatus } from '@/teams/entities/team-status.entity';
@@ -84,19 +85,24 @@ export class TeamsController {
   /**
    * Create a new API for POST /teams/{teamId}/cases
    * Updates the TEAM_ENTRY with the selected case
-   * Input: includes an action (selectCase), position, and the case number
+   * Input: includes position and the case number
    * Returns: success or failure - error if a case is already selected
    * @param teamId
    * @param dto
    */
   @TypedRoute.Post(':teamId/cases')
-  selectCases(@TypedParam('teamId') teamId: string, @TypedBody() dto: any): Promise<ITeamEntry> {
-    let action = dto.action;
+  async selectCases(@TypedParam('teamId') teamId: string, @TypedBody() dto: any): Promise<TeamEntryOfferResponseDto> {
     let position = dto.position;
     let caseNumber = dto.boxNumber;
 
     //TODO handle error cases better?
-    return this.teamsService.selectCase(teamId, position, caseNumber);
+    const teamEntry = await this.teamsService.selectCase(teamId, position, caseNumber);
+    const eliminatedCases = await this.teamsService.eliminateCases(teamId, position);
+    const offer = await this.teamsService.calculateOffer(teamEntry);
+    return {
+      boxes: eliminatedCases,
+      offer: offer,
+    };
   }
 
   /**
@@ -132,7 +138,7 @@ export class TeamsController {
   }
 
   @TypedRoute.Post(':teamId/offers/reject')
-  async rejectOffer(@TypedParam('teamId') teamId: string, @TypedBody() dto: { position: string }) {
+  async rejectOffer(@TypedParam('teamId') teamId: string, @TypedBody() dto: { position: string }): Promise<TeamEntryOfferResponseDto> {
     return this.teamsService.rejectOffer(teamId, dto.position);
   }
 

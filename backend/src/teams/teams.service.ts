@@ -10,9 +10,7 @@ import {
   ITeamEntry,
   ITeamEntryAudit,
   ITeamEntryOffer,
-  TeamEntry,
   TeamEntryAuditFinalDecision,
-  TeamEntryAuditFinalDecisionInputDto,
   TeamEntryBoxStatus,
   TeamEntryCaseBoxDto,
   TeamEntryCasePlayerDto,
@@ -119,6 +117,12 @@ export class TeamsService {
   ): Promise<TeamEntryCasesResponseDto> {
     const entry = await this.getTeamEntryForTeamId(teamId, position);
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(entry.teamEntryId);
+    const trimmedAudits = audits as TeamEntryCasePlayerDto[];
+    trimmedAudits.map((audit) => {
+      if (audit.boxStatus === 'selected') {
+        audit.boxStatus = 'available';
+      }
+    });
     return {
       teamEntryId: entry.teamEntryId,
       teamId: entry.teamId,
@@ -126,7 +130,7 @@ export class TeamsService {
       leagueSettingsId: entry.leagueSettingsId,
       resetCount: entry.resetCount,
       status: entry.status,
-      players: audits as TeamEntryCasePlayerDto[],
+      players: shuffle(trimmedAudits),
       boxes: audits as TeamEntryCaseBoxDto[],
     };
   }
