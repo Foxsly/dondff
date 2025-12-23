@@ -309,6 +309,14 @@ export class TeamsService {
       (audit) => audit.boxStatus === 'available' && audit.boxNumber !== teamEntry.selectedBox,
     );
 
+    /**
+     * TODO determine current round
+     * 9 remaining: eliminate 3
+     * 6 remaining: eliminate 2
+     * 4 remaining: eliminate 2
+     * 2 remaining: eliminate 1
+     */
+
     if (availableAudits.length < 2) {
       throw new Error('Not enough available cases to eliminate (need at least 2)');
     }
