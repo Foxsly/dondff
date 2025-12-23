@@ -368,12 +368,31 @@ const Game = ({teamUser, onComplete}) => {
     setDisplayCases(copyDisplayCases);
   }, [cases]);
 
-  const declineOffer = () => {
+  const declineOffer = async () => {
+    const declineOfferDto = {
+      position: type,
+    }
+    const declineOfferResponse = await fetch(`${API_BASE}/teams/${teamId}/offers/reject`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      credentials: "include",
+      body: JSON.stringify(declineOfferDto),
+    });
     removeOfferFromLeftovers(offer);
     setRound(round + 1);
   };
 
   const keep = useCallback(async () => {
+    const finalDecisionDto = {
+      position: type,
+      decision: 'keep',
+    }
+    const finalDecisionResponse = await fetch(`${API_BASE}/teams/${teamId}/offers`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      credentials: "include",
+      body: JSON.stringify(finalDecisionDto),
+    });
     const lastRemaining = gameCases[0];
     setRemovedCases(removedCases => [...removedCases, lastRemaining]);
     cleanUpCaseDisplay(lastRemaining);
@@ -381,6 +400,16 @@ const Game = ({teamUser, onComplete}) => {
   }, [gameCases, round, cases]);
 
   const swap = useCallback(async () => {
+    const finalDecisionDto = {
+      position: type,
+      decision: 'swap',
+    }
+    const finalDecisionResponse = await fetch(`${API_BASE}/teams/${teamId}/offers`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      credentials: "include",
+      body: JSON.stringify(finalDecisionDto),
+    });
     const lastRemaining = gameCases[0];
     const ogSelected = caseSelected;
     setRemovedCases(removedCases => [...removedCases, ogSelected]);
@@ -389,8 +418,17 @@ const Game = ({teamUser, onComplete}) => {
     setRound(round + 1);
   }, [gameCases, round, cases]);
 
-  const acceptOffer = () => {
+  const acceptOffer = async () => {
     const accepted = offer;
+    const acceptOfferDto = {
+      position: type,
+    }
+    const acceptOfferResponse = await fetch(`${API_BASE}/teams/${teamId}/offers/accept`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      credentials: "include",
+      body: JSON.stringify(acceptOfferDto),
+    });
     setRemovedCases(cases);
     setCaseSelected(accepted);
     cleanAllCases();
