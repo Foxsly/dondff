@@ -123,7 +123,17 @@ export class TeamsController {
     return await this.teamsService.getCurrentOffer(teamId, position);
   }
 
-  
+  /**
+   * POST /teams/{teamId}/offers/accept
+   * Accepts the current offer for a team and position
+   * Input: position in the body
+   * Returns: the position for now
+   */
+  @TypedRoute.Post(':teamId/offers/accept')
+  async acceptOffer(@TypedParam('teamId') teamId: string, @TypedBody() dto: { position: string }) {
+    // For now, just return the position
+    return { position: dto.position };
+  }
 
   /**
    * TODO - Returns: case numbers & players to eliminate, new offer
