@@ -9,6 +9,7 @@ import {
   ITeamEntryOffer,
   TeamEntry,
   TeamEntryAudit,
+  TeamEntryBoxStatus,
   TeamEntryEvent,
   TeamEntryOffer,
   TeamEntryOfferStatus,
@@ -53,6 +54,8 @@ export abstract class TeamsEntryRepository {
   abstract getCurrentOffer(teamEntryId: string): Promise<ITeamEntryOffer | null>;
 
   abstract getOffers(teamEntryId: string, status?: TeamEntryOfferStatus): Promise<ITeamEntryOffer[]>;
+
+  abstract updateAuditStatus(teamEntryAuditId: string, status: TeamEntryBoxStatus): Promise<ITeamEntryAudit>;
 }
 
 @Injectable()
