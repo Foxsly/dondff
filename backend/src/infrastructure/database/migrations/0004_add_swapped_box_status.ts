@@ -1,3 +1,4 @@
+import { db } from '@/infrastructure/database/database';
 import { Kysely, sql } from 'kysely';
 
 export async function up(db: Kysely<any>): Promise<void> {
@@ -11,11 +12,7 @@ export async function up(db: Kysely<any>): Promise<void> {
       ALTER TABLE team_entry_audit
       DROP CONSTRAINT IF EXISTS team_entry_audit_box_status_check
     `.execute(db);
-  }
-  // For SQLite, we can't easily drop constraints, so we'll recreate the table
 
-  // Update the constraint to include 'swapped' status
-  if (engine === 'postgres') {
     await sql`
       ALTER TABLE team_entry_audit
       ADD CONSTRAINT team_entry_audit_box_status_check
