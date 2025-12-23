@@ -164,7 +164,11 @@ export class TeamsService {
   }
 
   async generateCasesForPosition(team: Team, position: string, leagueSettings: ILeagueSettings) {
-    let playerProjections = await this.sleeperService.getPlayerProjections(position, team.seasonYear, team.week);
+    let playerProjections = await this.sleeperService.getPlayerProjections(
+      position,
+      team.seasonYear,
+      team.week,
+    );
     let teamEntry: ITeamEntry = await this.getOrCreateTeamEntry(
       team.teamId,
       position,
@@ -241,26 +245,25 @@ export class TeamsService {
 
     // Get all previous offers (both accepted and rejected) to filter them out
     const previousOffers = await this.getOffers(teamEntry.teamId, teamEntry.position);
-    const previousOfferPlayerIds = previousOffers.map(offer => offer.playerId);
+    const previousOfferPlayerIds = previousOffers.map((offer) => offer.playerId);
 
     // Remove players in boxes and previously offered players from the projections
     let playerIdsInBoxes = teamEntryAudits.map((entry) => entry.playerId);
     let availableOffers = projections.filter(
-      (player) => !playerIdsInBoxes.includes(player.player_id) &&
-                 !previousOfferPlayerIds.includes(player.player_id)
+      (player) =>
+        !playerIdsInBoxes.includes(player.player_id) &&
+        !previousOfferPlayerIds.includes(player.player_id),
     );
 
     if (availableOffers.length === 0) {
       throw new Error('No available players left to make an offer');
     }
 
-    const closestOffer = availableOffers.reduce(
-      (closest, current) => {
-        const currentDiff = Math.abs(current.stats.pts_ppr - finalOfferValue);
-        const closestDiff = Math.abs(closest.stats.pts_ppr - finalOfferValue);
-        return currentDiff < closestDiff ? current : closest;
-      },
-    );
+    const closestOffer = availableOffers.reduce((closest, current) => {
+      const currentDiff = Math.abs(current.stats.pts_ppr - finalOfferValue);
+      const closestDiff = Math.abs(closest.stats.pts_ppr - finalOfferValue);
+      return currentDiff < closestDiff ? current : closest;
+    });
 
     const offer: Omit<ITeamEntryOffer, 'offerId'> = {
       teamEntryId: teamEntry.teamEntryId,
@@ -274,14 +277,23 @@ export class TeamsService {
     return this.teamsEntryRepository.createOffer(offer);
   }
 
-  async updateOfferStatus(teamId: string, position: string, status: TeamEntryOfferStatus): Promise<ITeamEntryOffer> {
+  async updateOfferStatus(
+    teamId: string,
+    position: string,
+    status: TeamEntryOfferStatus,
+  ): Promise<ITeamEntryOffer> {
     const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
     const currentOffer = await this.teamsEntryRepository.getCurrentOffer(teamEntry.teamEntryId);
     if (!currentOffer) {
-      throw new NotFoundException(`No current offer found for team ${teamId} and position ${position}`);
+      throw new NotFoundException(
+        `No current offer found for team ${teamId} and position ${position}`,
+      );
     }
 
-    const updatedOffer = await this.teamsEntryRepository.updateOfferStatus(currentOffer.offerId, status);
+    const updatedOffer = await this.teamsEntryRepository.updateOfferStatus(
+      currentOffer.offerId,
+      status,
+    );
     if (!updatedOffer) {
       throw new NotFoundException(`Could not update offer with id ${currentOffer.offerId}`);
     }
@@ -294,7 +306,7 @@ export class TeamsService {
 
     // Filter to only available boxes (excluding selected and already eliminated)
     const availableAudits = audits.filter(
-      (audit) => audit.boxStatus === 'available' && audit.boxNumber !== teamEntry.selectedBox
+      (audit) => audit.boxStatus === 'available' && audit.boxNumber !== teamEntry.selectedBox,
     );
 
     if (availableAudits.length < 2) {
@@ -310,7 +322,7 @@ export class TeamsService {
     for (const audit of auditsToEliminate) {
       const updatedAudit = await this.teamsEntryRepository.updateAuditStatus(
         audit.auditId,
-        'eliminated' as TeamEntryBoxStatus
+        'eliminated' as TeamEntryBoxStatus,
       );
       updatedAudits.push(updatedAudit);
     }
@@ -318,7 +330,11 @@ export class TeamsService {
     return updatedAudits;
   }
 
-  async getOffers(teamId: string, position: string, status?: TeamEntryOfferStatus): Promise<ITeamEntryOffer[]> {
+  async getOffers(
+    teamId: string,
+    position: string,
+    status?: TeamEntryOfferStatus,
+  ): Promise<ITeamEntryOffer[]> {
     const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
     return this.teamsEntryRepository.getOffers(teamEntry.teamEntryId, status);
   }
@@ -327,10 +343,11 @@ export class TeamsService {
     const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
     const updatedOffer = await this.updateOfferStatus(teamId, position, 'accepted');
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
+    await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, { status: 'finished' });
     return {
       offer: updatedOffer,
       boxes: audits,
-    }
+    };
   }
 
   async rejectOffer(teamId: string, position: string): Promise<TeamEntryOfferResponseDto> {
@@ -341,16 +358,20 @@ export class TeamsService {
     return {
       offer: newOffer,
       boxes: eliminatedCases,
-    }
+    };
   }
 
-  async handleFinalOffer(teamId: string, position: string, decision: TeamEntryAuditFinalDecision): Promise<TeamEntryFinalResponseDto> {
+  async handleFinalOffer(
+    teamId: string,
+    position: string,
+    decision: TeamEntryAuditFinalDecision,
+  ): Promise<TeamEntryFinalResponseDto> {
     const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
 
     // Find the last non-selected box
     const nonSelectedBoxes = audits.filter(
-      (audit) => audit.boxStatus === 'available' && audit.boxNumber !== teamEntry.selectedBox
+      (audit) => audit.boxStatus === 'available' && audit.boxNumber !== teamEntry.selectedBox,
     );
 
     if (nonSelectedBoxes.length !== 1) {
@@ -360,19 +381,16 @@ export class TeamsService {
     const lastNonSelectedBox = nonSelectedBoxes[0];
 
     // Update the status based on the decision
-    const newStatus = decision === 'keep' ? 'eliminated' : 'swapped';
-    await this.teamsEntryRepository.updateAuditStatus(
-      lastNonSelectedBox.auditId,
-      newStatus as TeamEntryBoxStatus
-    );
+    const newStatus: TeamEntryBoxStatus = decision === 'keep' ? 'eliminated' : 'swapped';
+    await this.teamsEntryRepository.updateAuditStatus(lastNonSelectedBox.auditId, newStatus);
 
     // Update team entry status to finished
-    await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, {
-      status: 'finished',
-    });
+    await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, { status: 'finished' });
 
     // Return all boxes with updated statuses
-    const updatedAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
+    const updatedAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(
+      teamEntry.teamEntryId,
+    );
     return {
       boxes: updatedAudits,
     };

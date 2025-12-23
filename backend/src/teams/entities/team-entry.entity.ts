@@ -2,8 +2,9 @@ import { tags } from 'typia';
 import { Selectable } from 'kysely';
 
 export type TeamEntryStatus = 'pending' | 'playing' | 'finished';
-export type TeamEntryBoxStatus = 'selected' | 'eliminated' | 'available' | 'reset';
+export type TeamEntryBoxStatus = 'selected' | 'eliminated' | 'available' | 'swapped' | 'reset';
 export type TeamEntryOfferStatus = 'accepted' | 'rejected' | 'pending';
+export type TeamEntryAuditFinalDecision = 'keep' | 'swap';
 export type TeamEntryEventType =
   | 'start'
   | 'reset'
@@ -150,4 +151,9 @@ export interface TeamEntryOfferResponseDto {
  */
 export interface TeamEntryFinalResponseDto {
   boxes: ITeamEntryAudit[];
+}
+
+export interface TeamEntryAuditFinalDecisionInputDto {
+  decision: TeamEntryAuditFinalDecision;
+  position: string & tags.MinLength<1>;
 }

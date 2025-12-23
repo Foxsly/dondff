@@ -1,9 +1,12 @@
-import { ITeamEntry, TeamEntryCasesResponseDto } from '@/teams/entities/team-entry.entity';
+import {
+  ITeamEntry,
+  TeamEntryAuditFinalDecisionInputDto,
+  TeamEntryCasesResponseDto,
+} from '@/teams/entities/team-entry.entity';
 import type { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.entity';
 import { ITeamStatus } from '@/teams/entities/team-status.entity';
 import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
 import { Body, Controller, Query } from '@nestjs/common';
-import { TeamEntryOfferStatus } from './entities/team-entry.entity';
 import type { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
 import { TeamsService } from './teams.service';
 
@@ -133,21 +136,8 @@ export class TeamsController {
     return this.teamsService.rejectOffer(teamId, dto.position);
   }
 
-  /**
-   * TODO - this now just handles the keep/swap scenario
-   * TODO - Returns: case numbers & players to eliminate, new offer
-   * @param teamId
-   * @param dto
-   */
   @TypedRoute.Post(':teamId/offers')
-  async updateOffer(@TypedParam('teamId') teamId: string, @TypedBody() dto: any) {
-    let action = dto.action; //'keep' or 'swap'
-    let status = dto.status as TeamEntryOfferStatus;
-    let position = dto.position;
-
-    if (action) {
-    } else {
-      return await this.teamsService.updateOfferStatus(teamId, position, status);
-    }
+  async updateOffer(@TypedParam('teamId') teamId: string, @TypedBody() dto: TeamEntryAuditFinalDecisionInputDto) {
+    return this.teamsService.handleFinalOffer(teamId, dto.position, dto.decision);
   }
 }
