@@ -1,11 +1,11 @@
 import { ITeamEntry, TeamEntryCasesResponseDto } from '@/teams/entities/team-entry.entity';
-import { ITeamStatus } from '@/teams/entities/team-status.entity';
-import { Controller, Body, Query } from '@nestjs/common';
-import { TeamsService } from './teams.service';
-import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
-import type { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
 import type { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.entity';
+import { ITeamStatus } from '@/teams/entities/team-status.entity';
+import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
+import { Body, Controller, Query } from '@nestjs/common';
 import { TeamEntryOfferStatus } from './entities/team-entry.entity';
+import type { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
+import { TeamsService } from './teams.service';
 
 @Controller('teams')
 export class TeamsController {
@@ -123,31 +123,18 @@ export class TeamsController {
     return await this.teamsService.getCurrentOffer(teamId, position);
   }
 
-  /**
-   * POST /teams/{teamId}/offers/accept
-   * Accepts the current offer for a team and position
-   * Input: position in the body
-   * Returns: the position for now
-   */
   @TypedRoute.Post(':teamId/offers/accept')
   async acceptOffer(@TypedParam('teamId') teamId: string, @TypedBody() dto: { position: string }) {
-    // For now, just return the position
-    return { position: dto.position };
+    return this.teamsService.acceptOffer(teamId, dto.position);
   }
 
-  /**
-   * POST /teams/{teamId}/offers/reject
-   * Rejects the current offer for a team and position
-   * Input: position in the body
-   * Returns: the position for now
-   */
   @TypedRoute.Post(':teamId/offers/reject')
   async rejectOffer(@TypedParam('teamId') teamId: string, @TypedBody() dto: { position: string }) {
-    // For now, just return the position
-    return { position: dto.position };
+    return this.teamsService.rejectOffer(teamId, dto.position);
   }
 
   /**
+   * TODO - this now just handles the keep/swap scenario
    * TODO - Returns: case numbers & players to eliminate, new offer
    * @param teamId
    * @param dto
@@ -159,7 +146,6 @@ export class TeamsController {
     let position = dto.position;
 
     if (action) {
-
     } else {
       return await this.teamsService.updateOfferStatus(teamId, position, status);
     }

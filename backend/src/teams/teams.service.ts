@@ -10,10 +10,12 @@ import {
   ITeamEntry,
   ITeamEntryAudit,
   ITeamEntryOffer,
+  TeamEntry,
   TeamEntryBoxStatus,
   TeamEntryCaseBoxDto,
   TeamEntryCasePlayerDto,
   TeamEntryCasesResponseDto,
+  TeamEntryOfferResponseDto,
   TeamEntryOfferStatus,
 } from './entities/team-entry.entity';
 import { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
@@ -301,7 +303,7 @@ export class TeamsService {
     const auditsToEliminate = shuffledAudits.slice(0, 2);
 
     // Update the status of the selected audits to 'eliminated'
-    const updatedAudits = [];
+    const updatedAudits: ITeamEntryAudit[] = [];
     for (const audit of auditsToEliminate) {
       const updatedAudit = await this.teamsEntryRepository.updateAuditStatus(
         audit.auditId,
@@ -316,6 +318,27 @@ export class TeamsService {
   async getOffers(teamId: string, position: string, status?: TeamEntryOfferStatus): Promise<ITeamEntryOffer[]> {
     const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
     return this.teamsEntryRepository.getOffers(teamEntry.teamEntryId, status);
+  }
+
+  async acceptOffer(teamId: string, position: string): Promise<TeamEntryOfferResponseDto> {
+    const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
+    const updatedOffer = await this.updateOfferStatus(teamId, position, 'accepted');
+    const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
+    return {
+      offer: updatedOffer,
+      boxes: audits,
+    }
+  }
+
+  async rejectOffer(teamId: string, position: string): Promise<TeamEntryOfferResponseDto> {
+    const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
+    await this.updateOfferStatus(teamId, position, 'rejected');
+    const eliminatedCases = await this.eliminateCases(teamId, position);
+    const newOffer = await this.calculateOffer(teamEntry);
+    return {
+      offer: newOffer,
+      boxes: eliminatedCases,
+    }
   }
 
   // async handleFinalOffer(teamId: string, position: string, keep: boolean): Promise<ITeamEntryOffer> {

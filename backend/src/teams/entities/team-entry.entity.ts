@@ -135,10 +135,19 @@ export interface TeamEntryCasesResponseDto extends TeamEntryCasesMetaDto {
 }
 
 /**
- * Response DTO for offer-related operations that includes
- * the offer details along with the current state of case boxes.
+ * Accepted: contains the accepted offer and all boxes
+ * Rejected: contains the new offer and eliminated boxes
+ * offer will be absent when returning the last two cases (keep/swap choice)
  */
 export interface TeamEntryOfferResponseDto {
-  offer: ITeamEntryOffer;
-  boxes: TeamEntryCaseBoxDto[];
+  offer?: ITeamEntryOffer;
+  boxes: ITeamEntryAudit[];
+}
+
+/**
+ * DTO shape for the final keep/swap response
+ * boxes: all boxes and player data
+ */
+export interface TeamEntryFinalResponseDto {
+  boxes: ITeamEntryAudit[];
 }
