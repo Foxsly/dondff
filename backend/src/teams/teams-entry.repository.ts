@@ -236,4 +236,15 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
 
     return rows as TeamEntryOffer[];
   }
+
+  async updateAuditStatus(teamEntryAuditId: string, status: TeamEntryBoxStatus): Promise<ITeamEntryAudit> {
+    const row = await this.db
+      .updateTable('teamEntryAudit')
+      .set({ boxStatus: status })
+      .where('auditId', '=', teamEntryAuditId)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return row as TeamEntryAudit;
+  }
 }
