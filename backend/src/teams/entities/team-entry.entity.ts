@@ -133,3 +133,12 @@ export interface TeamEntryCasesResponseDto extends TeamEntryCasesMetaDto {
   boxes: TeamEntryCaseBoxDto[];
   players: TeamEntryCasePlayerDto[];
 }
+
+/**
+ * Response DTO for offer-related operations that includes
+ * the offer details along with the current state of case boxes.
+ */
+export interface TeamEntryOfferResponseDto {
+  offer: ITeamEntryOffer;
+  boxes: TeamEntryCaseBoxDto[];
+}
