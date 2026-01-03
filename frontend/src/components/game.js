@@ -288,7 +288,6 @@ const Game = ({teamUser, onComplete}) => {
       projectedPoints	14.72
      */
     setOffer(newOffer);
-    //TODO - call setOffer, figure out what needs to change when rendering
     const eliminatedCases = selectCase.boxes;
     /*
       auditId	"15f3ed59-e113-4d96-9b5b-a46914cc4a84"
@@ -581,13 +580,13 @@ const Game = ({teamUser, onComplete}) => {
     if (cases && caseSelected) {
       return (
         <>
-          {cases.map((box, index) => (box.boxStatus !== 'available' ?
+          {cases.map((box, index) => (box.boxStatus === 'available' ?
               <div className="box" key={index}>
-                <span className="num">{index+1}</span>
+                <span className="num">{box.boxNumber}</span>
               </div>
               :
               <div className="box opened" key={index}>
-                {index+1}<br/>
+                {box.boxNumber}<br/>
                 {box.name}({box.points})
               </div>
           ))}
