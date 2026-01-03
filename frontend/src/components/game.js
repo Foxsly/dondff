@@ -300,8 +300,6 @@ const Game = ({teamUser, onComplete}) => {
       injuryStatus	null
       boxStatus
      */
-
-    // TODO - iterate through displayCases, match to eliminatedCases by playerId, and update the boxStatus, then re-set the value on displayCases
     if (displayCases && eliminatedCases) {
       const updatedDisplayCases = displayCases.map(displayPlayer => {
         const eliminatedCase = eliminatedCases.find(ec => ec.playerId === displayPlayer.playerId);
@@ -316,11 +314,7 @@ const Game = ({teamUser, onComplete}) => {
       setDisplayCases(updatedDisplayCases);
     }
 
-    const copy = [...cases];
-    const index = copy.indexOf(box);
-    copy.splice(index, 1);
-    setGameCases(copy);
-    setRound(1);
+    // TODO - iterate through cases, match to eliminatedCases by playerId, and update the boxStatus, then re-set the value on cases
   };
 
   //TBD?
