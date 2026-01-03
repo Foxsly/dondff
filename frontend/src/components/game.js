@@ -1,11 +1,25 @@
-import React, {useEffect, useState, useCallback} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
-import {getPlayers, generateCases} from './util';
+import {getPlayers} from './util';
 import {getCurrentUser} from "../api/auth";
 
 const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
   "http://localhost:3001"; // fallback only for local dev
+
+/**
+ * LOGIC FLOW
+ * User enters page. Find/create team. render boxes and player list.
+ * Player selects a case. Eliminate boxes, display offer
+ * Player declines offer. Eliminate boxes, display new offer
+ *
+ * What information do we need?
+ * - The list of players in cases, which gets updated when offers are declined
+ * - The cases themselves, which show the player in the case when that player has been eliminated
+ * - The current offer, if available
+ * - The next possible actions from the user
+ */
+
 
 // Game component that can accept a specific uid or default to the current user
 const Game = ({teamUser, onComplete}) => {
@@ -14,15 +28,38 @@ const Game = ({teamUser, onComplete}) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentName, setCurrentName] = useState(null);
   const [cases, setCases] = useState(null);
+  /**
+   * boxNumber
+   * boxStatus
+   * if eliminated:
+   * boxNumber
+   * playerId
+   * playerName
+   * projetedPoints
+   * injuryStatus
+   * boxStatus = 'eliminated'
+   */
+  const [players, setPlayers] = useState(null);
+  /**
+   * playerId
+   * playerName
+   * projectedPoints
+   * injuryStatus
+   * boxStatus
+   */
+  const [offer, setOffer] = useState(null);
+  /**
+   * playerId
+   * playerName
+   * projectedPoints
+   * injuryStatus
+   * status = 'pending'
+   */
   const [caseSelected, setCaseSelected] = useState(null);
-  const [gameCases, setGameCases] = useState(null);
+
   const [round, setRound] = useState(0);
   const [thinking, setThinking] = useState(false);
-  const [removedCases, setRemovedCases] = useState(null);
-  const [offer, setOffer] = useState(null);
   const [reset, setReset] = useState(false);
-  const [leftovers, setLeftovers] = useState(null);
-  const [displayCases, setDisplayCases] = useState(null);
   const [finished, setFinished] = useState(false);
   const [midway, setMidway] = useState(false);
   const [type, setType] = useState("RB");
@@ -36,7 +73,6 @@ const Game = ({teamUser, onComplete}) => {
   const [teamId, setTeamId] = useState(null);
   const hasEnsuredTeamRef = React.useRef(false);
 
-  //KEEP
   useEffect(() => {
     const loadUserAndName = async () => {
       try {
@@ -56,7 +92,6 @@ const Game = ({teamUser, onComplete}) => {
     loadUserAndName();
   }, [teamUser, leagueId]);
 
-  //KEEP
   const ensureTeamForContext = useCallback(
     async (user) => {
       if (!user || !leagueId || !season || !week) {
@@ -128,7 +163,6 @@ const Game = ({teamUser, onComplete}) => {
     [leagueId, season, week]
   );
 
-  //KEEP
   useEffect(() => {
     // Only run once per mount when we have user + context
     if (hasEnsuredTeamRef.current) return;
@@ -146,8 +180,9 @@ const Game = ({teamUser, onComplete}) => {
     })();
   }, [currentUser, leagueId, season, week, ensureTeamForContext]);
 
-  //OLD
+  //KEEP?
   const retrieveCases = useCallback(async () => {
+    console.log("inside retrieveCases")
     if(!teamId) return;
     const getCasesRes = await fetch(`${API_BASE}/teams/${teamId}/cases?position=${type}`, {
       method: "GET",
@@ -176,7 +211,7 @@ const Game = ({teamUser, onComplete}) => {
     // setCases(generateCases(pool, 10));
   }, [teamId, type]);
 
-  //OLD
+  //KEEP
   const buildDisplayCases = async () => {
     const getCasesRes = await fetch(`${API_BASE}/teams/${teamId}/cases?position=${type}`, {
       method: "GET",
@@ -187,39 +222,7 @@ const Game = ({teamUser, onComplete}) => {
       throw new Error(`Failed to retrieve cases (status ${getCasesRes.status})`);
     }
     const serverCases = await getCasesRes.json();
-    setDisplayCases(serverCases.players);
-    //TODO probably need to map players to the front-end format - this is used in renderCaseDisplay
-  };
-
-  //OLD
-  const buildLeftovers = async () => {
-    const genLeftovers = (arr) => {
-      //console.log("genLeftovers fired, state is gonna set")
-      let copyPool = [...pool];
-      let copyCases = arr;
-
-      for (let item of copyCases) {
-        copyPool = copyPool.filter((player) => {
-          if (player.name !== item.name) {
-            return player;
-          }
-        });
-      }
-
-      return copyPool;
-    };
-    const realLeftovers = await genLeftovers(cases);
-    //console.log("leftover cases generated: ", realLeftovers)
-    setLeftovers(realLeftovers);
-
-  };
-
-  //OLD
-  const removeOfferFromLeftovers = (offer) => {
-    let offerToRemoveIndex = leftovers.findIndex(player => player.playerId == offer.playerId);
-    if (offerToRemoveIndex !== -1) {
-      leftovers.splice(offerToRemoveIndex, 1);
-    }
+    setPlayers(serverCases.players);
   };
 
   //KEEP
@@ -248,22 +251,6 @@ const Game = ({teamUser, onComplete}) => {
     setLineUp(prev => ({...prev, [position]: {name: "awaiting game..."}}));
   };
 
-  //OLD
-  const removeCases = (arr, n) => {
-    var result = new Array(n),
-      len = arr.length,
-      taken = new Array(len);
-    if (n > len)
-      throw new RangeError("getRandom: more elements taken than available");
-    while (n--) {
-      var x = Math.floor(Math.random() * len);
-      result[n] = arr[x in taken ? taken[x] : x];
-      taken[x] = --len in taken ? taken[len] : len;
-    }
-    return result;
-  };
-
-  //KEEP - CLEANUP
   const selectCase = async (box) => {
     setCaseSelected(box);
     const selectCaseDto = {
@@ -278,105 +265,11 @@ const Game = ({teamUser, onComplete}) => {
     });
 
     const selectCase = await selectCaseResponse.json();
-    const newOffer = selectCase.offer;
-    /*
-      offerId	"c5e8ba32-60a5-420d-a0e8-c50f7513c0f2"
-      teamEntryId	"c6562e40-d0a0-4a55-93eb-3ce970c64b66"
-      playerId	"9224"
-      playerName	"Chase Brown"
-      injuryStatus	null
-      projectedPoints	14.72
-     */
-    setOffer(newOffer);
-    const eliminatedCases = selectCase.boxes;
-    /*
-      auditId	"15f3ed59-e113-4d96-9b5b-a46914cc4a84"
-      teamEntryId	"c6562e40-d0a0-4a55-93eb-3ce970c64b66"
-      resetNumber	0
-      boxNumber	4
-      playerId	"11199"
-      playerName	"Emari Demercado"
-      projectedPoints	7.34
-      injuryStatus	null
-      boxStatus
-     */
-    if (displayCases && eliminatedCases) {
-      const updatedDisplayCases = displayCases.map(displayPlayer => {
-        const eliminatedCase = eliminatedCases.find(ec => ec.playerId === displayPlayer.playerId);
-        if (eliminatedCase) {
-          return {
-            ...displayPlayer,
-            boxStatus: eliminatedCase.boxStatus
-          };
-        }
-        return displayPlayer;
-      });
-      setDisplayCases(updatedDisplayCases);
-    }
+    setOffer(selectCase.offer);
 
-    // TODO - iterate through cases, match to eliminatedCases by playerId, and update the boxStatus, then re-set the value on cases
-    if (cases && eliminatedCases) {
-      const updatedCases = cases.map(caseItem => {
-        const eliminatedCase = eliminatedCases.find(ec => ec.playerId === caseItem.playerId);
-        if (eliminatedCase) {
-          return {
-            ...caseItem,
-            boxStatus: eliminatedCase.boxStatus
-          };
-        }
-        return caseItem;
-      });
-      setCases(updatedCases);
-    }
-
-    const copy = [...cases];
-    const index = copy.indexOf(box);
-    copy.splice(index, 1);
-    setGameCases(copy);
-    setRound(1);
+    handleEliminatedCases(selectCase.boxes);
   };
 
-  //TBD?
-  const cleanUpCaseDisplay = useCallback(async (lastRemaining) => {
-    let copyCases = cases;
-    let copyDisplayCases = displayCases;
-
-    copyCases = copyCases.map((box) => {
-      if (box.name === lastRemaining.name) {
-        return {...box, opened: true};
-      }
-      return box;
-    });
-
-    copyDisplayCases = copyDisplayCases.map((box) => {
-      if (box.name === lastRemaining.name) {
-        return {...box, opened: true};
-      }
-      return box;
-    });
-
-    setCases(copyCases);
-    setDisplayCases(copyDisplayCases);
-  }, [cases, displayCases]);
-
-  //TBD?
-  const cleanAllCases = useCallback(async (lastRemaining) => {
-    let copyCases = cases;
-    let copyDisplayCases = displayCases;
-
-    copyCases = copyCases.map((box) => {
-      return {...box, opened: true};
-    });
-
-    copyDisplayCases = copyDisplayCases.map((box) => {
-      return {...box, opened: true};
-    });
-
-    setCases(copyCases);
-    setDisplayCases(copyDisplayCases);
-  }, [cases]);
-
-  //KEEP - CLEANUP
   const declineOffer = async () => {
     const declineOfferDto = {
       position: type,
@@ -387,8 +280,26 @@ const Game = ({teamUser, onComplete}) => {
       credentials: "include",
       body: JSON.stringify(declineOfferDto),
     });
-    removeOfferFromLeftovers(offer);
-    setRound(round + 1);
+
+    const declineOffer = await declineOfferResponse.json();
+    //TODO handle final offer (only two cases remaining - don't give them an offer, go to keep/swap).
+    setOffer(declineOffer.offer);
+    handleEliminatedCases(declineOffer.boxes);
+  };
+
+  //KEEP - CLEANUP
+  const acceptOffer = async () => {
+    const accepted = offer;
+    const acceptOfferDto = {
+      position: type,
+    }
+    const acceptOfferResponse = await fetch(`${API_BASE}/teams/${teamId}/offers/accept`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      credentials: "include",
+      body: JSON.stringify(acceptOfferDto),
+    });
+    //TODO do something with the response
   };
 
   //KEEP - CLEANUP
@@ -403,11 +314,8 @@ const Game = ({teamUser, onComplete}) => {
       credentials: "include",
       body: JSON.stringify(finalDecisionDto),
     });
-    const lastRemaining = gameCases[0];
-    setRemovedCases(removedCases => [...removedCases, lastRemaining]);
-    cleanUpCaseDisplay(lastRemaining);
-    setRound(round + 1);
-  }, [gameCases, round, cases]);
+    //TODO do something with the response
+  }, [type, teamId]);
 
   //KEEP - CLEANUP
   const swap = useCallback(async () => {
@@ -421,31 +329,27 @@ const Game = ({teamUser, onComplete}) => {
       credentials: "include",
       body: JSON.stringify(finalDecisionDto),
     });
-    const lastRemaining = gameCases[0];
-    const ogSelected = caseSelected;
-    setRemovedCases(removedCases => [...removedCases, ogSelected]);
-    setCaseSelected(lastRemaining);
-    cleanUpCaseDisplay(ogSelected);
-    setRound(round + 1);
-  }, [gameCases, round, cases]);
+    //TODO do something with the response
+  }, [type, teamId]);
 
-  //KEEP - CLEANUP
-  const acceptOffer = async () => {
-    const accepted = offer;
-    const acceptOfferDto = {
-      position: type,
+  function handleEliminatedCases(eliminatedCases) {
+    if (players && eliminatedCases) {
+      for (const eliminatedCase of eliminatedCases) {
+        const eliminatedPlayer = players.find(player => player.playerId === eliminatedCase.playerId);
+        eliminatedPlayer.boxStatus = eliminatedCase.boxStatus;
+      }
     }
-    const acceptOfferResponse = await fetch(`${API_BASE}/teams/${teamId}/offers/accept`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      credentials: "include",
-      body: JSON.stringify(acceptOfferDto),
-    });
-    setRemovedCases(cases);
-    setCaseSelected(accepted);
-    cleanAllCases();
-    setRound(5);
-  };
+
+    if (cases && eliminatedCases) {
+      for (const eliminatedCase of eliminatedCases) {
+        const eliminatedBox = cases.find(box => box.boxNumber === eliminatedCase.boxNumber);
+        eliminatedBox.boxStatus = eliminatedCase.boxStatus;
+        eliminatedBox.playerName = eliminatedCase.playerName;
+        eliminatedBox.projectedPoints = eliminatedCase.projectedPoints;
+        eliminatedBox.playerId = eliminatedCase.playerId;
+      }
+    }
+  }
 
   //OLD - REFACTOR
   const swapPosition = () => {
@@ -535,6 +439,7 @@ const Game = ({teamUser, onComplete}) => {
 
   //OLD
   useEffect(() => {
+    console.log("inside setLimit useEffect");
     if (type === "WR") {
       setLimit(95);
     }
@@ -547,6 +452,7 @@ const Game = ({teamUser, onComplete}) => {
 
   //OLD - entry?
   useEffect(() => {
+    console.log("inside getPlayers useEffect")
     if (limit) {
       getPlayers(week, type, season, limit, setPool);
     }
@@ -554,6 +460,8 @@ const Game = ({teamUser, onComplete}) => {
 
   //OLD - entry?
   useEffect(() => {
+    console.log("inside retrieveCases useEffect")
+
     if (pool.length > 0 && !cases) {
       console.log("pool when cases try to build", pool);
       retrieveCases();
@@ -561,22 +469,19 @@ const Game = ({teamUser, onComplete}) => {
     }
   }, [cases, pool, retrieveCases]);
 
-  //OLD
-  useEffect(() => {
-    if (cases && leftovers === null) {
-      buildLeftovers();
-    }
-  }, [cases, leftovers]);
-
   //OLD - entry?
   useEffect(() => {
-    if (cases && !displayCases) {
+    console.log("inside buildDisplayCases useEffect")
+
+    if (cases && !players) {
       buildDisplayCases();
     }
-  }, [cases, displayCases]);
+  }, [cases, players]);
 
   //OLD
   useEffect(() => {
+    console.log("inside round switch useEffect")
+
     //TODO figure out how to do this differently
     if (round === 5) {
       setLineUp(prev => ({...prev, [type]: caseSelected}));
@@ -586,22 +491,21 @@ const Game = ({teamUser, onComplete}) => {
 
   //OLD - entry?
   useEffect(() => {
+    console.log("inside if-reset useEffect")
+
     if (reset) {
-      setLeftovers(null);
       setCases(null);
       setCaseSelected(null);
-      setGameCases(null);
       setRound(0);
       setThinking(false);
-      setRemovedCases(null);
       setOffer(null);
-      setDisplayCases(null);
+      setPlayers(null);
       setReset(false);
 
     }
   }, [reset]);
 
-  const render = () => {
+  const renderCases = () => {
     if (cases && caseSelected) {
       return (
         <>
@@ -612,7 +516,7 @@ const Game = ({teamUser, onComplete}) => {
               :
               <div className="box opened" key={index}>
                 {box.boxNumber}<br/>
-                {box.name}({box.points})
+                {box.playerName}({box.projectedPoints})
               </div>
           ))}
         </>
@@ -630,13 +534,13 @@ const Game = ({teamUser, onComplete}) => {
     }
   };
 
-  //TODO need to return team and oppoonent (or retrieve that and use it for rendering purposes)
-  const renderCaseDisplay = () => {
-    if (displayCases) {
+  //TODO need to return team and opponent (or retrieve that and use it for rendering purposes)
+  const renderPlayerList = () => {
+    if (players) {
       return (
         <div className="display-cases">
           Players in cases:
-          {displayCases.map((player, index) => (
+          {players.map((player, index) => (
               player.boxStatus === 'available' ?
                 <div className="list-player">{player.playerName} <span className="status">{player.team} {player.injuryStatus}</span><br/>
                   <span className="proj">Proj: {player.projectedPoints} Opp: {player.opponent}</span></div>
@@ -656,7 +560,7 @@ const Game = ({teamUser, onComplete}) => {
       return (
         <>
           <div>To begin select a case.</div>
-          {renderCaseDisplay()}
+          {renderPlayerList()}
         </>
       );
     }
@@ -666,8 +570,8 @@ const Game = ({teamUser, onComplete}) => {
           <div className="case-selected-text">You have selected case #{caseSelected.number}</div>
           {thinking ? <div>Eliminating Cases...</div> : <div></div>}
 
-          {!thinking && displayCases ?
-            <>{renderCaseDisplay()}</> : null
+          {!thinking && players ?
+            <>{renderPlayerList()}</> : null
           }
         </>
       );
@@ -676,7 +580,8 @@ const Game = ({teamUser, onComplete}) => {
   };
 
   const renderActions = () => {
-    if (offer && round <= 3) {
+    const keepOrSwap = players && players.filter(player => player.boxStatus === 'available').length === 2;
+    if (offer && !keepOrSwap) {
       return (
         <div className="action-box">
           <div className="offer-box">The Banker offers you:
@@ -692,11 +597,11 @@ const Game = ({teamUser, onComplete}) => {
           </div>
         </div>
       );
-    } else if (offer && round === 4) {
+    } else if (offer && keepOrSwap) {
       return (
         <div className="action-box">
           <div className="offer-box">
-            <p>You have rejected all offers and there is one more case remaining: {gameCases[0].number}.</p>
+            <p>You have rejected all offers and there is one more case remaining: DERIVE THE CASE NUMBER.</p>
             <p>Would you like to keep your original case or swap with the last remaining?</p>
           </div>
           <div className="action-buttons">
@@ -742,7 +647,7 @@ const Game = ({teamUser, onComplete}) => {
       <h3>Current User: {currentName}</h3>
       <div className="game">
         <div className="board">
-          {render()}
+          {renderCases()}
         </div>
         <div className="side">
           {renderInfo()}
