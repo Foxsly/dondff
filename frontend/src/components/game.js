@@ -277,7 +277,7 @@ const Game = ({teamUser, onComplete}) => {
       body: JSON.stringify(selectCaseDto),
     });
 
-    const selectCase = selectCaseResponse.json();
+    const selectCase = await selectCaseResponse.json();
     const newOffer = selectCase.offer;
     /*
       offerId	"c5e8ba32-60a5-420d-a0e8-c50f7513c0f2"
@@ -300,9 +300,21 @@ const Game = ({teamUser, onComplete}) => {
       injuryStatus	null
       boxStatus
      */
-    const currentDisplayCases = displayCases;
-    //TODO - iterate through displayCases, match to eliminatedCases by playerId, and update the boxStatus, then re-set the value on displayCases
 
+    // TODO - iterate through displayCases, match to eliminatedCases by playerId, and update the boxStatus, then re-set the value on displayCases
+    if (displayCases && eliminatedCases) {
+      const updatedDisplayCases = displayCases.map(displayPlayer => {
+        const eliminatedCase = eliminatedCases.find(ec => ec.playerId === displayPlayer.playerId);
+        if (eliminatedCase) {
+          return {
+            ...displayPlayer,
+            boxStatus: eliminatedCase.boxStatus
+          };
+        }
+        return displayPlayer;
+      });
+      setDisplayCases(updatedDisplayCases);
+    }
 
     const copy = [...cases];
     const index = copy.indexOf(box);
