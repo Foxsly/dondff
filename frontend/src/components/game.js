@@ -315,6 +315,25 @@ const Game = ({teamUser, onComplete}) => {
     }
 
     // TODO - iterate through cases, match to eliminatedCases by playerId, and update the boxStatus, then re-set the value on cases
+    if (cases && eliminatedCases) {
+      const updatedCases = cases.map(caseItem => {
+        const eliminatedCase = eliminatedCases.find(ec => ec.playerId === caseItem.playerId);
+        if (eliminatedCase) {
+          return {
+            ...caseItem,
+            boxStatus: eliminatedCase.boxStatus
+          };
+        }
+        return caseItem;
+      });
+      setCases(updatedCases);
+    }
+
+    const copy = [...cases];
+    const index = copy.indexOf(box);
+    copy.splice(index, 1);
+    setGameCases(copy);
+    setRound(1);
   };
 
   //TBD?
