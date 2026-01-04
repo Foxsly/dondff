@@ -122,11 +122,12 @@ export type TeamEntryCaseBoxDto = Pick<ITeamEntryAudit, 'boxNumber' | 'boxStatus
  * omits boxNumber so the client cannot infer which player is in
  * which case.
  */
-//TODO - include box status so that you can cross off eliminated players?
+//TODO update this to include `boxNumber` from `ITeamEntryAudit` as an optional field
 export type TeamEntryCasePlayerDto = Pick<
   ITeamEntryAudit,
   'playerId' | 'playerName' | 'projectedPoints' | 'injuryStatus' | 'boxStatus'
 >;
+
 
 /**
  * Combined DTO shape returned by GET /teams/:teamId/cases.
