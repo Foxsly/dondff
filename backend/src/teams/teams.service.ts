@@ -93,13 +93,13 @@ export class TeamsService {
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       team.leagueId,
     );
-    let playable = true;
+    let teamEntries: ITeamEntry[] = [];
     for (let position of leagueSettings.positions) {
       let teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
-      playable = playable && teamEntry.status !== 'finished';
+      teamEntries.push(teamEntry);
     }
     return {
-      playable: playable,
+      playable: !teamEntries.every(teamEntry => teamEntry.status === 'finished')
     } as ITeamStatus;
   }
 
