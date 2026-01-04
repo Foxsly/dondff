@@ -1,6 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
-import {getPlayers} from './util';
 import {getCurrentUser} from "../api/auth";
 
 const API_BASE =
@@ -56,24 +55,22 @@ const Game = ({teamUser, onComplete}) => {
    * status = 'pending'
    */
   const [caseSelected, setCaseSelected] = useState(null);
+  const [position, setPosition] = useState("RB");
+  const [lineUp, setLineUp] = useState([
+    {position: 'RB', playerName: 'awaiting game...', complete: false},
+    {position: 'WR', playerName: 'awaiting game...', complete: false},
+  ]);
 
   const [round, setRound] = useState(0);
   const [thinking, setThinking] = useState(false);
   const [reset, setReset] = useState(false);
-  const [finished, setFinished] = useState(false);
-  const [midway, setMidway] = useState(false);
-  const [type, setType] = useState("RB");
-  const [limit, setLimit] = useState(65);
-  const [pool, setPool] = useState([]);
-  const [lineUp, setLineUp] = useState({
-    RB: {name: "awaiting game..."},
-    WR: {name: "awaiting game..."},
-  });
   const [resetUsed, setResetUsed] = useState({RB: false, WR: false});
   const [teamId, setTeamId] = useState(null);
   const hasEnsuredTeamRef = React.useRef(false);
+  const hasSetupGameRef = React.useRef(false);
 
   useEffect(() => {
+    console.log("loadUserAndName useEffect", teamUser, getCurrentUser())
     const loadUserAndName = async () => {
       try {
         if(teamUser) {
@@ -180,54 +177,46 @@ const Game = ({teamUser, onComplete}) => {
     })();
   }, [currentUser, leagueId, season, week, ensureTeamForContext]);
 
-  //KEEP?
-  const retrieveCases = useCallback(async () => {
-    console.log("inside retrieveCases")
-    if(!teamId) return;
-    const getCasesRes = await fetch(`${API_BASE}/teams/${teamId}/cases?position=${type}`, {
+
+  const setupGame = useCallback(async () => {
+    const getCasesResponse = await fetch(`${API_BASE}/teams/${teamId}/cases?position=${position}`, {
       method: "GET",
       headers: {"Content-Type": "application/json"},
       credentials: "include",
     });
-    if (!getCasesRes.ok) {
-      throw new Error(`Failed to retrieve cases (status ${getCasesRes.status})`);
+    if (!getCasesResponse.ok) {
+      throw new Error(`Failed to retrieve cases (status ${getCasesResponse.status})`);
     }
-    const getCases = await getCasesRes.json();
+    const getCases = await getCasesResponse.json();
     setCases(getCases.boxes);
+    setPlayers(getCases.players);
+    setCaseSelected(getCases.boxes.find(c => c.boxStatus === 'selected'))
 
-    /*
-        "number" : index + 1,
-        "name" : player.name,
-        "points" : player.points,
-        "opened" : false,
-        "status" : player.status,
-        "opponent" : player.opponent,
-        "team" : player.team,
-        "playerId" : player.playerId
-      }
-     */
-
-    //call /teams/:teamId/cases and pull the cases from there
-    // setCases(generateCases(pool, 10));
-  }, [teamId, type]);
-
-  //KEEP
-  const buildDisplayCases = async () => {
-    const getCasesRes = await fetch(`${API_BASE}/teams/${teamId}/cases?position=${type}`, {
+    const getCurrentOffer = await fetch(`${API_BASE}/teams/${teamId}/offers?position=${position}`, {
       method: "GET",
       headers: {"Content-Type": "application/json"},
       credentials: "include",
     });
-    if (!getCasesRes.ok) {
-      throw new Error(`Failed to retrieve cases (status ${getCasesRes.status})`);
-    }
-    const serverCases = await getCasesRes.json();
-    setPlayers(serverCases.players);
-  };
+
+    const currentOffer = await getCurrentOffer.json();
+    console.log(currentOffer);
+    setOffer(currentOffer);
+  }, [position, teamId]);
+
+  useEffect(() => {
+    // Only run once per mount to set up game
+    if (hasSetupGameRef.current) return;
+    if (!teamId || !position) return;
+    hasSetupGameRef.current = true;
+
+    (async () => {
+      await setupGame();
+    })();
+  }, [teamId, position, setupGame]);
 
   //KEEP
   const resetGameHandler = () => {
-    resetGame(true, type);
+    resetGame(true, position);
   };
 
   //KEEP - CLEANUP
@@ -235,7 +224,7 @@ const Game = ({teamUser, onComplete}) => {
     if (consume && (caseSelected || resetUsed[position])) return;
     if (consume) {
       const resetDto = {
-        position: type,
+        position: position,
       }
       const resetResponse = await fetch(`${API_BASE}/teams/${teamId}/cases/reset`, {
         method: "POST",
@@ -247,15 +236,13 @@ const Game = ({teamUser, onComplete}) => {
       setResetUsed(resetUsed);
     }
     setReset(true);
-    setMidway(false);
-    setLineUp(prev => ({...prev, [position]: {name: "awaiting game..."}}));
   };
 
   const selectCase = async (box) => {
     setCaseSelected(box);
     const selectCaseDto = {
-      position: type,
-      boxNumber: box.number
+      position: position,
+      boxNumber: box.boxNumber
     }
     const selectCaseResponse = await fetch(`${API_BASE}/teams/${teamId}/cases`, {
       method: "POST",
@@ -266,13 +253,12 @@ const Game = ({teamUser, onComplete}) => {
 
     const selectCase = await selectCaseResponse.json();
     setOffer(selectCase.offer);
-
     handleEliminatedCases(selectCase.boxes);
   };
 
   const declineOffer = async () => {
     const declineOfferDto = {
-      position: type,
+      position: position,
     }
     const declineOfferResponse = await fetch(`${API_BASE}/teams/${teamId}/offers/reject`, {
       method: "POST",
@@ -282,16 +268,15 @@ const Game = ({teamUser, onComplete}) => {
     });
 
     const declineOffer = await declineOfferResponse.json();
-    //TODO handle final offer (only two cases remaining - don't give them an offer, go to keep/swap).
     setOffer(declineOffer.offer);
     handleEliminatedCases(declineOffer.boxes);
   };
 
+
   //KEEP - CLEANUP
   const acceptOffer = async () => {
-    const accepted = offer;
     const acceptOfferDto = {
-      position: type,
+      position: position,
     }
     const acceptOfferResponse = await fetch(`${API_BASE}/teams/${teamId}/offers/accept`, {
       method: "POST",
@@ -299,13 +284,26 @@ const Game = ({teamUser, onComplete}) => {
       credentials: "include",
       body: JSON.stringify(acceptOfferDto),
     });
-    //TODO do something with the response
+    const acceptedOffer = await acceptOfferResponse.json();
+    const casesToEliminate = acceptedOffer.boxes.map((box) => {
+      //Simulate the remaining cases all being 'eliminated'
+      return {
+        ...box,
+        boxStatus: 'eliminated'
+      }
+    });
+    handleEliminatedCases(casesToEliminate);
+    setOffer({...offer, status: 'accepted'});
+    console.log("lineup: ", lineUp, "position:", position);
+    const lineUpPosition = lineUp.find(value => value.position === position);
+    lineUpPosition.playerName = offer.playerName;
+    lineUpPosition.complete = true;
   };
 
   //KEEP - CLEANUP
   const keep = useCallback(async () => {
     const finalDecisionDto = {
-      position: type,
+      position: position,
       decision: 'keep',
     }
     const finalDecisionResponse = await fetch(`${API_BASE}/teams/${teamId}/offers`, {
@@ -315,12 +313,12 @@ const Game = ({teamUser, onComplete}) => {
       body: JSON.stringify(finalDecisionDto),
     });
     //TODO do something with the response
-  }, [type, teamId]);
+  }, [position, teamId]);
 
   //KEEP - CLEANUP
   const swap = useCallback(async () => {
     const finalDecisionDto = {
-      position: type,
+      position: position,
       decision: 'swap',
     }
     const finalDecisionResponse = await fetch(`${API_BASE}/teams/${teamId}/offers`, {
@@ -330,7 +328,17 @@ const Game = ({teamUser, onComplete}) => {
       body: JSON.stringify(finalDecisionDto),
     });
     //TODO do something with the response
-  }, [type, teamId]);
+  }, [position, teamId]);
+
+  const advanceToNextPosition = () => {
+    if(position === 'RB') {
+      setPosition('WR');
+    }
+    setOffer(null);
+    setPlayers(null);
+    setCases(null);
+    setCaseSelected(null);
+  };
 
   function handleEliminatedCases(eliminatedCases) {
     if (players && eliminatedCases) {
@@ -339,6 +347,7 @@ const Game = ({teamUser, onComplete}) => {
         eliminatedPlayer.boxStatus = eliminatedCase.boxStatus;
       }
     }
+    setPlayers([...players]);
 
     if (cases && eliminatedCases) {
       for (const eliminatedCase of eliminatedCases) {
@@ -349,20 +358,12 @@ const Game = ({teamUser, onComplete}) => {
         eliminatedBox.playerId = eliminatedCase.playerId;
       }
     }
+    setCases([...cases]);
   }
-
-  //OLD - REFACTOR
-  const swapPosition = () => {
-    setPool([]);
-    setType("WR");
-    console.log("TYPE", type);
-    setLimit(95);
-    resetGame(false, "WR");
-    setFinished(true);
-  };
 
   //TBD
   const submitLineup = async () => {
+    console.log("submitLineup");
     try {
       // Ensure we have a user; if not yet loaded, try to fetch again
       let user = currentUser;
@@ -437,84 +438,17 @@ const Game = ({teamUser, onComplete}) => {
     }
   };
 
-  //OLD
-  useEffect(() => {
-    console.log("inside setLimit useEffect");
-    if (type === "WR") {
-      setLimit(95);
-    }
-    if (type === "RB") {
-      setLimit(65);
-      console.log("position group is ", type);
-    }
-  }, [type]);
-
-
-  //OLD - entry?
-  useEffect(() => {
-    console.log("inside getPlayers useEffect")
-    if (limit) {
-      getPlayers(week, type, season, limit, setPool);
-    }
-  }, [limit]);
-
-  //OLD - entry?
-  useEffect(() => {
-    console.log("inside retrieveCases useEffect")
-
-    if (pool.length > 0 && !cases) {
-      console.log("pool when cases try to build", pool);
-      retrieveCases();
-
-    }
-  }, [cases, pool, retrieveCases]);
-
-  //OLD - entry?
-  useEffect(() => {
-    console.log("inside buildDisplayCases useEffect")
-
-    if (cases && !players) {
-      buildDisplayCases();
-    }
-  }, [cases, players]);
-
-  //OLD
-  useEffect(() => {
-    console.log("inside round switch useEffect")
-
-    //TODO figure out how to do this differently
-    if (round === 5) {
-      setLineUp(prev => ({...prev, [type]: caseSelected}));
-      setMidway(true);
-    }
-  }, [round, caseSelected, type]);
-
-  //OLD - entry?
-  useEffect(() => {
-    console.log("inside if-reset useEffect")
-
-    if (reset) {
-      setCases(null);
-      setCaseSelected(null);
-      setRound(0);
-      setThinking(false);
-      setOffer(null);
-      setPlayers(null);
-      setReset(false);
-
-    }
-  }, [reset]);
-
   const renderCases = () => {
+    console.log("rendering cases", cases, caseSelected)
     if (cases && caseSelected) {
       return (
         <>
-          {cases.map((box, index) => (box.boxStatus === 'available' ?
-              <div className="box" key={index}>
+          {cases.map((box, index) => (box.boxStatus === 'available' || box.boxStatus === 'selected' ?
+              <div className="box" key={box.boxNumber}>
                 <span className="num">{box.boxNumber}</span>
               </div>
               :
-              <div className="box opened" key={index}>
+              <div className="box opened" key={box.boxNumber}>
                 {box.boxNumber}<br/>
                 {box.playerName}({box.projectedPoints})
               </div>
@@ -525,8 +459,8 @@ const Game = ({teamUser, onComplete}) => {
       return (
         <>
           {cases.map((box, index) =>
-            <div className="box" key={index} onClick={() => selectCase(cases[index])}>
-              <span className="num">{index+1}</span>
+            <div className="box" key={box.boxNumber} onClick={() => selectCase(box)}>
+              <span className="num">{box.boxNumber}</span>
             </div>
           )}
         </>
@@ -536,16 +470,17 @@ const Game = ({teamUser, onComplete}) => {
 
   //TODO need to return team and opponent (or retrieve that and use it for rendering purposes)
   const renderPlayerList = () => {
+    console.log("rendering player list", players)
     if (players) {
       return (
         <div className="display-cases">
           Players in cases:
           {players.map((player, index) => (
               player.boxStatus === 'available' ?
-                <div className="list-player">{player.playerName} <span className="status">{player.team} {player.injuryStatus}</span><br/>
+                <div className="list-player" key={player.playerId}>{player.playerName} <span className="status">{player.team} {player.injuryStatus}</span><br/>
                   <span className="proj">Proj: {player.projectedPoints} Opp: {player.opponent}</span></div>
                 :
-                <div className="list-player eliminated">{player.playerName} <span
+                <div className="list-player eliminated" key={player.playerId}>{player.playerName} <span
                   className="status">{player.team} {player.status}</span><br/>
                   <span className="proj">Proj: {player.projectedPoints} Opp: {player.opponent}</span></div>
             )
@@ -567,7 +502,7 @@ const Game = ({teamUser, onComplete}) => {
     if (caseSelected) {
       return (
         <>
-          <div className="case-selected-text">You have selected case #{caseSelected.number}</div>
+          <div className="case-selected-text">You have selected case #{caseSelected.boxNumber}</div>
           {thinking ? <div>Eliminating Cases...</div> : <div></div>}
 
           {!thinking && players ?
@@ -576,12 +511,12 @@ const Game = ({teamUser, onComplete}) => {
         </>
       );
     }
-
   };
 
   const renderActions = () => {
     const keepOrSwap = players && players.filter(player => player.boxStatus === 'available').length === 2;
-    if (offer && !keepOrSwap) {
+    const allPositionsDone = lineUp && lineUp.every(lu => lu.complete === true);
+    if (offer && offer.status === 'pending' && !keepOrSwap) {
       return (
         <div className="action-box">
           <div className="offer-box">The Banker offers you:
@@ -592,7 +527,7 @@ const Game = ({teamUser, onComplete}) => {
             <button className="btn" onClick={acceptOffer}>Accept</button>
             <button className="btn" onClick={declineOffer}>Decline</button>
             <button className="btn" onClick={resetGameHandler}
-                    disabled={caseSelected !== null || resetUsed[type]}>Reset
+                    disabled={caseSelected !== null || resetUsed[position]}>Reset
             </button>
           </div>
         </div>
@@ -608,35 +543,53 @@ const Game = ({teamUser, onComplete}) => {
             <button className="btn" onClick={keep}>Keep</button>
             <button className="btn" onClick={swap}>Swap</button>
             <button className="btn" onClick={resetGameHandler}
-                    disabled={caseSelected !== null || resetUsed[type]}>Reset
+                    disabled={caseSelected !== null || resetUsed[position]}>Reset
             </button>
           </div>
         </div>
       );
-    } else if (offer && round === 5) {
+    } else if (offer && offer.status === 'accepted') {
       return (
         <div className="action-box">
           <div className="offer-box">
-            {caseSelected.number ? <p>Your Final case is case#{caseSelected.number}</p> :
-              <p>You accepted the Banker's offer.</p>}
-            <p>Congratulations!! Your player is {caseSelected.name}. His projected points are {caseSelected.points}</p>
+            <p>You accepted the Banker's offer.</p>
+            <p>Congratulations!! Your player is {offer.playerName}. His projected points are {offer.projectedPoints}</p>
           </div>
           <div className="action-buttons">
             <button className="btn" onClick={resetGameHandler}
-                    disabled={caseSelected !== null || resetUsed[type]}>Reset
+                    disabled={caseSelected !== null || resetUsed[position]}>Reset
             </button>
-            {midway ? (finished ? <button className="btn" onClick={submitLineup}>Submit Lineup</button> :
-              <button className="btn" onClick={swapPosition}>Switch Position Group</button>) : null}
+            {allPositionsDone ?
+              <button className="btn" onClick={submitLineup}>Submit Lineup</button> :
+              <button className="btn" onClick={advanceToNextPosition}>Switch Position Group</button>}
+          </div>
+        </div>
+      );
+    } else if (offer && round === 5) { //TODO figure out how to replace this - `round` obvs won't be 5
+      return (
+        <div className="action-box">
+          <div className="offer-box">
+            <p>Your Final case is case#{caseSelected.number}</p>
+            <p>Congratulations!! Your player is {caseSelected.playerName}. His projected points are {caseSelected.projectedPoints}</p>
+          </div>
+          <div className="action-buttons">
+            <button className="btn" onClick={resetGameHandler}
+                    disabled={caseSelected !== null || resetUsed[position]}>Reset
+            </button>
+            {allPositionsDone ?
+              <button className="btn" onClick={submitLineup}>Submit Lineup</button> :
+              <button className="btn" onClick={advanceToNextPosition}>Switch Position Group</button>}
           </div>
         </div>
       );
     } else {
       return (
         <div className="action-buttons">
-          <button className="btn" onClick={resetGameHandler} disabled={caseSelected !== null || resetUsed[type]}>Reset
+          <button className="btn" onClick={resetGameHandler} disabled={caseSelected !== null || resetUsed[position]}>Reset
           </button>
-          {midway ? (finished ? <button className="btn" onClick={submitLineup}>Submit Lineup</button> :
-            <button className="btn" onClick={swapPosition}>Switch Position Group</button>) : null}
+          {allPositionsDone ?
+            <button className="btn" onClick={submitLineup}>Submit Lineup</button> :
+            <button className="btn" onClick={advanceToNextPosition}>Switch Position Group</button>}
         </div>
       );
     }
@@ -657,8 +610,9 @@ const Game = ({teamUser, onComplete}) => {
       <div className="contestant-flexbox">
         <div className="contestant-card">
           <p>{currentName}</p>
-          <p><b>RB:</b> {lineUp.RB.name}</p>
-          <p><b>WR:</b> {lineUp.WR.name}</p>
+          {lineUp.map((lineUpData, index) => {
+            return <p><b>{lineUpData.position}:</b> {lineUpData.playerName}</p>
+          })}
         </div>
       </div>
     </>
