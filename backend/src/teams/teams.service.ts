@@ -117,12 +117,21 @@ export class TeamsService {
   ): Promise<TeamEntryCasesResponseDto> {
     const entry = await this.getTeamEntryForTeamId(teamId, position);
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(entry.teamEntryId);
-    const trimmedAudits = audits as TeamEntryCasePlayerDto[];
-    trimmedAudits.map((audit) => {
-      if (audit.boxStatus === 'selected') {
-        audit.boxStatus = 'available';
-      }
-    });
+    const playerListAudits = audits.map((audit) => ({
+      ...audit,
+      boxStatus: audit.boxStatus === 'selected' ? 'available' : audit.boxStatus,
+    })) as TeamEntryCasePlayerDto[];
+    const boxAudits = audits.map((audit) => ({
+      boxNumber: audit.boxNumber,
+      boxStatus: audit.boxStatus,
+      //Conditional object spreading - only include these if the box is eliminated
+      ...(audit.boxStatus === 'eliminated' ? {
+        boxNumber: audit.boxNumber,
+        playerId: audit.playerId,
+        playerName: audit.playerName,
+        projectedPoints: audit.projectedPoints,
+      } : {})
+    })) as TeamEntryCaseBoxDto[];
     return {
       teamEntryId: entry.teamEntryId,
       teamId: entry.teamId,
@@ -130,8 +139,8 @@ export class TeamsService {
       leagueSettingsId: entry.leagueSettingsId,
       resetCount: entry.resetCount,
       status: entry.status,
-      players: shuffle(trimmedAudits),
-      boxes: audits as TeamEntryCaseBoxDto[],
+      players: shuffle(playerListAudits),
+      boxes: boxAudits,
     };
   }
 
@@ -144,6 +153,12 @@ export class TeamsService {
     if (!updatedTeamEntry) {
       throw new NotFoundException(`Could not update TeamEntry with id ${teamEntry.teamEntryId}`);
     }
+    const teamEntryAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
+    const selectedAudit = teamEntryAudits.find(audit => audit.boxNumber === caseNumber);
+    if (!selectedAudit) {
+      throw new NotFoundException(`Could not update TeamEntryAudit to 'selected' for box number ${caseNumber}`)
+    }
+    await this.teamsEntryRepository.updateAuditStatus(selectedAudit.auditId, 'selected' as TeamEntryBoxStatus)
     return updatedTeamEntry;
   }
 

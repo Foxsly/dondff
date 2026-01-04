@@ -107,14 +107,15 @@ export type TeamEntryCasesMetaDto = Pick<
 >;
 
 /**
- * A single case “box” as exposed to the API layer.
+ * A single case “box” as exposed to the API layer. Includes player details if the box is eliminated.
  *
  * NOTE: This only exposes structural information about the box
  * (its number and status), not the underlying player mapping.
  * That mapping lives only in the audit rows and the server-side
  * game logic, to prevent front-end cheating.
  */
-export type TeamEntryCaseBoxDto = Pick<ITeamEntryAudit, 'boxNumber' | 'boxStatus'>;
+export type TeamEntryCaseBoxDto = Pick<ITeamEntryAudit, 'boxNumber' | 'boxStatus'>
+  & Partial<Pick<ITeamEntryAudit, 'boxNumber' | 'playerId' | 'playerName' | 'projectedPoints'>>;
 
 /**
  * Player summary used when building the “players in cases” list
@@ -123,11 +124,7 @@ export type TeamEntryCaseBoxDto = Pick<ITeamEntryAudit, 'boxNumber' | 'boxStatus
  * which case.
  */
 export type TeamEntryCasePlayerDto = Pick<
-  ITeamEntryAudit,
-  'playerId' | 'playerName' | 'projectedPoints' | 'injuryStatus' | 'boxStatus'
-> & {
-  boxNumber?: number;
-};
+  ITeamEntryAudit, 'playerId' | 'playerName' | 'projectedPoints' | 'injuryStatus' | 'boxStatus'>
 
 /**
  * Combined DTO shape returned by GET /teams/:teamId/cases.

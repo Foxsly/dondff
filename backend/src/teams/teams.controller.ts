@@ -1,5 +1,6 @@
 import {
   ITeamEntry,
+  ITeamEntryOffer,
   TeamEntryAuditFinalDecisionInputDto,
   TeamEntryCasesResponseDto,
   TeamEntryOfferResponseDto,
@@ -91,7 +92,7 @@ export class TeamsController {
    * @param dto
    */
   @TypedRoute.Post(':teamId/cases')
-  async selectCases(@TypedParam('teamId') teamId: string, @TypedBody() dto: any): Promise<TeamEntryOfferResponseDto> {
+  async selectCase(@TypedParam('teamId') teamId: string, @TypedBody() dto: any): Promise<TeamEntryOfferResponseDto> {
     let position = dto.position;
     let caseNumber = dto.boxNumber;
 
@@ -128,7 +129,7 @@ export class TeamsController {
    */
 
   @TypedRoute.Get('/:teamId/offers')
-  async getCurrentOffer(@TypedParam('teamId') teamId: string, @Query('position') position: string) {
+  async getCurrentOffer(@TypedParam('teamId') teamId: string, @Query('position') position: string): Promise<ITeamEntryOffer> {
     return await this.teamsService.getCurrentOffer(teamId, position);
   }
 
