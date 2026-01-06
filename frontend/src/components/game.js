@@ -391,80 +391,11 @@ const Game = ({teamUser, onComplete}) => {
     hasSetupGameRef.current = false;
   };
 
-  //TBD
   const submitLineup = async () => {
-    console.log("submitLineup");
-    try {
-      // Ensure we have a user; if not yet loaded, try to fetch again
-      let user = currentUser;
-      if (!user) {
-        try {
-          user = await getCurrentUser();
-          setCurrentUser(user || null);
-        } catch (e) {
-          console.error("Failed to resolve current user before submitLineup", e);
-        }
-      }
-
-      const userId = user?.id || user?.userId;
-      if (!userId) {
-        console.error("No user id available for submitLineup", user);
-        alert("Unable to determine your user account. Please sign in again.");
-        return;
-      }
-
-      if (!leagueId || !season || !week) {
-        console.error("Missing league/season/week context for submitLineup", {
-          leagueId,
-          season,
-          week,
-        });
-        alert("Missing league/season/week information. Please navigate back and try again.");
-        return;
-      }
-
-      if (!teamId) {
-        console.error("submitLineup: teamId could not be resolved or created");
-        alert("Could not resolve a team to attach your lineup to.");
-        return;
-      }
-
-      // 3. Upsert RB/WR players into the team via upsertTeamPlayer
-      const rb = lineUp.RB;
-      const wr = lineUp.WR;
-
-      const upsertPlayer = async (position, player) => {
-        if (!player || !player.playerId || !player.name) return;
-        const dto = {
-          teamId,
-          position,
-          playerId: player.playerId,
-          playerName: player.name,
-        };
-        const res = await fetch(`${API_BASE}/teams/${teamId}/players`, {
-          method: "PUT",
-          headers: {"Content-Type": "application/json"},
-          credentials: "include",
-          body: JSON.stringify(dto),
-        });
-        if (!res.ok) {
-          throw new Error(
-            `Failed to upsert ${position} for team ${teamId} (status ${res.status})`
-          );
-        }
-      };
-
-      await upsertPlayer("RB", rb);
-      await upsertPlayer("WR", wr);
-
-      if (onComplete) {
-        onComplete();
-      } else {
-        navigate(-1);
-      }
-    } catch (err) {
-      console.error("Unexpected error during submitLineup", err);
-      alert("There was a problem saving your lineup. Please try again.");
+    if (onComplete) {
+      onComplete();
+    } else {
+      navigate(-1);
     }
   };
 
