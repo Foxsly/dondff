@@ -190,17 +190,21 @@ const Game = ({teamUser, onComplete}) => {
     const getCases = await getCasesResponse.json();
     setCases(getCases.boxes);
     setPlayers(getCases.players);
-    setCaseSelected(getCases.boxes.find(c => c.boxStatus === 'selected'))
+    const selectedCase = getCases.boxes.find(c => c.boxStatus === 'selected');
+    setCaseSelected(selectedCase)
 
-    const getCurrentOffer = await fetch(`${API_BASE}/teams/${teamId}/offers?position=${position}`, {
-      method: "GET",
-      headers: {"Content-Type": "application/json"},
-      credentials: "include",
-    });
+    //Don't retrieve an offer unless there is a case selected already
+    if(selectedCase) {
+      const getCurrentOffer = await fetch(`${API_BASE}/teams/${teamId}/offers?position=${position}`, {
+        method: "GET",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+      });
 
-    const currentOffer = await getCurrentOffer.json();
-    console.log(currentOffer);
-    setOffer(currentOffer);
+      const currentOffer = await getCurrentOffer.json();
+      console.log(currentOffer);
+      setOffer(currentOffer);
+    }
   }, [position, teamId]);
 
   useEffect(() => {
@@ -312,8 +316,15 @@ const Game = ({teamUser, onComplete}) => {
       credentials: "include",
       body: JSON.stringify(finalDecisionDto),
     });
-    //TODO do something with the response
-  }, [position, teamId]);
+    const finalDecision = await finalDecisionResponse.json();
+    const boxes = finalDecision.boxes;
+    const selectedPlayer = boxes.find((box) => box.boxStatus === 'selected');
+    handleEliminatedCases(boxes);
+    const lineUpPosition = lineUp.find(value => value.position === position);
+    lineUpPosition.playerName = selectedPlayer.playerName;
+    lineUpPosition.complete = true;
+    setOffer(null);
+  }, [handleEliminatedCases, lineUp, position, teamId]);
 
   //KEEP - CLEANUP
   const swap = useCallback(async () => {
@@ -439,11 +450,12 @@ const Game = ({teamUser, onComplete}) => {
   };
 
   const renderCases = () => {
-    console.log("rendering cases", cases, caseSelected)
+    const showAllCases = players && players.filter(player => player.boxStatus === 'available').length === 0;
+    console.log("rendering cases", cases, caseSelected, players, showAllCases);
     if (cases && caseSelected) {
       return (
         <>
-          {cases.map((box, index) => (box.boxStatus === 'available' || box.boxStatus === 'selected' ?
+          {cases.map((box, index) => ((box.boxStatus === 'available' || box.boxStatus === 'selected') && !showAllCases ?
               <div className="box" key={box.boxNumber}>
                 <span className="num">{box.boxNumber}</span>
               </div>
@@ -476,7 +488,7 @@ const Game = ({teamUser, onComplete}) => {
         <div className="display-cases">
           Players in cases:
           {players.map((player, index) => (
-              player.boxStatus === 'available' ?
+              player.boxStatus === 'available' || player.boxStatus === 'selected' ?
                 <div className="list-player" key={player.playerId}>{player.playerName} <span className="status">{player.team} {player.injuryStatus}</span><br/>
                   <span className="proj">Proj: {player.projectedPoints} Opp: {player.opponent}</span></div>
                 :
