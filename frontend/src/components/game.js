@@ -177,8 +177,8 @@ const Game = ({teamUser, onComplete}) => {
     })();
   }, [currentUser, leagueId, season, week, ensureTeamForContext]);
 
-
   const setupGame = useCallback(async () => {
+    //TODO get all entries (/teams/{teamId}/entry with no position query) and figure out what position to start at
     const getCasesResponse = await fetch(`${API_BASE}/teams/${teamId}/cases?position=${position}`, {
       method: "GET",
       headers: {"Content-Type": "application/json"},
