@@ -217,27 +217,27 @@ const Game = ({teamUser, onComplete}) => {
     })();
   }, [teamId, position, setupGame]);
 
-  //KEEP
-  const resetGameHandler = () => {
-    resetGame(true, position);
+  const resetGameHandler = async () => {
+    resetGame(position);
   };
 
-  //KEEP - CLEANUP
-  const resetGame = async (consume = true, position) => {
-    if (consume && (caseSelected || resetUsed[position])) return;
-    if (consume) {
-      const resetDto = {
-        position: position,
-      }
-      const resetResponse = await fetch(`${API_BASE}/teams/${teamId}/cases/reset`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        credentials: "include",
-        body: JSON.stringify(resetDto),
-      });
-      resetUsed[position] = true;
-      setResetUsed(resetUsed);
-    }
+  const resetGame = async (position) => {
+    if (caseSelected || resetUsed[position]) return;
+    const resetDto = {
+      position: position,
+    };
+    const resetResponse = await fetch(`${API_BASE}/teams/${teamId}/cases/reset`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      credentials: "include",
+      body: JSON.stringify(resetDto),
+    });
+
+    const reset = await resetResponse.json();
+    setCases(reset.boxes);
+    setPlayers(reset.players);
+    resetUsed[position] = true;
+    setResetUsed(resetUsed);
     setReset(true);
   };
 
@@ -490,7 +490,7 @@ const Game = ({teamUser, onComplete}) => {
             <button className="btn" onClick={acceptOffer}>Accept</button>
             <button className="btn" onClick={declineOffer}>Decline</button>
             <button className="btn" onClick={resetGameHandler}
-                    disabled={caseSelected !== null || resetUsed[position]}>Reset
+                    disabled={caseSelected || resetUsed[position]}>Reset
             </button>
           </div>
         </div>
@@ -506,7 +506,7 @@ const Game = ({teamUser, onComplete}) => {
             <button className="btn" onClick={keep}>Keep</button>
             <button className="btn" onClick={swap}>Swap</button>
             <button className="btn" onClick={resetGameHandler}
-                    disabled={caseSelected !== null || resetUsed[position]}>Reset
+                    disabled={caseSelected || resetUsed[position]}>Reset
             </button>
           </div>
         </div>
@@ -519,9 +519,6 @@ const Game = ({teamUser, onComplete}) => {
             <p>Congratulations!! Your player is {offer.playerName}. His projected points are {offer.projectedPoints}</p>
           </div>
           <div className="action-buttons">
-            <button className="btn" onClick={resetGameHandler}
-                    disabled={caseSelected !== null || resetUsed[position]}>Reset
-            </button>
             {allPositionsDone ?
               <button className="btn" onClick={submitLineup}>Submit Lineup</button> :
               <button className="btn" onClick={advanceToNextPosition}>Switch Position Group</button>}
@@ -545,8 +542,7 @@ const Game = ({teamUser, onComplete}) => {
     } else {
       return (
         <div className="action-buttons">
-          <button className="btn" onClick={resetGameHandler} disabled={caseSelected !== null || resetUsed[position]}>Reset
-          </button>
+          <button className="btn" onClick={resetGameHandler} disabled={caseSelected || resetUsed[position]}>Reset</button>
           {allPositionsDone ?
             <button className="btn" onClick={submitLineup}>Submit Lineup</button> :
             <button className="btn" onClick={advanceToNextPosition}>Switch Position Group</button>}
