@@ -338,8 +338,24 @@ const Game = ({teamUser, onComplete}) => {
       credentials: "include",
       body: JSON.stringify(finalDecisionDto),
     });
-    //TODO do something with the response
-  }, [position, teamId]);
+
+    const finalDecision = await finalDecisionResponse.json();
+    const boxes = finalDecision.boxes;
+    const selectedPlayer = boxes.find((box) => box.boxStatus === 'swapped');
+    const updatedBoxes = boxes.map((box) => {
+      const newBoxStatus = box.boxStatus === 'selected' ? 'eliminated' : box.boxStatus === 'swapped' ? 'selected' : box.boxStatus;
+      return {
+        ...box,
+        boxStatus: newBoxStatus
+      }
+    });
+    //A little hacky, but set the swapped case to the selected case and eliminate the selected case
+    handleEliminatedCases(updatedBoxes);
+    const lineUpPosition = lineUp.find(value => value.position === position);
+    lineUpPosition.playerName = selectedPlayer.playerName;
+    lineUpPosition.complete = true;
+    setOffer(null);
+  }, [handleEliminatedCases, lineUp, position, teamId]);
 
   const advanceToNextPosition = () => {
     if(position === 'RB') {
