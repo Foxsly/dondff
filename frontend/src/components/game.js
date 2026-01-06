@@ -388,9 +388,8 @@ const Game = ({teamUser, onComplete}) => {
     setPlayers(null);
     setCases(null);
     setCaseSelected(null);
+    hasSetupGameRef.current = false;
   };
-
-
 
   //TBD
   const submitLineup = async () => {
