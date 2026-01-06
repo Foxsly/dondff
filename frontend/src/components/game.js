@@ -61,7 +61,6 @@ const Game = ({teamUser, onComplete}) => {
     {position: 'WR', playerName: 'awaiting game...', complete: false},
   ]);
 
-  const [round, setRound] = useState(0);
   const [thinking, setThinking] = useState(false);
   const [reset, setReset] = useState(false);
   const [resetUsed, setResetUsed] = useState({RB: false, WR: false});
@@ -242,6 +241,28 @@ const Game = ({teamUser, onComplete}) => {
     setReset(true);
   };
 
+  const handleEliminatedCases = useCallback(
+    eliminatedCases => {
+      if (players && eliminatedCases) {
+        for (const eliminatedCase of eliminatedCases) {
+          const eliminatedPlayer = players.find(player => player.playerId === eliminatedCase.playerId);
+          eliminatedPlayer.boxStatus = eliminatedCase.boxStatus;
+        }
+      }
+      setPlayers([...players]);
+
+      if (cases && eliminatedCases) {
+        for (const eliminatedCase of eliminatedCases) {
+          const eliminatedBox = cases.find(box => box.boxNumber === eliminatedCase.boxNumber);
+          eliminatedBox.boxStatus = eliminatedCase.boxStatus;
+          eliminatedBox.playerName = eliminatedCase.playerName;
+          eliminatedBox.projectedPoints = eliminatedCase.projectedPoints;
+          eliminatedBox.playerId = eliminatedCase.playerId;
+        }
+      }
+      setCases([...cases]);
+    }, [cases, players]);
+
   const selectCase = async (box) => {
     setCaseSelected(box);
     const selectCaseDto = {
@@ -323,6 +344,7 @@ const Game = ({teamUser, onComplete}) => {
     const lineUpPosition = lineUp.find(value => value.position === position);
     lineUpPosition.playerName = selectedPlayer.playerName;
     lineUpPosition.complete = true;
+    setCaseSelected(selectedPlayer);
     setOffer(null);
   }, [handleEliminatedCases, lineUp, position, teamId]);
 
@@ -354,6 +376,7 @@ const Game = ({teamUser, onComplete}) => {
     const lineUpPosition = lineUp.find(value => value.position === position);
     lineUpPosition.playerName = selectedPlayer.playerName;
     lineUpPosition.complete = true;
+    setCaseSelected(selectedPlayer);
     setOffer(null);
   }, [handleEliminatedCases, lineUp, position, teamId]);
 
@@ -367,26 +390,7 @@ const Game = ({teamUser, onComplete}) => {
     setCaseSelected(null);
   };
 
-  function handleEliminatedCases(eliminatedCases) {
-    if (players && eliminatedCases) {
-      for (const eliminatedCase of eliminatedCases) {
-        const eliminatedPlayer = players.find(player => player.playerId === eliminatedCase.playerId);
-        eliminatedPlayer.boxStatus = eliminatedCase.boxStatus;
-      }
-    }
-    setPlayers([...players]);
 
-    if (cases && eliminatedCases) {
-      for (const eliminatedCase of eliminatedCases) {
-        const eliminatedBox = cases.find(box => box.boxNumber === eliminatedCase.boxNumber);
-        eliminatedBox.boxStatus = eliminatedCase.boxStatus;
-        eliminatedBox.playerName = eliminatedCase.playerName;
-        eliminatedBox.projectedPoints = eliminatedCase.projectedPoints;
-        eliminatedBox.playerId = eliminatedCase.playerId;
-      }
-    }
-    setCases([...cases]);
-  }
 
   //TBD
   const submitLineup = async () => {
@@ -543,6 +547,7 @@ const Game = ({teamUser, onComplete}) => {
 
   const renderActions = () => {
     const keepOrSwap = players && players.filter(player => player.boxStatus === 'available').length === 2;
+    const remainingCase = cases && caseSelected && cases.find(c => c.boxStatus === 'available' && c.boxNumber !== caseSelected.boxNumber);
     const allPositionsDone = lineUp && lineUp.every(lu => lu.complete === true);
     if (offer && offer.status === 'pending' && !keepOrSwap) {
       return (
@@ -564,7 +569,7 @@ const Game = ({teamUser, onComplete}) => {
       return (
         <div className="action-box">
           <div className="offer-box">
-            <p>You have rejected all offers and there is one more case remaining: DERIVE THE CASE NUMBER.</p>
+            <p>You have rejected all offers and there is one more case remaining: #{remainingCase.boxNumber}.</p>
             <p>Would you like to keep your original case or swap with the last remaining?</p>
           </div>
           <div className="action-buttons">
@@ -593,17 +598,14 @@ const Game = ({teamUser, onComplete}) => {
           </div>
         </div>
       );
-    } else if (offer && round === 5) { //TODO figure out how to replace this - `round` obvs won't be 5
+    } else if (caseSelected && caseSelected.playerName) {
       return (
         <div className="action-box">
           <div className="offer-box">
-            <p>Your Final case is case#{caseSelected.number}</p>
+            <p>Your Final case is case#{caseSelected.boxNumber}</p>
             <p>Congratulations!! Your player is {caseSelected.playerName}. His projected points are {caseSelected.projectedPoints}</p>
           </div>
           <div className="action-buttons">
-            <button className="btn" onClick={resetGameHandler}
-                    disabled={caseSelected !== null || resetUsed[position]}>Reset
-            </button>
             {allPositionsDone ?
               <button className="btn" onClick={submitLineup}>Submit Lineup</button> :
               <button className="btn" onClick={advanceToNextPosition}>Switch Position Group</button>}
