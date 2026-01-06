@@ -89,6 +89,13 @@ export class TeamsService {
   }
 
   async getTeamStatus(teamId: string): Promise<ITeamStatus> {
+    let teamEntries = await this.getAllTeamEntriesForTeam(teamId);
+    return {
+      playable: !teamEntries.every((teamEntry) => teamEntry.status === 'finished'),
+    } as ITeamStatus;
+  }
+
+  async getAllTeamEntriesForTeam(teamId: string): Promise<ITeamEntry[]> {
     let team: ITeam = await this.findOne(teamId);
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       team.leagueId,
@@ -98,9 +105,7 @@ export class TeamsService {
       let teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
       teamEntries.push(teamEntry);
     }
-    return {
-      playable: !teamEntries.every(teamEntry => teamEntry.status === 'finished')
-    } as ITeamStatus;
+    return teamEntries;
   }
 
   /**
@@ -115,7 +120,7 @@ export class TeamsService {
     teamId: string,
     position: string,
   ): Promise<TeamEntryCasesResponseDto> {
-    const entry = await this.getTeamEntryForTeamId(teamId, position);
+    const entry = await this.getTeamEntry(teamId, position);
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(entry.teamEntryId);
     const playerListAudits = audits.map((audit) => ({
       ...audit,
@@ -125,12 +130,14 @@ export class TeamsService {
       boxNumber: audit.boxNumber,
       boxStatus: audit.boxStatus,
       //Conditional object spreading - only include these if the box is eliminated
-      ...(audit.boxStatus === 'eliminated' ? {
-        boxNumber: audit.boxNumber,
-        playerId: audit.playerId,
-        playerName: audit.playerName,
-        projectedPoints: audit.projectedPoints,
-      } : {})
+      ...(audit.boxStatus === 'eliminated'
+        ? {
+            boxNumber: audit.boxNumber,
+            playerId: audit.playerId,
+            playerName: audit.playerName,
+            projectedPoints: audit.projectedPoints,
+          }
+        : {}),
     })) as TeamEntryCaseBoxDto[];
     return {
       teamEntryId: entry.teamEntryId,
@@ -154,11 +161,11 @@ export class TeamsService {
       throw new NotFoundException(`Could not update TeamEntry with id ${teamEntry.teamEntryId}`);
     }
     const teamEntryAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
-    const selectedAudit = teamEntryAudits.find(audit => audit.boxNumber === caseNumber);
+    const selectedAudit = teamEntryAudits.find((audit) => audit.boxNumber === caseNumber);
     if (!selectedAudit) {
-      throw new NotFoundException(`Could not update TeamEntryAudit to 'selected' for box number ${caseNumber}`)
+      throw new NotFoundException(`Could not update TeamEntryAudit to 'selected' for box number ${caseNumber}`);
     }
-    await this.teamsEntryRepository.updateAuditStatus(selectedAudit.auditId, 'selected' as TeamEntryBoxStatus)
+    await this.teamsEntryRepository.updateAuditStatus(selectedAudit.auditId, 'selected' as TeamEntryBoxStatus);
     return updatedTeamEntry;
   }
 
@@ -230,7 +237,7 @@ export class TeamsService {
   }
 
   async getCurrentOffer(teamId: string, position: string): Promise<ITeamEntryOffer> {
-    const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
+    const teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
     const currentOffer = await this.teamsEntryRepository.getCurrentOffer(teamEntry.teamEntryId);
     if (!currentOffer) {
       return this.calculateOffer(teamEntry);
@@ -301,7 +308,7 @@ export class TeamsService {
     position: string,
     status: TeamEntryOfferStatus,
   ): Promise<ITeamEntryOffer> {
-    const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
+    const teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
     const currentOffer = await this.teamsEntryRepository.getCurrentOffer(teamEntry.teamEntryId);
     if (!currentOffer) {
       throw new NotFoundException(
@@ -320,7 +327,7 @@ export class TeamsService {
   }
 
   async eliminateCases(teamId: string, position: string): Promise<ITeamEntryAudit[]> {
-    const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
+    const teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
 
     // Filter to only available boxes (excluding selected and already eliminated)
@@ -366,12 +373,12 @@ export class TeamsService {
     position: string,
     status?: TeamEntryOfferStatus,
   ): Promise<ITeamEntryOffer[]> {
-    const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
+    const teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
     return this.teamsEntryRepository.getOffers(teamEntry.teamEntryId, status);
   }
 
   async acceptOffer(teamId: string, position: string): Promise<TeamEntryOfferResponseDto> {
-    const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
+    const teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
     const updatedOffer = await this.updateOfferStatus(teamId, position, 'accepted');
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
     await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, { status: 'finished' });
@@ -382,7 +389,7 @@ export class TeamsService {
   }
 
   async rejectOffer(teamId: string, position: string): Promise<TeamEntryOfferResponseDto> {
-    const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
+    const teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
     await this.updateOfferStatus(teamId, position, 'rejected');
     const eliminatedCases = await this.eliminateCases(teamId, position);
     const newOffer = await this.calculateOffer(teamEntry);
@@ -397,7 +404,7 @@ export class TeamsService {
     position: string,
     decision: TeamEntryAuditFinalDecision,
   ): Promise<TeamEntryFinalResponseDto> {
-    const teamEntry: ITeamEntry = await this.getTeamEntryForTeamId(teamId, position);
+    const teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
 
     // Find the last non-selected box
@@ -425,16 +432,5 @@ export class TeamsService {
     return {
       boxes: updatedAudits,
     };
-  }
-
-  private async getTeamEntryForTeamId(teamId: string, position: string) {
-    const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
-
-    if (!entry) {
-      throw new NotFoundException(
-        `No team entry found for team ${teamId} and position ${position}`,
-      );
-    }
-    return entry;
   }
 }

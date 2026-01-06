@@ -49,12 +49,17 @@ export class TeamsController {
     return this.teamsService.upsertTeamPlayer(teamId, dto);
   }
 
+  //TODO This should probably be split into two methods, where one is entry/:position instead of the query parameter
   @TypedRoute.Get(':teamId/entry')
   findTeamEntry(
     @TypedParam('teamId') teamId: string,
-    @Query('position') position: string,
-  ): Promise<ITeamEntry> {
-    return this.teamsService.getTeamEntry(teamId, position);
+    @Query('position') position?: string,
+  ): Promise<ITeamEntry> | Promise<ITeamEntry[]> {
+    if(position){
+      return this.teamsService.getTeamEntry(teamId, position);
+    } else {
+      return this.teamsService.getAllTeamEntriesForTeam(teamId);
+    }
   }
 
   @TypedRoute.Get(':teamId/status')
