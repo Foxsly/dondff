@@ -9,5 +9,4 @@ export interface ITeamPlayer {
 }
 
 export type TeamPlayer = Selectable<ITeamPlayer>;
-export type CreateTeamPlayerDto = ITeamPlayer; // all required
 export type UpdateTeamPlayerDto = Partial<Omit<ITeamPlayer, 'teamId' | 'position'>>;

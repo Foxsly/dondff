@@ -1,11 +1,11 @@
-import { CreateTeamDto, ITeam, Team } from './entities/team.entity';
+import { DB_PROVIDER } from '@/infrastructure/database/database.module';
+import { DB } from '@/infrastructure/database/types';
+import { ITeamPlayer, TeamPlayer } from '@/teams/entities/team-player.entity';
 import { Inject, Injectable } from '@nestjs/common';
 import { ExpressionBuilder, Kysely } from 'kysely';
-import { jsonArrayFrom as sqliteJsonArrayFrom } from 'kysely/helpers/sqlite';
 import { jsonArrayFrom as postgresJsonArrayFrom } from 'kysely/helpers/postgres';
-import { DB } from '@/infrastructure/database/types';
-import { DB_PROVIDER } from '@/infrastructure/database/database.module';
-import { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.entity';
+import { jsonArrayFrom as sqliteJsonArrayFrom } from 'kysely/helpers/sqlite';
+import { CreateTeamDto, ITeam, Team } from './entities/team.entity';
 
 export abstract class TeamsRepository {
   abstract create(team: CreateTeamDto): Promise<Team>;
@@ -13,7 +13,7 @@ export abstract class TeamsRepository {
   abstract findOne(id: string): Promise<ITeam | null>;
   abstract update(id: string, team: Partial<Team>): Promise<Team | null>;
   abstract remove(id: string): Promise<boolean>;
-  abstract upsertTeamPlayer(teamId: string, dto: CreateTeamPlayerDto): Promise<TeamPlayer>;
+  abstract upsertTeamPlayer(teamId: string, dto: ITeamPlayer): Promise<TeamPlayer>;
 }
 
 @Injectable()
@@ -78,7 +78,7 @@ export class DatabaseTeamsRepository extends TeamsRepository {
     return (result?.numDeletedRows ?? 0n) > 0n;
   }
 
-  async upsertTeamPlayer(teamId: string, dto: CreateTeamPlayerDto): Promise<TeamPlayer> {
+  async upsertTeamPlayer(teamId: string, dto: ITeamPlayer): Promise<TeamPlayer> {
     await this.db
       .insertInto('teamPlayer')
       .values({

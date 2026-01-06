@@ -5,7 +5,7 @@ import {
   TeamEntryCasesResponseDto,
   TeamEntryOfferResponseDto,
 } from '@/teams/entities/team-entry.entity';
-import type { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.entity';
+import type { ITeamPlayer, TeamPlayer } from '@/teams/entities/team-player.entity';
 import { ITeamStatus } from '@/teams/entities/team-status.entity';
 import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
 import { Body, Controller, Query } from '@nestjs/common';
@@ -44,7 +44,7 @@ export class TeamsController {
   @TypedRoute.Put(':teamId/players')
   upsertTeamPlayer(
     @TypedParam('teamId') teamId: string,
-    @TypedBody() dto: CreateTeamPlayerDto,
+    @TypedBody() dto: ITeamPlayer,
   ): Promise<TeamPlayer> {
     return this.teamsService.upsertTeamPlayer(teamId, dto);
   }
@@ -55,7 +55,7 @@ export class TeamsController {
     @TypedParam('teamId') teamId: string,
     @Query('position') position?: string,
   ): Promise<ITeamEntry> | Promise<ITeamEntry[]> {
-    if(position){
+    if (position) {
       return this.teamsService.getTeamEntry(teamId, position);
     } else {
       return this.teamsService.getAllTeamEntriesForTeam(teamId);
@@ -97,7 +97,10 @@ export class TeamsController {
    * @param dto
    */
   @TypedRoute.Post(':teamId/cases')
-  async selectCase(@TypedParam('teamId') teamId: string, @TypedBody() dto: any): Promise<TeamEntryOfferResponseDto> {
+  async selectCase(
+    @TypedParam('teamId') teamId: string,
+    @TypedBody() dto: any,
+  ): Promise<TeamEntryOfferResponseDto> {
     let position = dto.position;
     let caseNumber = dto.boxNumber;
 
@@ -134,7 +137,10 @@ export class TeamsController {
    */
 
   @TypedRoute.Get('/:teamId/offers')
-  async getCurrentOffer(@TypedParam('teamId') teamId: string, @Query('position') position: string): Promise<ITeamEntryOffer> {
+  async getCurrentOffer(
+    @TypedParam('teamId') teamId: string,
+    @Query('position') position: string,
+  ): Promise<ITeamEntryOffer> {
     return await this.teamsService.getCurrentOffer(teamId, position);
   }
 
@@ -144,12 +150,18 @@ export class TeamsController {
   }
 
   @TypedRoute.Post(':teamId/offers/reject')
-  async rejectOffer(@TypedParam('teamId') teamId: string, @TypedBody() dto: { position: string }): Promise<TeamEntryOfferResponseDto> {
+  async rejectOffer(
+    @TypedParam('teamId') teamId: string,
+    @TypedBody() dto: { position: string },
+  ): Promise<TeamEntryOfferResponseDto> {
     return this.teamsService.rejectOffer(teamId, dto.position);
   }
 
   @TypedRoute.Post(':teamId/offers')
-  async updateOffer(@TypedParam('teamId') teamId: string, @TypedBody() dto: TeamEntryAuditFinalDecisionInputDto) {
+  async updateOffer(
+    @TypedParam('teamId') teamId: string,
+    @TypedBody() dto: TeamEntryAuditFinalDecisionInputDto,
+  ) {
     return this.teamsService.handleFinalOffer(teamId, dto.position, dto.decision);
   }
 }

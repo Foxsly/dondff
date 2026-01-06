@@ -1,7 +1,7 @@
 import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
 import { LeaguesService } from '@/leagues/leagues.service';
 import { SleeperService } from '@/sleeper/sleeper.service';
-import { CreateTeamPlayerDto, TeamPlayer } from '@/teams/entities/team-player.entity';
+import { ITeamPlayer, TeamPlayer } from '@/teams/entities/team-player.entity';
 import { ITeamStatus } from '@/teams/entities/team-status.entity';
 import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
 import { TeamsRepository } from '@/teams/teams.repository';
@@ -71,7 +71,7 @@ export class TeamsService {
     }
   }
 
-  async upsertTeamPlayer(teamId: string, dto: CreateTeamPlayerDto): Promise<TeamPlayer> {
+  async upsertTeamPlayer(teamId: string, dto: ITeamPlayer): Promise<TeamPlayer> {
     return this.teamsRepository.upsertTeamPlayer(teamId, dto);
   }
 
@@ -160,12 +160,19 @@ export class TeamsService {
     if (!updatedTeamEntry) {
       throw new NotFoundException(`Could not update TeamEntry with id ${teamEntry.teamEntryId}`);
     }
-    const teamEntryAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
+    const teamEntryAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(
+      teamEntry.teamEntryId,
+    );
     const selectedAudit = teamEntryAudits.find((audit) => audit.boxNumber === caseNumber);
     if (!selectedAudit) {
-      throw new NotFoundException(`Could not update TeamEntryAudit to 'selected' for box number ${caseNumber}`);
+      throw new NotFoundException(
+        `Could not update TeamEntryAudit to 'selected' for box number ${caseNumber}`,
+      );
     }
-    await this.teamsEntryRepository.updateAuditStatus(selectedAudit.auditId, 'selected' as TeamEntryBoxStatus);
+    await this.teamsEntryRepository.updateAuditStatus(
+      selectedAudit.auditId,
+      'selected' as TeamEntryBoxStatus,
+    );
     return updatedTeamEntry;
   }
 
@@ -382,6 +389,12 @@ export class TeamsService {
     const updatedOffer = await this.updateOfferStatus(teamId, position, 'accepted');
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
     await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, { status: 'finished' });
+    await this.upsertTeamPlayer(teamId, {
+      playerId: updatedOffer.playerId,
+      playerName: updatedOffer.playerName,
+      position: position,
+      teamId: teamId
+    });
     return {
       offer: updatedOffer,
       boxes: audits,
@@ -424,6 +437,19 @@ export class TeamsService {
 
     // Update team entry status to finished
     await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, { status: 'finished' });
+    // Set player on teamPlayer
+    const finalPlayer = decision === 'keep' ? audits.find(audit => audit.boxStatus === 'selected') : lastNonSelectedBox;
+
+    if(!finalPlayer) {
+      throw new Error(`Could not save final player. Decision: ${decision}`);
+    }
+
+    await this.upsertTeamPlayer(teamId, {
+      playerId: finalPlayer.playerId,
+      playerName: finalPlayer.playerName,
+      position: position,
+      teamId: teamId,
+    });
 
     // Return all boxes with updated statuses
     const updatedAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(

@@ -1,15 +1,14 @@
-import * as Users from '../test/sdk/functional/users';
+import { CreateLeagueSettingsDto } from '@/leagues/entities/league-settings.entity';
+import { CreateLeagueDto } from '@/leagues/entities/league.entity';
+import { ITeamPlayer } from '@/teams/entities/team-player.entity';
+import { CreateTeamDto } from '@/teams/entities/team.entity';
+import { CreateUserDto } from '@/users/entities/user.entity';
 import * as Leagues from '../test/sdk/functional/leagues';
 import * as Teams from '../test/sdk/functional/teams';
+import * as Users from '../test/sdk/functional/users';
 // Lightweight factories/builders for E2E tests (no extra deps)
 // Keep IDs deterministic enough for assertions but unique per test run
 const unique = () => Math.random().toString(36).slice(2, 8);
-
-import { CreateLeagueSettingsDto } from '@/leagues/entities/league-settings.entity';
-import { CreateUserDto } from '@/users/entities/user.entity';
-import { CreateLeagueDto } from '@/leagues/entities/league.entity';
-import { CreateTeamDto } from '@/teams/entities/team.entity';
-import { CreateTeamPlayerDto } from '@/teams/entities/team-player.entity';
 
 export const leagueFactory = (overrides: Partial<CreateLeagueDto> = {}): CreateLeagueDto => ({
   name: overrides.name ?? `Test League ${unique()}`,
@@ -42,9 +41,7 @@ export const teamFactory = (overrides: Partial<CreateTeamDto> = {}): CreateTeamD
   week: overrides.week ?? 1,
 });
 
-export const teamPlayerFactory = (
-  overrides: Partial<CreateTeamPlayerDto> = {},
-): CreateTeamPlayerDto => ({
+export const teamPlayerFactory = (overrides: Partial<ITeamPlayer> = {}): ITeamPlayer => ({
   teamId: overrides.teamId ?? crypto.randomUUID(),
   position: overrides.position ?? 'QB',
   playerId: overrides.playerId ?? String(Math.floor(Math.random() * 10000)),
@@ -173,7 +170,7 @@ export async function ensureLeagueSettingsVersion(
 export async function ensureTeamPlayer(
   conn: any,
   teamId: string,
-  overrides: Partial<CreateTeamPlayerDto> = {},
+  overrides: Partial<ITeamPlayer> = {},
 ): Promise<any> {
   // If you later add more defaults, seed them via teamPlayerFactory().
   const dto = { ...overrides };
