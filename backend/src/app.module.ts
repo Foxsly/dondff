@@ -8,6 +8,7 @@ import { UsersModule } from '@/users/users.module';
 import { Module } from '@nestjs/common';
 import { HealthController } from '@/health/health.controller';
 import { ConfigModule } from '@nestjs/config';
+import { FanduelModule } from './fanduel/fanduel.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ConfigModule } from '@nestjs/config';
     LeaguesModule,
     TeamsModule,
     SleeperModule,
+    FanduelModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
