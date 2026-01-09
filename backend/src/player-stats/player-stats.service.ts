@@ -2,6 +2,7 @@ import { FanduelService } from '@/fanduel/fanduel.service';
 import {
   IPlayerProjection,
   IPlayerStats,
+  PlayerPosition,
   PlayerProjectionResponse,
   PlayerStatResponse,
 } from '@/player-stats/entities/player-stats.entity';
@@ -29,7 +30,7 @@ export class PlayerStatsService {
       const playerProjections: IPlayerProjection[] = fanduelPlayerProjections
         .filter((projection) => projection.player.position === position)
         .map((projection) => ({
-          id: `${projection.player.betGeniusId}`,
+          playerId: `${projection.player.betGeniusId}`,
           name: projection.player.name,
           position: projection.player.position,
           projectedPoints: projection.fantasy,
@@ -48,9 +49,9 @@ export class PlayerStatsService {
         week,
       );
       const playerProjections: IPlayerProjection[] = sleeperProjections.map((projection) => ({
-        id: projection.player.metadata.genius_id,
+        playerId: projection.player.metadata.genius_id,
         name: `${projection.player.first_name} ${projection.player.last_name}`,
-        position: projection.player.position,
+        position: this.mapPosition(projection.player.position),
         projectedPoints: projection.stats.pts_ppr,
         injuryStatus: projection.player.injury_status ? projection.player.injury_status : null,
         oppTeam: projection.opponent,
@@ -67,13 +68,24 @@ export class PlayerStatsService {
   ): Promise<PlayerStatResponse> {
     const sleeperStats = await this.sleeperService.getPlayerStatistics(position, season, week);
     return sleeperStats.map((player) => ({
-      id: player.player.metadata.genius_id,
+      playerId: player.player.metadata.genius_id,
       name: `${player.player.first_name} ${player.player.last_name}`,
-      position: player.player.position,
+      position: this.mapPosition(player.player.position),
       points: player.stats.pts_ppr,
       injuryStatus: player.player.injury_status ? player.player.injury_status : null,
       oppTeam: player.opponent,
       team: player.team,
     })) as IPlayerStats[];
+  }
+
+  private mapPosition(position:string): PlayerPosition {
+    switch(position) {
+      case 'FB':
+        return 'RB';
+      case 'DEF':
+        return 'DST';
+      default:
+        return position as PlayerPosition;
+    }
   }
 }

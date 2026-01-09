@@ -1,5 +1,5 @@
 export interface IPlayer {
-  id: string;
+  playerId: string;
   name: string;
   position: PlayerPosition;
   team: string;
@@ -18,5 +18,4 @@ export interface IPlayerStats extends IPlayer {
 }
 
 export type PlayerStatResponse = IPlayerStats[];
-//TODO map sleeper FB->RB, DEF->DST
 export type PlayerPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DST';
