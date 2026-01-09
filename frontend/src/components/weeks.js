@@ -85,31 +85,17 @@ const Weeks = () => {
         // Derive weeks from teams that belong to this league and season.
         if (Array.isArray(teams)) {
           const leagueTeams = teams.filter((team) => {
-            const teamLeagueId =
-              team.leagueId || team.league_id || team.league;
-            const teamSeason =
-              team.season ??
-              team.year ??
-              team.seasonYear ??
-              team.season_id ??
-              null;
+            const teamLeagueId = team.leagueId;
+            const teamSeason = team.seasonYear;
 
-            const matchesLeague =
-              teamLeagueId &&
-              String(teamLeagueId) === String(leagueId);
-            const matchesSeason =
-              !season || (teamSeason && String(teamSeason) === String(season));
+            const matchesLeague = teamLeagueId && String(teamLeagueId) === String(leagueId);
+            const matchesSeason = !season || (teamSeason && String(teamSeason) === String(season));
 
             return matchesLeague && matchesSeason;
           });
 
           leagueTeams.forEach((team) => {
-            const teamWeek =
-              team.week ??
-              team.weekNumber ??
-              team.week_number ??
-              team.week_id ??
-              null;
+            const teamWeek = team.week;
             if (teamWeek != null) {
               weekSet.add(String(teamWeek));
             }
@@ -118,12 +104,7 @@ const Weeks = () => {
 
         // Append the current NFL week from Sleeper state if available.
         if (sleeperState) {
-          const currentWeek =
-            sleeperState.week ??
-            sleeperState.current_week ??
-            sleeperState.nflWeek ??
-            sleeperState.currentWeek ??
-            null;
+          const currentWeek = sleeperState.week;
           if (currentWeek != null) {
             setActualNFLWeek(Number(currentWeek));
             weekSet.add(String(currentWeek));
