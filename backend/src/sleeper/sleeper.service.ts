@@ -25,6 +25,12 @@ export class SleeperService {
   async getNflState(): Promise<ISleeperState> {
     const response$ = this.httpService.get(`${this.BASE_URL}/v1/state/nfl`);
     const response = await lastValueFrom(response$);
+    //Temporarily change these for testing
+    // response.data.season_type='regular';
+    // response.data.league_season='2025';
+    // response.data.display_week=18;
+    // response.data.week=18;
+    // response.data.season='2025';
     return response.data;
   }
 
@@ -56,6 +62,7 @@ export class SleeperService {
     return this.assertSleeperStats(
       this.transformSleeperEntries(
         response.data
+          .filter(entry => entry.player.metadata.genius_id)
           .map((entry) => ({
             ...entry,
             stats: {

@@ -1,22 +1,17 @@
-import { ISleeperPlayerEntry, ISleeperPlayerProjectionStats } from '@/sleeper/entities/sleeper.entity';
-
 export type FanduelPlayerProjectionEntry = {
+  fantasy: number;
+  gameInfo: GameInfo;
   player: PlayerInfo;
   team: TeamInfo;
-  gameInfo: GameInfo;
-  fantasy: number;
-  positionRank: number;
-  overallRank: number;
 };
 
 export type PlayerInfo = {
-  numberFireId: number;
+  betGeniusId: string;
   name: string;
   position: PlayerPosition;
 };
 
 export type TeamInfo = {
-  numberFireId: number;
   name: string;
   abbreviation: string;
 };

@@ -27,6 +27,11 @@ export interface ISleeperPlayer {
   // The team on ISleeperPlayerEntry represents their team at the time of the game
   // team: string & tags.MinLength<2> & tags.MaxLength<3>;
   injury_status: string | null;
+  metadata: ISleeperPlayerMetadata
+}
+
+export interface ISleeperPlayerMetadata {
+  genius_id: string;
 }
 
 // -----------------------------

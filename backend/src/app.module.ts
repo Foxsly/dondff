@@ -2,6 +2,7 @@ import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import { DatabaseModule } from '@/infrastructure/database/database.module';
 import { LeaguesModule } from '@/leagues/leagues.module';
+import { PlayerStatsModule } from '@/player-stats/player-stats.module';
 import { SleeperModule } from '@/sleeper/sleeper.module';
 import { TeamsModule } from '@/teams/teams.module';
 import { UsersModule } from '@/users/users.module';
@@ -19,6 +20,7 @@ import { FanduelModule } from './fanduel/fanduel.module';
     TeamsModule,
     SleeperModule,
     FanduelModule,
+    PlayerStatsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
