@@ -64,10 +64,10 @@ const Entries = ({leagueId, season, week}) => {
           fetch(`${API_BASE}/leagues/${leagueId}/users`, {
             credentials: "include",
           }),
-          fetch(`${API_BASE}/sleeper/projections/${season}/${week}?position=RB`, {
+          fetch(`${API_BASE}/players/projections/${season}/${week}/RB`, {
             credentials: "include",
           }),
-          fetch(`${API_BASE}/sleeper/projections/${season}/${week}?position=WR`, {
+          fetch(`${API_BASE}/players/projections/${season}/${week}/WR`, {
             credentials: "include",
           }),
           fetch(`${API_BASE}/sleeper/state`, {
@@ -97,8 +97,8 @@ const Entries = ({leagueId, season, week}) => {
             const rbData = await rbProjRes.json();
             if (Array.isArray(rbData)) {
               rbData.forEach((entry) => {
-                const id = entry.player_id || entry.player?.player_id;
-                const pts = entry.stats?.pts_ppr ?? 0;
+                const id = entry.playerId;
+                const pts = entry.projectedPoints ?? 0;
                 if (id) {
                   rbProjections.set(String(id), pts);
                 }
@@ -118,8 +118,8 @@ const Entries = ({leagueId, season, week}) => {
             const wrData = await wrProjRes.json();
             if (Array.isArray(wrData)) {
               wrData.forEach((entry) => {
-                const id = entry.player_id || entry.player?.player_id;
-                const pts = entry.stats?.pts_ppr ?? 0;
+                const id = entry.playerId;
+                const pts = entry.projectedPoints ?? 0;
                 if (id) {
                   wrProjections.set(String(id), pts);
                 }
@@ -341,8 +341,8 @@ const Entries = ({leagueId, season, week}) => {
   const calculateScores = useCallback(async () => {
     if (!entries || entries.length === 0) return;
     try {
-      const rbUrl = `${API_BASE}/sleeper/stats/${season}/${week}?position=RB`;
-      const wrUrl = `${API_BASE}/sleeper/stats/${season}/${week}?position=WR`;
+      const rbUrl = `${API_BASE}/players/stats/${season}/${week}/RB`;
+      const wrUrl = `${API_BASE}/players/stats/${season}/${week}/WR`;
       const [rbResponse, wrResponse] = await Promise.all([
         fetch(rbUrl, {credentials: "include"}),
         fetch(wrUrl, {credentials: "include"}),
@@ -359,13 +359,13 @@ const Entries = ({leagueId, season, week}) => {
       const updatedEntries = entries.map((entry) => {
         const rbId = entry.lineUp?.RB?.playerId;
         const wrId = entry.lineUp?.WR?.playerId;
-        const rb = finalStats.find((player) => player.player_id === rbId);
-        const wr = finalStats.find((player) => player.player_id === wrId);
+        const rb = finalStats.find((player) => player.playerId === rbId);
+        const wr = finalStats.find((player) => player.playerId === wrId);
 
         const rbScore =
-          rb && rb.stats?.pts_ppr ? rb.stats.pts_ppr : 0.0;
+          rb && rb.points ? rb.points : 0.0;
         const wrScore =
-          wr && wr.stats?.pts_ppr ? wr.stats.pts_ppr : 0.0;
+          wr && wr.points ? wr.points : 0.0;
 
         const newLineup = {
           ...entry.lineUp,

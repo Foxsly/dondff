@@ -6,18 +6,19 @@ export const getPlayers = async (week, position, seasonYear, playerLimit, callba
     console.log("calling getPlayers with " + week + " " + position + " " + seasonYear + " " + playerLimit)
     let players = [];
     try {
-      const url = `${API_BASE}/sleeper/projections/${seasonYear}/${week}?position=${position}`
+      const url = `${API_BASE}/players/projections/${seasonYear}/${week}/${position}`
       const response = await fetch(url)
       const json = await response.json()
       for (let i = 0; i < playerLimit; i++) {
         let playerJson = json[i];
+        if(!playerJson) {continue}
         let player = {
-            "name": `${playerJson.player.first_name} ${playerJson.player.last_name}`,
-            "points": playerJson.stats.pts_ppr,
-            "status": playerJson.player.injury_status, 
-            "opponent": playerJson.opponent, 
+            "name": playerJson.name,
+            "points": playerJson.projectedPoints,
+            "status": playerJson.injuryStatus,
+            "opponent": playerJson.oppTeam,
             "team": playerJson.team, 
-            "playerId": playerJson.player_id
+            "playerId": playerJson.playerId
         };
         players.push(player);
       }

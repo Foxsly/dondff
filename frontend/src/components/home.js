@@ -14,7 +14,7 @@ function Home() {
     event.preventDefault();
     if (!week || !type) return;
     const limit = type === 'WR' ? 95 : 65;
-    getPlayers(week, type, '2024', limit, setPool);
+    getPlayers(week, type, '2025', limit, setPool);
   };
 
   const renderOptions = () => (
