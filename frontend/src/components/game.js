@@ -439,12 +439,12 @@ const Game = ({teamUser, onComplete}) => {
           Players in cases:
           {players.map((player, index) => (
               player.boxStatus === 'available' || player.boxStatus === 'selected' ?
-                <div className="list-player" key={player.playerId}>{player.playerName} <span className="status">{player.team} {player.injuryStatus}</span><br/>
-                  <span className="proj">Proj: {player.projectedPoints} Opp: {player.opponent}</span></div>
+                <div className="list-player" key={player.playerId}>{player.playerName} <span className="status">{player.matchup.team} {player.injuryStatus}</span><br/>
+                  <span className="proj">Proj: {player.projectedPoints} Opp: {player.matchup.opponent}</span></div>
                 :
                 <div className="list-player eliminated" key={player.playerId}>{player.playerName} <span
-                  className="status">{player.team} {player.status}</span><br/>
-                  <span className="proj">Proj: {player.projectedPoints} Opp: {player.opponent}</span></div>
+                  className="status">{player.matchup.team} {player.status}</span><br/>
+                  <span className="proj">Proj: {player.projectedPoints} Opp: {player.matchup.opponent}</span></div>
             )
           )}
         </div>
@@ -483,8 +483,8 @@ const Game = ({teamUser, onComplete}) => {
       return (
         <div className="action-box">
           <div className="offer-box">The Banker offers you:
-            <div className="list-player">{offer.playerName} <span className="status">{offer.team} {offer.injuryStatus}</span><br/>
-              <span className="proj">Proj: {offer.projectedPoints} Opp: {offer.opponent}</span></div>
+            <div className="list-player">{offer.playerName} <span className="status">{offer.matchup.team} {offer.injuryStatus}</span><br/>
+              <span className="proj">Proj: {offer.projectedPoints} Opp: {offer.matchup.opponent}</span></div>
           </div>
           <div className="action-buttons">
             <button className="btn" onClick={acceptOffer}>Accept</button>

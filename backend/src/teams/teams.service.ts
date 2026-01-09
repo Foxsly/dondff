@@ -14,6 +14,7 @@ import {
   ITeamEntry,
   ITeamEntryAudit,
   ITeamEntryOffer,
+  PlayerOfferDto,
   TeamEntryAuditFinalDecision,
   TeamEntryBoxStatus,
   TeamEntryCaseBoxDto,
@@ -129,6 +130,7 @@ export class TeamsService {
     const playerListAudits = audits.map((audit) => ({
       ...audit,
       boxStatus: audit.boxStatus === 'selected' ? 'available' : audit.boxStatus,
+      matchup: this.playerStatsService.getTeamAndOpponentForPlayer(audit.playerId),
     })) as TeamEntryCasePlayerDto[];
     const boxAudits = audits.map((audit) => ({
       boxNumber: audit.boxNumber,
@@ -400,7 +402,7 @@ export class TeamsService {
       teamId: teamId
     });
     return {
-      offer: updatedOffer,
+      offer: this.addTeamsToOffer(updatedOffer),
       boxes: audits,
     };
   }
@@ -411,7 +413,7 @@ export class TeamsService {
     const eliminatedCases = await this.eliminateCases(teamId, position);
     const newOffer = await this.calculateOffer(teamEntry);
     return {
-      offer: newOffer,
+      offer: this.addTeamsToOffer(newOffer),
       boxes: eliminatedCases,
     };
   }
@@ -461,6 +463,13 @@ export class TeamsService {
     );
     return {
       boxes: updatedAudits,
+    };
+  }
+
+  addTeamsToOffer(offer: ITeamEntryOffer): PlayerOfferDto {
+    return {
+      ...offer,
+      matchup: this.playerStatsService.getTeamAndOpponentForPlayer(offer.playerId),
     };
   }
 }

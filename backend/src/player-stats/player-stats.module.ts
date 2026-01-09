@@ -9,6 +9,5 @@ import { PlayerStatsController } from './player-stats.controller';
   controllers: [PlayerStatsController],
   providers: [PlayerStatsService],
   exports: [PlayerStatsService],
-
 })
 export class PlayerStatsModule {}

@@ -5,16 +5,21 @@ import {
   PlayerPosition,
   PlayerProjectionResponse,
   PlayerStatResponse,
+  PlayerTeams,
 } from '@/player-stats/entities/player-stats.entity';
 import { SleeperService } from '@/sleeper/sleeper.service';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class PlayerStatsService {
+  private playerTeams: Map<string, PlayerTeams> = new Map<string, PlayerTeams>();
+
   constructor(
     private readonly sleeperService: SleeperService,
     private readonly fanduelService: FanduelService,
-  ) {}
+  ) {
+    this.playerTeams = new Map<string, PlayerTeams>()
+  }
 
   async getPlayerProjections(
     position: string,
@@ -42,6 +47,7 @@ export class PlayerStatsService {
         .filter((projection) => projection.position === position)
         //Filter out any 0-score players
         .filter((projection) => projection.projectedPoints > 0.0);
+      playerProjections.forEach(this.setPlayerTeamMappings, this);
       return playerProjections;
     } else {
       const sleeperProjections = await this.sleeperService.getPlayerProjections(
@@ -58,6 +64,7 @@ export class PlayerStatsService {
         oppTeam: projection.opponent,
         team: projection.team,
       })) as IPlayerProjection[];
+      playerProjections.forEach(this.setPlayerTeamMappings, this);
       return playerProjections;
     }
   }
@@ -77,6 +84,21 @@ export class PlayerStatsService {
       oppTeam: player.opponent,
       team: player.team,
     })) as IPlayerStats[];
+  }
+
+  getTeamAndOpponentForPlayer(playerId: string): PlayerTeams {
+    const matchup = this.playerTeams.get(playerId);
+    if(!matchup) {
+      return {
+        team: 'NA',
+        opponent: 'NA'
+      };
+    }
+    return matchup
+  }
+
+  private setPlayerTeamMappings(projection: IPlayerProjection) {
+    this.playerTeams.set(projection.playerId, {team: projection.team, opponent: projection.oppTeam});
   }
 
   private mapPosition(position:string): PlayerPosition {

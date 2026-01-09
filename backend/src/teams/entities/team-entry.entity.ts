@@ -1,3 +1,4 @@
+import { PlayerTeams } from '@/player-stats/entities/player-stats.entity';
 import { tags } from 'typia';
 import { Selectable } from 'kysely';
 
@@ -125,6 +126,7 @@ export type TeamEntryCaseBoxDto = Pick<ITeamEntryAudit, 'boxNumber' | 'boxStatus
  */
 export type TeamEntryCasePlayerDto = Pick<
   ITeamEntryAudit, 'playerId' | 'playerName' | 'projectedPoints' | 'injuryStatus' | 'boxStatus'>
+  & { matchup: PlayerTeams};
 
 /**
  * Combined DTO shape returned by GET /teams/:teamId/cases.
@@ -140,7 +142,7 @@ export interface TeamEntryCasesResponseDto extends TeamEntryCasesMetaDto {
  * offer will be absent when returning the last two cases (keep/swap choice)
  */
 export interface TeamEntryOfferResponseDto {
-  offer?: ITeamEntryOffer;
+  offer?: PlayerOfferDto;
   boxes: ITeamEntryAudit[];
 }
 
@@ -156,3 +158,5 @@ export interface TeamEntryAuditFinalDecisionInputDto {
   decision: TeamEntryAuditFinalDecision;
   position: string & tags.MinLength<1>;
 }
+
+export type PlayerOfferDto = ITeamEntryOffer & {matchup: PlayerTeams};

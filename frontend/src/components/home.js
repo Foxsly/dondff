@@ -27,7 +27,7 @@ function Home() {
           className="p-2 rounded bg-gray-800 border border-gray-700"
         >
           <option></option>
-          {Array.from({ length: 18 }, (_, i) => (
+          {Array.from({ length: 21 }, (_, i) => (
             <option key={i + 1} value={i + 1}>
               {i + 1}
             </option>
