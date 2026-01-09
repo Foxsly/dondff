@@ -1,6 +1,10 @@
 import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
 import { LeaguesService } from '@/leagues/leagues.service';
-import { SleeperService } from '@/sleeper/sleeper.service';
+import {
+  IPlayerProjection,
+  PlayerProjectionResponse,
+} from '@/player-stats/entities/player-stats.entity';
+import { PlayerStatsService } from '@/player-stats/player-stats.service';
 import { ITeamPlayer, TeamPlayer } from '@/teams/entities/team-player.entity';
 import { ITeamStatus } from '@/teams/entities/team-status.entity';
 import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
@@ -29,8 +33,8 @@ export class TeamsService {
   constructor(
     private readonly teamsRepository: TeamsRepository,
     private readonly teamsEntryRepository: TeamsEntryRepository,
-    private readonly sleeperService: SleeperService,
     private readonly leaguesService: LeaguesService,
+    private readonly playerStatsService: PlayerStatsService,
   ) {}
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
@@ -197,7 +201,7 @@ export class TeamsService {
   }
 
   async generateCasesForPosition(team: Team, position: string, leagueSettings: ILeagueSettings) {
-    let playerProjections = await this.sleeperService.getPlayerProjections(
+    let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(
       position,
       team.seasonYear,
       team.week,
@@ -209,20 +213,20 @@ export class TeamsService {
     );
     let boxNumber = 1;
 
-    let trimmedPlayers = playerProjections.slice(
+    let trimmedPlayers: IPlayerProjection[] = playerProjections.slice(
       0,
       leagueSettings[position.toLowerCase() + 'PoolSize'],
     );
     let cases: Array<Omit<ITeamEntryAudit, 'auditId'>> = shuffle(trimmedPlayers)
       .slice(0, 10)
-      .map((player) => ({
+      .map((player: IPlayerProjection) => ({
         teamEntryId: teamEntry.teamEntryId,
         resetNumber: teamEntry.resetCount,
         boxNumber: boxNumber++,
-        playerId: player.player_id,
-        playerName: `${player.player.first_name} ${player.player.last_name}`,
-        projectedPoints: player.stats.pts_ppr,
-        injuryStatus: player.player.injury_status,
+        playerId: player.playerId,
+        playerName: player.name,
+        projectedPoints: player.projectedPoints,
+        injuryStatus: player.injuryStatus,
         boxStatus: 'available',
       }));
     await this.teamsEntryRepository.insertAuditSnapshots(cases);
@@ -270,7 +274,7 @@ export class TeamsService {
     );
 
     const team: ITeam = await this.findOne(teamEntry.teamId);
-    const projections = await this.sleeperService.getPlayerProjections(
+    const projections = await this.playerStatsService.getPlayerProjections(
       teamEntry.position,
       team.seasonYear,
       team.week,
@@ -284,8 +288,8 @@ export class TeamsService {
     let playerIdsInBoxes = teamEntryAudits.map((entry) => entry.playerId);
     let availableOffers = projections.filter(
       (player) =>
-        !playerIdsInBoxes.includes(player.player_id) &&
-        !previousOfferPlayerIds.includes(player.player_id),
+        !playerIdsInBoxes.includes(player.playerId) &&
+        !previousOfferPlayerIds.includes(player.playerId),
     );
 
     if (availableOffers.length === 0) {
@@ -293,17 +297,17 @@ export class TeamsService {
     }
 
     const closestOffer = availableOffers.reduce((closest, current) => {
-      const currentDiff = Math.abs(current.stats.pts_ppr - finalOfferValue);
-      const closestDiff = Math.abs(closest.stats.pts_ppr - finalOfferValue);
+      const currentDiff = Math.abs(current.projectedPoints - finalOfferValue);
+      const closestDiff = Math.abs(closest.projectedPoints - finalOfferValue);
       return currentDiff < closestDiff ? current : closest;
     });
 
     const offer: Omit<ITeamEntryOffer, 'offerId'> = {
       teamEntryId: teamEntry.teamEntryId,
-      playerId: closestOffer.player_id,
-      playerName: `${closestOffer.player.first_name} ${closestOffer.player.last_name}`,
-      injuryStatus: closestOffer.player.injury_status,
-      projectedPoints: closestOffer.stats.pts_ppr,
+      playerId: closestOffer.playerId,
+      playerName: closestOffer.name,
+      injuryStatus: closestOffer.injuryStatus || null,
+      projectedPoints: closestOffer.projectedPoints,
       status: 'pending' as TeamEntryOfferStatus,
     };
 

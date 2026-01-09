@@ -31,7 +31,11 @@ export class SleeperService {
     // response.data.display_week=18;
     // response.data.week=18;
     // response.data.season='2025';
-    return response.data;
+    const sleeperState: ISleeperState = await response.data;
+    if (sleeperState.season_type === 'post') {
+      sleeperState.week = sleeperState.week + 18;
+    }
+    return sleeperState;
   }
 
   async getPlayerProjections(

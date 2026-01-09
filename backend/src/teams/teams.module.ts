@@ -1,4 +1,5 @@
 import { LeaguesModule } from '@/leagues/leagues.module';
+import { PlayerStatsModule } from '@/player-stats/player-stats.module';
 import { SleeperModule } from '@/sleeper/sleeper.module';
 import {
   DatabaseTeamsEntryRepository,
@@ -28,6 +29,6 @@ import { DatabaseModule } from '@/infrastructure/database/database.module';
       useClass: DatabaseTeamsEntryRepository,
     }
   ],
-  imports: [DatabaseModule, SleeperModule, LeaguesModule],
+  imports: [DatabaseModule, LeaguesModule, PlayerStatsModule],
 })
 export class TeamsModule {}

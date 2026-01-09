@@ -21,14 +21,11 @@ export class PlayerStatsService {
     season: number,
     week: number,
   ): Promise<PlayerProjectionResponse> {
-    const sleeperState = await this.sleeperService.getNflState();
-    //TODO figure out a better way to do this. This isn't great, because it's ignoring the season/week parameters being passed in. Maybe drive it off week (e.g. week 19 = playoffs week 1)?
+    const isPostseason = week > 18;
     //This currently works because the two APIs share a BetGenius ID. If we add more sources, this could become problematic.
-    if (sleeperState.season_type === 'post') {
+    if (isPostseason) {
       const fanduelPlayerProjections = await this.fanduelService.getFanduelProjections();
-      //Need to filter out by position, since the fanduel API doesn't allow us to
       const playerProjections: IPlayerProjection[] = fanduelPlayerProjections
-        .filter((projection) => projection.player.position === position)
         .map((projection) => ({
           playerId: `${projection.player.betGeniusId}`,
           name: projection.player.name,
@@ -40,7 +37,11 @@ export class PlayerStatsService {
               ? projection.gameInfo.homeTeam.abbreviation
               : projection.gameInfo.awayTeam.abbreviation,
           team: projection.team.abbreviation,
-        }));
+        }))
+        //Need to filter out by position, since the fanduel API doesn't allow us to
+        .filter((projection) => projection.position === position)
+        //Filter out any 0-score players
+        .filter((projection) => projection.projectedPoints > 0.0);
       return playerProjections;
     } else {
       const sleeperProjections = await this.sleeperService.getPlayerProjections(
