@@ -44,7 +44,7 @@ export class TeamsService {
       createdTeam.leagueId,
     );
     for (const position of leagueSettings.positions) {
-      await this.generateCasesForPosition(createdTeam, position, leagueSettings);
+      await this.generateCasesForPosition(createdTeam, position, leagueSettings, this.getNumberOfCases(createTeamDto.week));
     }
     return createdTeam;
   }
@@ -199,10 +199,10 @@ export class TeamsService {
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       team.leagueId,
     );
-    await this.generateCasesForPosition(team, position, leagueSettings);
+    await this.generateCasesForPosition(team, position, leagueSettings, this.getNumberOfCases(team.week));
   }
 
-  async generateCasesForPosition(team: Team, position: string, leagueSettings: ILeagueSettings) {
+  async generateCasesForPosition(team: Team, position: string, leagueSettings: ILeagueSettings, numberOfCases: number = 10) {
     let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(
       position,
       team.seasonYear,
@@ -220,7 +220,7 @@ export class TeamsService {
       leagueSettings[position.toLowerCase() + 'PoolSize'],
     );
     let cases: Array<Omit<ITeamEntryAudit, 'auditId'>> = shuffle(trimmedPlayers)
-      .slice(0, 10)
+      .slice(0, numberOfCases)
       .map((player: IPlayerProjection) => ({
         teamEntryId: teamEntry.teamEntryId,
         resetNumber: teamEntry.resetCount,
@@ -471,5 +471,18 @@ export class TeamsService {
       ...offer,
       matchup: this.playerStatsService.getTeamAndOpponentForPlayer(offer.playerId),
     };
+  }
+
+    /**
+     * As we get further into the playoffs, the number of available players drops.
+     * To account for this, we limit the number of cases as well
+     */
+  getNumberOfCases(week: number): number {
+      switch(week) {
+          case 20:
+              return 6
+          default:
+              return 10;
+      }
   }
 }
