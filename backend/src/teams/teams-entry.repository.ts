@@ -140,7 +140,10 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
       .returningAll()
       .execute();
 
-    return rows as TeamEntryAudit[];
+    return rows.map((row) => ({
+      ...row,
+      projectedPoints: Number(row.projectedPoints)
+    }));
   }
 
   async createOffer(
@@ -154,7 +157,7 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
       })
       .returningAll()
       .executeTakeFirstOrThrow();
-
+    row.projectedPoints = Number(row.projectedPoints);
     return row as TeamEntryOffer;
   }
 
@@ -169,6 +172,7 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
       .returningAll()
       .executeTakeFirst();
 
+    if (row) row.projectedPoints = Number(row.projectedPoints);
     return (row as TeamEntryOffer | undefined) ?? null;
   }
 
@@ -207,7 +211,10 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
       .orderBy('teamEntryAudit.boxNumber', 'asc')
       .execute();
 
-    return rows as ITeamEntryAudit[];
+    return rows.map((row) => ({
+      ...row,
+      projectedPoints: Number(row.projectedPoints)
+    }));
   }
 
   async getCurrentOffer(teamEntryId: string): Promise<ITeamEntryOffer | null> {
@@ -219,6 +226,7 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
       .limit(1)
       .executeTakeFirst();
 
+    if (row) row.projectedPoints = Number(row.projectedPoints);
     return row ? row : null;
   }
 
@@ -234,7 +242,10 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
 
     const rows = await query.execute();
 
-    return rows as TeamEntryOffer[];
+    return rows.map((row) => ({
+      ...row,
+      projectedPoints: Number(row.projectedPoints)
+    }));
   }
 
   async updateAuditStatus(teamEntryAuditId: string, status: TeamEntryBoxStatus): Promise<ITeamEntryAudit> {
@@ -244,7 +255,7 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
       .where('auditId', '=', teamEntryAuditId)
       .returningAll()
       .executeTakeFirstOrThrow();
-
-    return row as TeamEntryAudit;
+    row.projectedPoints = Number(row.projectedPoints);
+    return row;
   }
 }
