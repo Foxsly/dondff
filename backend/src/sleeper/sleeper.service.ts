@@ -49,7 +49,7 @@ export class SleeperService {
     return this.assertSleeperProjections(
       this.transformSleeperEntries(
         response.data.filter(
-          (entry: { stats: { pts_ppr: undefined } }) => entry?.stats?.pts_ppr !== undefined,
+          (entry) => entry?.stats?.pts_ppr && entry.player.metadata.genius_id,
         ),
       ),
     );
