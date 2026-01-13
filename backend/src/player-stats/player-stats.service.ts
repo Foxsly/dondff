@@ -30,7 +30,7 @@ export class PlayerStatsService {
     //This currently works because the two APIs share a BetGenius ID. If we add more sources, this could become problematic.
     if (isPostseason) {
       const fanduelPlayerProjections = await this.fanduelService.getFanduelProjections();
-      const playerProjections: IPlayerProjection[] = fanduelPlayerProjections
+      const rawPlayerProjections: IPlayerProjection[] = fanduelPlayerProjections
         .map((projection) => ({
           playerId: `${projection.player.betGeniusId}`,
           name: projection.player.name,
@@ -42,11 +42,27 @@ export class PlayerStatsService {
               ? projection.gameInfo.homeTeam.abbreviation
               : projection.gameInfo.awayTeam.abbreviation,
           team: projection.team.abbreviation,
-        }))
-        //Need to filter out by position, since the fanduel API doesn't allow us to
-        .filter((projection) => projection.position === position)
-        //Filter out any 0-score players
-        .filter((projection) => projection.projectedPoints > 0.0);
+        }));
+        //Depending on the week, filter out player (or not)
+      let playerProjections: IPlayerProjection[] = [];
+      if (week === 20) {
+        // RBs: RB > 1.0, TE > 2.0
+        // WRs: WR > 1.0
+        const positionFilter = position === 'WR' ? [position] : [position, 'TE'];
+        playerProjections = rawPlayerProjections
+          .filter((projection) => positionFilter.includes(projection.position))
+          .filter((projection) =>
+            projection.position === 'TE'
+              ? projection.projectedPoints >= 2.0
+              : projection.projectedPoints >= 1.0,
+          );
+      } else {
+        playerProjections = rawPlayerProjections
+          //Need to filter out by position, since the fanduel API doesn't allow us to
+          .filter((projection) => projection.position === position)
+          //Filter out any 0-score players
+          .filter((projection) => projection.projectedPoints > 0.0);
+      }
       playerProjections.forEach(this.setPlayerTeamMappings, this);
       return playerProjections;
     } else {
