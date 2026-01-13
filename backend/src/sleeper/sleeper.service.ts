@@ -59,14 +59,15 @@ export class SleeperService {
     position: string,
     season: number,
     week: number,
+    seasonType: string = 'regular',
   ): Promise<SleeperStatResponse> {
-    const url = `${this.BASE_URL}/stats/nfl/${season}/${week}?season_type=regular&position=${position}&order_by=pts_ppr`;
+    const url = `${this.BASE_URL}/stats/nfl/${season}/${week}?season_type=${seasonType}&position=${position}&order_by=pts_ppr`;
     const response$ = this.httpService.get(url);
     const response = await lastValueFrom(response$);
     return this.assertSleeperStats(
       this.transformSleeperEntries(
         response.data
-          .filter(entry => entry.player.metadata.genius_id)
+          .filter((entry) => entry.player.metadata.genius_id)
           .map((entry) => ({
             ...entry,
             stats: {

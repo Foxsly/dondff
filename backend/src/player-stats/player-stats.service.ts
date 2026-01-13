@@ -74,7 +74,13 @@ export class PlayerStatsService {
     season: number,
     week: number,
   ): Promise<PlayerStatResponse> {
-    const sleeperStats = await this.sleeperService.getPlayerStatistics(position, season, week);
+    const isPostseason = week > 18;
+    const sleeperStats = await this.sleeperService.getPlayerStatistics(
+      position,
+      season,
+      isPostseason ? week-18 : week,
+      //TODO figure out a better way to do this. Sleeper implementation details are leaking into the API doing this
+      isPostseason ? 'post' : 'regular');
     return sleeperStats.map((player) => ({
       playerId: player.player.metadata.genius_id,
       name: `${player.player.first_name} ${player.player.last_name}`,
