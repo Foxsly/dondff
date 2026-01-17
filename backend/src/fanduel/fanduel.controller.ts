@@ -1,13 +1,26 @@
 import { Controller } from '@nestjs/common';
 import { FanduelService } from './fanduel.service';
-import { TypedRoute } from '@nestia/core';
+import { TypedRoute, TypedParam, TypedQuery } from '@nestia/core';
+import { FanduelSport } from './fanduel.projections.config';
+
+type ProjectionsQuery = {
+  slateId?: string;
+  eventId?: string;
+};
 
 @Controller('fanduel')
 export class FanduelController {
   constructor(private readonly fanduelService: FanduelService) {}
 
-  @TypedRoute.Get('test')
-  getState() {
-    return this.fanduelService.getFanduelProjections();
+
+  // New: sport-selected projections
+  @TypedRoute.Get(':sport/projections')
+  getProjectionsBySport(
+      @TypedParam('sport') sport: FanduelSport,
+      @TypedQuery() query: ProjectionsQuery,
+  ) {
+    return this.fanduelService.getProjectionsBySport(sport, query);
   }
+
+
 }

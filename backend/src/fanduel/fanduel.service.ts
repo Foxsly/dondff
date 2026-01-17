@@ -1,67 +1,98 @@
+import { HttpService } from "@nestjs/axios";
+import { Inject, Injectable, BadRequestException } from "@nestjs/common";
+import { lastValueFrom } from "rxjs";
+
 import {
-  FanduelProjectionsResponse,
-} from '@/fanduel/entities/fanduel.entity';
-import { HttpService } from '@nestjs/axios';
-import { Inject, Injectable } from '@nestjs/common';
-import { lastValueFrom } from 'rxjs';
-import typia from 'typia';
+  fanduelProjectionsConfig,
+  FanduelSport,
+  FanduelProjectionsBySport,
+  ProjectionsInput
+} from "./fanduel.projections.config";
 
 @Injectable()
 export class FanduelService {
-  private readonly BASE_URL = 'https://fdresearch-api.fanduel.com/graphql';
+  private readonly BASE_URL = "https://fdresearch-api.fanduel.com/graphql";
 
-  // Create transformer functions
-  private assertFanduelProjections = typia.misc.createAssertPrune<FanduelProjectionsResponse>();
+  constructor(@Inject(HttpService) private readonly httpService: HttpService) {}
 
-  constructor(
-    @Inject(HttpService) private readonly httpService: HttpService,
-  ) {}
+  private buildGetProjectionsQuery(fragment: string): string {
+    return `
+      query GetProjections($input: ProjectionsInput!) {
+        getProjections(input: $input) {
+          ${fragment}
+        }
+      }
+    `;
+  }
 
-  async getFanduelProjections(): Promise<FanduelProjectionsResponse> {
+  async getProjectionsBySport<K extends FanduelSport>(
+      sport: K,
+      overrides?: Partial<ProjectionsInput>,
+  ): Promise<FanduelProjectionsBySport[K]> {
+    const config = fanduelProjectionsConfig[sport];
+    if (!config) throw new BadRequestException(`Unsupported sport: ${sport}`);
+
+    // ✅ validate against the input you are actually sending
+    const input = { ...config.input, ...(overrides ?? {}) };
+
+    for (const key of config.requiredInputKeys ?? []) {
+      const value = input[key];
+      if (value == null || value === '') {
+        throw new BadRequestException({
+          message: `Missing required FanDuel input field: ${key}`,
+          sport,
+          input,
+        });
+      }
+    }
+
     const requestBody = {
-      query:
-        'query GetProjections($input: ProjectionsInput!) {\n'+
-        '  getProjections(input: $input) {\n'+
-        '    ... on NflSkill {\n'+
-        '      fantasy\n'+
-        '      gameInfo {\n'+
-        '        awayTeam {\n'+
-        '          abbreviation\n'+
-        '          name\n'+
-        '        }\n'+
-        '        homeTeam {\n'+
-        '          abbreviation\n'+
-        '          name\n'+
-        '        }\n'+
-        '      }\n'+
-        '      player {\n'+
-        '        name\n'+
-        '        betGeniusId\n'+
-        '        position\n'+
-        '      }\n'+
-        '      team {\n'+
-        '        name\n'+
-        '        abbreviation\n'+
-        '      }\n'+
-        '    }\n'+
-        '  }\n'+
-        '}',
-      variables: {
-        input: {
-          type: 'PPR',
-          position: 'NFL_SKILL',
-          sport: 'NFL',
-        },
-      },
-      operationName: 'GetProjections',
+      query: this.buildGetProjectionsQuery(config.fragment),
+      variables: { input },
+      operationName: "GetProjections",
     };
-    const response$ = this.httpService.post(`${this.BASE_URL}`, requestBody);
+
+    const response$ = this.httpService.post(this.BASE_URL, requestBody);
     const response = await lastValueFrom(response$);
 
-    const projections = response.data.data.getProjections;
-    const nonZeroScoringPlayers = projections.filter(
-      (entry) => entry?.fantasy >= 0,
-    );
-    return this.assertFanduelProjections(nonZeroScoringPlayers);
+    const payload = response?.data;
+
+    if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
+      throw new BadRequestException({
+        message: 'FanDuel GraphQL error',
+        sport,
+        input,
+        errors: payload.errors.map((e: any) => ({
+          message: e?.message,
+          path: e?.path,
+          extensions: e?.extensions,
+        })),
+      });
+    }
+
+    const projections = payload?.data?.getProjections;
+
+    if (projections == null) {
+      throw new BadRequestException({
+        message: 'FanDuel returned null for getProjections',
+        sport,
+        input,
+        rawData: payload?.data,
+      });
+    }
+
+    if (!Array.isArray(projections)) {
+      throw new BadRequestException({
+        message: 'FanDuel returned non-array getProjections',
+        sport,
+        input,
+        typeof: typeof projections,
+        valuePreview: projections,
+      });
+    }
+
+    const filtered = config.filter ? config.filter(projections) : projections;
+    return config.assert(filtered);
   }
+
 }
