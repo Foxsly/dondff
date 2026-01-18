@@ -12,6 +12,15 @@ type ProjectionsQuery = {
 export class FanduelController {
   constructor(private readonly fanduelService: FanduelService) {}
 
+  @TypedRoute.Get('GOLF/events')
+  getGolfEvents() {
+    return this.fanduelService.getGolfEvents();
+  }
+
+  @TypedRoute.Get('GOLF/slates')
+  getGolfSlates() {
+    return this.fanduelService.getGolfSlates();
+  }
 
   // New: sport-selected projections
   @TypedRoute.Get(':sport/projections')

@@ -47,7 +47,7 @@ export const fanduelProjectionsConfig: {
 
   GOLF: {
     requiredInputKeys: ['slateId', 'eventId'],
-    input: { type: "DAILY", position: "GOLF_PLAYER", sport: "GOLF", eventId: "697", slateId: "1" },
+    input: { type: "DAILY", position: "GOLF_PLAYER", sport: "GOLF" },
     fragment: `
       ... on GolfPlayer {
         fantasy

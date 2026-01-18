@@ -9,6 +9,10 @@ import {
   ProjectionsInput
 } from "./fanduel.projections.config";
 
+import typia from "typia";
+import { FanduelGolfEventsResponse, FanduelGolfSlatesResponse } from "./entities/fanduel-golf-lookups.entity";
+
+
 @Injectable()
 export class FanduelService {
   private readonly BASE_URL = "https://fdresearch-api.fanduel.com/graphql";
@@ -25,6 +29,9 @@ export class FanduelService {
     `;
   }
 
+  private assertGolfEvents = typia.misc.createAssertPrune<FanduelGolfEventsResponse>();
+  private assertGolfSlates = typia.misc.createAssertPrune<FanduelGolfSlatesResponse>();
+
   async getProjectionsBySport<K extends FanduelSport>(
       sport: K,
       overrides?: Partial<ProjectionsInput>,
@@ -33,7 +40,28 @@ export class FanduelService {
     if (!config) throw new BadRequestException(`Unsupported sport: ${sport}`);
 
     // ✅ validate against the input you are actually sending
-    const input = { ...config.input, ...(overrides ?? {}) };
+    let input = { ...config.input, ...(overrides ?? {}) };
+
+    if (sport === 'GOLF') {
+      // slateId default
+      if (input.slateId == null || input.slateId === '') {
+        input = { ...input, slateId: '1' };
+      }
+
+      // eventId default
+      if (input.eventId == null || input.eventId === '') {
+        const events = await this.getGolfEvents();
+        const first = events?.[0];
+        if (!first?.id) {
+          throw new BadRequestException({
+            message: 'No golf events available from FanDuel',
+            sport,
+            input,
+          });
+        }
+        input = { ...input, eventId: first.id };
+      }
+    }
 
     for (const key of config.requiredInputKeys ?? []) {
       const value = input[key];
@@ -93,6 +121,80 @@ export class FanduelService {
 
     const filtered = config.filter ? config.filter(projections) : projections;
     return config.assert(filtered);
+  }
+
+  async getGolfEvents(): Promise<FanduelGolfEventsResponse> {
+    const requestBody = {
+      query: `
+      query GetGolfEvents {
+        getGolfEvents {
+          id
+          name
+        }
+      }
+    `,
+      operationName: "GetGolfEvents",
+    };
+
+    const response$ = this.httpService.post(this.BASE_URL, requestBody);
+    const response = await lastValueFrom(response$);
+    const payload = response?.data;
+
+    if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
+      throw new BadRequestException({
+        message: "FanDuel GraphQL error",
+        operation: "GetGolfEvents",
+        errors: payload.errors.map((e: any) => ({ message: e?.message, path: e?.path })),
+      });
+    }
+
+    const events = payload?.data?.getGolfEvents;
+    if (!Array.isArray(events)) {
+      throw new BadRequestException({
+        message: "Unexpected response shape from FanDuel GraphQL",
+        operation: "GetGolfEvents",
+        rawData: payload?.data,
+      });
+    }
+
+    return this.assertGolfEvents(events);
+  }
+
+  async getGolfSlates(): Promise<FanduelGolfSlatesResponse> {
+    const requestBody = {
+      query: `
+      query GetSlates {
+        getSlates(sport: GOLF) {
+          id
+          name
+        }
+      }
+    `,
+      operationName: "GetSlates",
+    };
+
+    const response$ = this.httpService.post(this.BASE_URL, requestBody);
+    const response = await lastValueFrom(response$);
+    const payload = response?.data;
+
+    if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
+      throw new BadRequestException({
+        message: "FanDuel GraphQL error",
+        operation: "GetSlates",
+        errors: payload.errors.map((e: any) => ({ message: e?.message, path: e?.path })),
+      });
+    }
+
+    const slates = payload?.data?.getSlates;
+    if (!Array.isArray(slates)) {
+      throw new BadRequestException({
+        message: "Unexpected response shape from FanDuel GraphQL",
+        operation: "GetSlates",
+        rawData: payload?.data,
+      });
+    }
+
+    return this.assertGolfSlates(slates);
   }
 
 }
