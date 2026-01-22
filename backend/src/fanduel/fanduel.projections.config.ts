@@ -1,10 +1,8 @@
 import typia from "typia";
 import { FanduelNflProjectionsResponse } from "./entities/fanduel-nfl.entity";
-import { FanduelGolfProjectionsResponse } from "./entities/fanduel-golf.entity";
 
 export type FanduelProjectionsBySport = {
   NFL: FanduelNflProjectionsResponse;
-  GOLF: FanduelGolfProjectionsResponse;
   // add more sports here later
 };
 
@@ -45,17 +43,4 @@ export const fanduelProjectionsConfig: {
     filter: (entries) => entries.filter((e) => e?.fantasy >= 0),
   },
 
-  GOLF: {
-    requiredInputKeys: ['slateId', 'eventId'],
-    input: { type: "DAILY", position: "GOLF_PLAYER", sport: "GOLF" },
-    fragment: `
-      ... on GolfPlayer {
-        fantasy
-        salary
-        player { name numberFireId imageUrl }
-      }
-    `,
-    assert: typia.misc.createAssertPrune<FanduelGolfProjectionsResponse>(),
-    filter: (entries) => entries.filter((e) => e?.salary && e.salary !== "N/A"),
-  },
 };
