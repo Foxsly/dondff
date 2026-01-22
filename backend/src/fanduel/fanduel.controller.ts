@@ -1,4 +1,5 @@
-import { FanduelProjectionsResponse, PlayerPosition } from '@/fanduel/entities/fanduel.entity';
+import { FanduelNflProjectionsResponse } from '@/fanduel/entities/fanduel-nfl.entity';
+import { PlayerPosition } from '@/player-stats/entities/player-stats.entity';
 import { Controller } from '@nestjs/common';
 import { FanduelService } from './fanduel.service';
 import { TypedRoute, TypedParam, TypedQuery } from '@nestia/core';
@@ -21,9 +22,11 @@ export class FanduelController {
   @TypedRoute.Get('GOLF/slates')
   getGolfSlates() {
     return this.fanduelService.getGolfSlates();
+  }
+
   @TypedRoute.Get('test')
   async getState() {
-    const fP:FanduelProjectionsResponse = await this.fanduelService.getFanduelProjections();
+    const fP: FanduelNflProjectionsResponse = await this.fanduelService.getProjectionsBySport("NFL");
     let stats: PositionStats[] =
       [
         {position: 'RB'},
