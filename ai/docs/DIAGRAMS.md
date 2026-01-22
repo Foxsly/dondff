@@ -65,7 +65,7 @@ sequenceDiagram
   participant UI
   participant TeamsController
   participant TeamsService
-  participant SleeperService
+  participant PlayerStatsService
   participant TeamsRepository
   participant TeamsEntryRepository
   participant DB
@@ -80,8 +80,8 @@ sequenceDiagram
   DB-->>TeamsRepository: team row
   TeamsRepository-->>TeamsService: team
 
-  TeamsService->>SleeperService: getPlayers + projections (server-side)
-  SleeperService-->>TeamsService: player pool
+  TeamsService->>PlayerStatsService: getPlayers + projections (server-side)
+  PlayerStatsService-->>TeamsService: player pool
 
   TeamsService->>TeamsEntryRepository: createEntry + audits (cases)
   TeamsEntryRepository->>DB: INSERT teamEntry
@@ -164,7 +164,7 @@ sequenceDiagram
   participant TeamsController
   participant TeamsService
   participant TeamsEntryRepository
-  participant SleeperService
+  participant PlayerStatsService
   participant DB
 
   Note over UI,DB: Reset allowed only before selection and within reset limit.
@@ -180,8 +180,8 @@ sequenceDiagram
     TeamsService-->>TeamsController: 409/400 error
     TeamsController-->>UI: error
   else ok
-    TeamsService->>SleeperService: getPlayers + projections (new pool)
-    SleeperService-->>TeamsService: players
+    TeamsService->>PlayerStatsService: getPlayers + projections (new pool)
+    PlayerStatsService-->>TeamsService: players
     TeamsService->>TeamsEntryRepository: incrementResetCount(entryId)
     TeamsEntryRepository->>DB: UPDATE teamEntry
     TeamsService->>TeamsEntryRepository: createNewAudits(entryId, resetCount)
