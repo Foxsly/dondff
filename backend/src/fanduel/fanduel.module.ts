@@ -4,9 +4,9 @@ import { FanduelController } from './fanduel.controller';
 import { HttpModule } from '@nestjs/axios';
 
 @Module({
-  imports: [HttpModule],
-  controllers: [FanduelController],
-  providers: [FanduelService],
-  exports: [FanduelService],
+    imports: [HttpModule],
+    controllers: [FanduelController],
+    providers: [FanduelService],
+    exports: [FanduelService],
 })
 export class FanduelModule {}
