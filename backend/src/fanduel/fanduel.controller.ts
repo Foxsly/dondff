@@ -19,6 +19,15 @@ export class FanduelController {
     return this.fanduelService.getGolfSlates();
   }
 
+  @TypedRoute.Get(':sport/projections')
+  getProjectionsBySport(
+      @TypedParam('sport') sport: FanduelSport,
+      @Query("slateId") slateId: string,
+      @Query("eventId") eventId: string,
+  ) {
+    return this.fanduelService.getProjectionsBySport(sport, eventId, slateId);
+  }
+
   @TypedRoute.Get('test')
   async getPositionStats() {
     const fP: FanduelNflProjectionsResponse = await this.fanduelService.getProjectionsBySport("NFL");
@@ -33,15 +42,6 @@ export class FanduelController {
       value.underOne = fPP.filter((e) => e.fantasy > 0.0 && e.fantasy < 1.0).length
     })
     return stats;
-  }
-
-  @TypedRoute.Get(':sport/projections')
-  getProjectionsBySport(
-      @TypedParam('sport') sport: FanduelSport,
-      @Query("slateId") slateId: string,
-      @Query("eventId") eventId: string,
-  ) {
-    return this.fanduelService.getProjectionsBySport(sport, eventId, slateId);
   }
 }
 
