@@ -29,7 +29,7 @@ export class PlayerStatsService {
     const isPostseason = week > 18;
     //This currently works because the two APIs share a BetGenius ID. If we add more sources, this could become problematic.
     if (isPostseason) {
-      const fanduelPlayerProjections = await this.fanduelService.getFanduelProjections();
+      const fanduelPlayerProjections = await this.fanduelService.getProjectionsBySport("NFL");
       const rawPlayerProjections: IPlayerProjection[] = fanduelPlayerProjections
         .map((projection) => ({
           playerId: `${projection.player.betGeniusId}`,
