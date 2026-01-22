@@ -16,6 +16,8 @@ export class FanduelService {
   constructor(@Inject(HttpService) private readonly httpService: HttpService) {}
 
   private assertGolfProjections = typia.misc.createAssertPrune<FanduelGolfProjectionsResponse>();
+  private assertNFLProjections = typia.misc.createAssertPrune<FanduelNflProjectionsResponse>();
+
   private buildGetProjectionsQuery(fragment: string): string {
     return `
       query GetProjections($input: ProjectionsInput!) {
@@ -46,16 +48,11 @@ export class FanduelService {
       eventId = events[0].id;
     }
 
-    const requestBody = {
-      query: this.buildGetProjectionsQuery(this.GOLF.request),
-      variables: { input: { ...this.GOLF.input, eventId: eventId, slateId: slateId } },
-      operationName: 'GetProjections',
-    };
-
-    const response$ = this.httpService.post(this.BASE_URL, requestBody);
-    const response = await lastValueFrom(response$);
-    const payload = response?.data;
-    const projections = payload?.data?.getProjections;
+    const projections = await this.retrieveProjections(this.GOLF.request, {
+      ...this.GOLF.input,
+      eventId: eventId,
+      slateId: slateId,
+    });
     const filtered = projections.filter((projection) => projection?.salary && projection.salary !== 'N/A');
     return this.assertGolfProjections(filtered);
   }
@@ -135,11 +132,25 @@ export class FanduelService {
   }
 
   async getNflProjections(): Promise<FanduelNflProjectionsResponse> {
-    //TODO make this method work
-    return Promise.all([]);
+    const projections = await this.retrieveProjections(this.NFL.request, { ...this.NFL.input });
+    const filtered = projections.filter((projection) => projection?.fantasy >= 0);
+    return this.assertNFLProjections(filtered);
   }
 
-  //TODO determine if we need to keep this, or just inline it all
+  private async retrieveProjections(graphQLRequest: string, inputVariables: any) {
+    const requestBody = {
+      query: this.buildGetProjectionsQuery(graphQLRequest),
+      variables: { input: inputVariables },
+      operationName: 'GetProjections',
+    };
+
+    const response$ = this.httpService.post(this.BASE_URL, requestBody);
+    const response = await lastValueFrom(response$);
+    const payload = response?.data;
+    return payload?.data?.getProjections;
+  }
+
+//TODO determine if we need to keep this, or just inline it all
   GOLF = {
     input: { type: 'DAILY', position: 'GOLF_PLAYER', sport: 'GOLF' },
     request: `
@@ -149,5 +160,22 @@ export class FanduelService {
         player { name numberFireId imageUrl }
       }
     `,
+  };
+
+  NFL = {
+    input: { type: "PPR", position: "NFL_SKILL", sport: "NFL" },
+    request: `
+      ... on NflSkill {
+        fantasy
+        gameInfo {
+          awayTeam { abbreviation name }
+          homeTeam { abbreviation name }
+        }
+        player { name betGeniusId position }
+        team { name abbreviation }
+      }
+    `,
+    assert: typia.misc.createAssertPrune<FanduelNflProjectionsResponse>(),
+    filter: (entries) => entries.filter((e) => e?.fantasy >= 0),
   };
 }
