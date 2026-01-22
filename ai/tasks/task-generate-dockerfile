@@ -1,0 +1,12 @@
+Start Plan — Research
+Task title: Add support for Docker
+Task details:
+I would like `backend` to be runnable via Docker, preferably using docker-compose.
+This should also include support for the environment-specific databases.
+
+Use the “Write Software Implementation Plan” guideline. Output only:
+- Overview
+- Background
+- Notes
+
+Stop for review after drafting.
