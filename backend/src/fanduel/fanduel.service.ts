@@ -61,10 +61,7 @@ export class FanduelService {
     const requestBody = {
       query: `
       query GetGolfEvents {
-        getGolfEvents {
-          id
-          name
-        }
+        getGolfEvents { id name }
       }
     `,
       operationName: 'GetGolfEvents',
@@ -98,10 +95,7 @@ export class FanduelService {
     const requestBody = {
       query: `
       query GetSlates {
-        getSlates(sport: GOLF) {
-          id
-          name
-        }
+        getSlates(sport: GOLF) { id name }
       }
     `,
       operationName: 'GetSlates',
@@ -133,8 +127,8 @@ export class FanduelService {
 
   async getNflProjections(): Promise<FanduelNflProjectionsResponse> {
     const projections = await this.retrieveProjections(this.NFL.request, { ...this.NFL.input });
-    const filtered = projections.filter((projection) => projection?.fantasy >= 0);
-    return this.assertNFLProjections(filtered);
+    const nonZeroScoringPlayers = projections.filter((projection) => projection?.fantasy >= 0);
+    return this.assertNFLProjections(nonZeroScoringPlayers);
   }
 
   private async retrieveProjections(graphQLRequest: string, inputVariables: any) {
