@@ -20,3 +20,25 @@ Building locally (apple silicon):
 docker buildx create --name dondff-builder --use
 docker buildx inspect --bootstrap
 ```
+
+### BUILD
+Locally, execute:
+```bash
+./scripts/build-and-export-images.sh
+```
+
+Then, on the server, execute:
+```bash
+docker@sh2:~/docker$ pwd
+/home/docker/docker
+docker@sh2:~/docker$ ./down-dondff
+[+] Running 5/5
+ ✔ Container dondff-frontend  Removed                                                                                                                                                                           11.1s
+ ✔ Container dondff-backend   Removed                                                                                                                                                                           11.0s
+ ✔ Container dondff-postgres  Removed                                                                                                                                                                            0.8s
+ ✔ Network docker_dondff      Removed                                                                                                                                                                            0.2s
+ ! Network internal           Resource is still in use                                                                                                                                                           0.0s
+docker@sh2:~/docker$ dondff/
+images/                load-images-and-up.sh
+docker@sh2:~/docker$ dondff/load-images-and-up.sh
+```
