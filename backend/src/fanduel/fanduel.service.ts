@@ -35,10 +35,12 @@ export class FanduelService {
   private assertGolfEvents = typia.misc.createAssertPrune<FanduelGolfEventsResponse>();
   private assertGolfSlates = typia.misc.createAssertPrune<FanduelGolfSlatesResponse>();
 
-  async getProjectionsBySport<K extends FanduelSport>(
-      sport: K,
+  async getProjectionsBySport<Sport extends FanduelSport>(
+      sport: Sport,
+      eventId?: string,
+      sportId?: string,
       overrides?: Partial<ProjectionsInput>,
-  ): Promise<FanduelProjectionsBySport[K]> {
+  ): Promise<FanduelProjectionsBySport[Sport]> {
     const config = fanduelProjectionsConfig[sport];
     if (!config) throw new BadRequestException(`Unsupported sport: ${sport}`);
 

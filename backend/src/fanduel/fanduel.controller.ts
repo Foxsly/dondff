@@ -1,14 +1,9 @@
 import { FanduelNflProjectionsResponse } from '@/fanduel/entities/fanduel-nfl.entity';
 import { PlayerPosition } from '@/player-stats/entities/player-stats.entity';
-import { Controller } from '@nestjs/common';
+import { Controller, Query } from '@nestjs/common';
 import { FanduelService } from './fanduel.service';
-import { TypedRoute, TypedParam, TypedQuery } from '@nestia/core';
+import { TypedRoute, TypedParam } from '@nestia/core';
 import { FanduelSport } from './fanduel.projections.config';
-
-type ProjectionsQuery = {
-  slateId?: string;
-  eventId?: string;
-};
 
 @Controller('fanduel')
 export class FanduelController {
@@ -25,14 +20,9 @@ export class FanduelController {
   }
 
   @TypedRoute.Get('test')
-  async getState() {
+  async getPositionStats() {
     const fP: FanduelNflProjectionsResponse = await this.fanduelService.getProjectionsBySport("NFL");
-    let stats: PositionStats[] =
-      [
-        {position: 'RB'},
-        {position: 'WR'},
-        {position: 'TE'},
-        ];
+    let stats: PositionStats[] = [{position: 'RB'}, {position: 'WR'}, {position: 'TE'},];
     stats.forEach(value => {
       let fPP = fP.filter((e) => e.player.position === value.position);
       console.log(value.position, fPP.length);
@@ -45,16 +35,14 @@ export class FanduelController {
     return stats;
   }
 
-  // New: sport-selected projections
   @TypedRoute.Get(':sport/projections')
   getProjectionsBySport(
       @TypedParam('sport') sport: FanduelSport,
-      @TypedQuery() query: ProjectionsQuery,
+      @Query("slateId") slateId: string,
+      @Query("eventId") eventId: string,
   ) {
-    return this.fanduelService.getProjectionsBySport(sport, query);
+    return this.fanduelService.getProjectionsBySport(sport, eventId, slateId);
   }
-
-
 }
 
 interface PositionStats {
