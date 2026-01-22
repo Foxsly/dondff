@@ -1,3 +1,7 @@
+import {
+  FanduelGolfEventsResponse,
+  FanduelGolfSlatesResponse,
+} from '@/fanduel/entities/fanduel-golf.entity';
 import { HttpService } from "@nestjs/axios";
 import { Inject, Injectable, BadRequestException } from "@nestjs/common";
 import { lastValueFrom } from "rxjs";
@@ -10,7 +14,6 @@ import {
 } from "./fanduel.projections.config";
 
 import typia from "typia";
-import { FanduelGolfEventsResponse, FanduelGolfSlatesResponse } from "./entities/fanduel-golf-lookups.entity";
 
 
 @Injectable()
