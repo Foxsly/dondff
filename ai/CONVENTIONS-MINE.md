@@ -29,6 +29,7 @@ This document describes the backend layering, invariants, and cross-cutting conv
 - Perform minimal request parsing and input shaping.
 - Delegate business logic to services.
 - Must not contain database queries.
+- Should follow idempotency rules for determining whether requests should be GET/PUT/POST
 
 Controller invariants:
 
