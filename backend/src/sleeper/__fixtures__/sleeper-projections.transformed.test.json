@@ -1,0 +1,142 @@
+[
+  {
+    "stats": {
+      "pos_adp_dd_ppr": 1,
+      "pts_std": 13.29,
+      "pts_half_ppr": 17.14,
+      "pts_ppr": 21
+    },
+    "week": 4,
+    "season": 2025,
+    "season_type": "regular",
+    "sport": "nfl",
+    "player_id": "9493",
+    "player": {
+      "fantasy_positions": [
+        "WR"
+      ],
+      "first_name": "Puka",
+      "last_name": "Nacua",
+      "position": "WR",
+      "injury_status": null
+    },
+    "team": "LAR",
+    "opponent": "IND",
+    "game_id": "202510432",
+    "date": "2025-09-28T00:00:00.000Z",
+    "last_modified": "2025-09-23T16:46:00.052Z",
+    "updated_at": "2025-09-23T16:46:00.052Z"
+  },
+  {
+    "stats": {
+      "pos_adp_dd_ppr": 2,
+      "pts_std": 12.05,
+      "pts_half_ppr": 15.53,
+      "pts_ppr": 19.01
+    },
+    "week": 4,
+    "season": 2025,
+    "season_type": "regular",
+    "sport": "nfl",
+    "player_id": "9488",
+    "player": {
+      "fantasy_positions": [
+        "WR"
+      ],
+      "first_name": "Jaxon",
+      "last_name": "Smith-Njigba",
+      "position": "WR",
+      "injury_status": null
+    },
+    "team": "SEA",
+    "opponent": "ARI",
+    "game_id": "202510401",
+    "date": "2025-09-25T00:00:00.000Z",
+    "last_modified": "2025-09-23T16:45:59.806Z",
+    "updated_at": "2025-09-23T16:45:59.806Z"
+  },
+  {
+    "stats": {
+      "pos_adp_dd_ppr": 3,
+      "pts_std": 12.16,
+      "pts_half_ppr": 15.26,
+      "pts_ppr": 18.36
+    },
+    "week": 4,
+    "season": 2025,
+    "season_type": "regular",
+    "sport": "nfl",
+    "player_id": "7547",
+    "player": {
+      "fantasy_positions": [
+        "WR"
+      ],
+      "first_name": "Amon-Ra",
+      "last_name": "St. Brown",
+      "position": "WR",
+      "injury_status": null
+    },
+    "team": "DET",
+    "opponent": "CLE",
+    "game_id": "202510411",
+    "date": "2025-09-28T00:00:00.000Z",
+    "last_modified": "2025-09-23T16:45:59.925Z",
+    "updated_at": "2025-09-23T16:45:59.925Z"
+  },
+  {
+    "stats": {
+      "pos_adp_dd_ppr": 4,
+      "pts_std": 11.28,
+      "pts_half_ppr": 14.23,
+      "pts_ppr": 17.19
+    },
+    "week": 4,
+    "season": 2025,
+    "season_type": "regular",
+    "sport": "nfl",
+    "player_id": "7569",
+    "player": {
+      "fantasy_positions": [
+        "WR"
+      ],
+      "first_name": "Nico",
+      "last_name": "Collins",
+      "position": "WR",
+      "injury_status": null
+    },
+    "team": "HOU",
+    "opponent": "TEN",
+    "game_id": "202510413",
+    "date": "2025-09-28T00:00:00.000Z",
+    "last_modified": "2025-09-23T16:45:59.864Z",
+    "updated_at": "2025-09-23T16:45:59.864Z"
+  },
+  {
+    "stats": {
+      "pos_adp_dd_ppr": 7,
+      "pts_std": 10.73,
+      "pts_half_ppr": 13.38,
+      "pts_ppr": 16.02
+    },
+    "week": 4,
+    "season": 2025,
+    "season_type": "regular",
+    "sport": "nfl",
+    "player_id": "7564",
+    "player": {
+      "fantasy_positions": [
+        "WR"
+      ],
+      "first_name": "Ja'Marr",
+      "last_name": "Chase",
+      "position": "WR",
+      "injury_status": null
+    },
+    "team": "CIN",
+    "opponent": "DEN",
+    "game_id": "202510410",
+    "date": "2025-09-29T00:00:00.000Z",
+    "last_modified": "2025-09-23T16:46:00.123Z",
+    "updated_at": "2025-09-23T16:46:00.123Z"
+  }
+]

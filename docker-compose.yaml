@@ -1,0 +1,73 @@
+services:
+  dondff-postgres:
+    image: postgres:16-alpine
+    container_name: dondff-postgres
+    #    profiles: [dondff]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - dondff-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - dondff
+
+
+  dondff-backend:
+    image: dondff-backend:latest
+    container_name: dondff-backend
+    #    profiles: [dondff]
+    user: "65532:65532"
+    depends_on:
+      dondff-postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      DB_ENGINE: postgres
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@dondff-postgres:5432/${POSTGRES_DB}
+      RUN_SEED: "false"
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: [ "CMD", "/nodejs/bin/node", "-e", "require('http').get('http://localhost:3001/health', r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - dondff
+      - internal
+
+  dondff-frontend:
+    image: dondff-frontend:latest
+    container_name: dondff-frontend
+    #    profiles: [dondff]
+    depends_on:
+      dondff-backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      API_BASE_URL: ${API_BASE_URL}
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - dondff
+      - internal
+
+volumes:
+  dondff-pgdata:
+    driver: local
+
+networks:
+  dondff:

@@ -1,0 +1,14 @@
+node_modules
+build
+.git
+.idea
+.vscode
+coverage
+*.log
+**/__tests__/
+**/*.test.*
+**/*.spec.*
+*.zip
+*.out
+.env
+.env.*
