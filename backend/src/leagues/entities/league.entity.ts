@@ -4,6 +4,7 @@ import { Selectable } from 'kysely';
 export interface ILeague {
   leagueId: string & tags.Format<'uuid'>;
   name: string;
+  sport: string;
 }
 
 export type League = Selectable<ILeague>;

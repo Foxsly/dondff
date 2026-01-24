@@ -49,6 +49,7 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
       .values({
         leagueId: crypto.randomUUID(),
         name: league.name,
+        sport: league.sport,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
