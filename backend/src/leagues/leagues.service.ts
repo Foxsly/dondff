@@ -6,16 +6,14 @@ import { LeaguesRepository } from '@/leagues/leagues.repository';
 import {
   CreateLeagueSettingsDto,
   ILeagueSettings,
+  ILeagueSettingsPosition,
   ScoringType,
+  SportLeague,
 } from '@/leagues/entities/league-settings.entity';
 
 const DEFAULT_LEAGUE_SETTINGS = {
   scoringType: 'PPR' as ScoringType,
-  positions: ['RB', 'WR'],
-  rbPoolSize: 64,
-  wrPoolSize: 96,
-  qbPoolSize: 32,
-  tePoolSize: 32,
+  sportLeague: 'NFL' as SportLeague,
 };
 @Injectable()
 export class LeaguesService {
@@ -86,7 +84,39 @@ export class LeaguesService {
     leagueId: string,
     dto: CreateLeagueSettingsDto,
   ): Promise<ILeagueSettings> {
-    return this.leaguesRepository.createLeagueSettings(leagueId, dto);
+    const settings = await this.leaguesRepository.createLeagueSettings(leagueId, dto);
+    
+    // Create default positions based on sport
+    if (dto.sportLeague === 'NFL') {
+      await this.createDefaultNflPositions(settings.leagueSettingsId);
+    } else if (dto.sportLeague === 'GOLF') {
+      await this.createDefaultGolfPositions(settings.leagueSettingsId);
+    }
+    
+    return settings;
+  }
+
+  async createDefaultNflPositions(leagueSettingsId: string): Promise<void> {
+    const defaultNflPositions = [
+      { position: 'RB', poolSize: 64 },
+      { position: 'WR', poolSize: 96 },
+    ];
+    
+    for (const pos of defaultNflPositions) {
+      await this.leaguesRepository.createLeagueSettingsPosition(leagueSettingsId, pos);
+    }
+  }
+
+  async createDefaultGolfPositions(leagueSettingsId: string): Promise<void> {
+    const defaultGolfPositions = [
+      { position: 'GOLF_PLAYER_1', poolSize: 150 },
+      { position: 'GOLF_PLAYER_2', poolSize: 150 },
+      { position: 'GOLF_PLAYER_3', poolSize: 150 },
+    ];
+    
+    for (const pos of defaultGolfPositions) {
+      await this.leaguesRepository.createLeagueSettingsPosition(leagueSettingsId, pos);
+    }
   }
 
   async getLatestLeagueSettingsByLeague(leagueId: string): Promise<ILeagueSettings> {
@@ -113,5 +143,14 @@ export class LeaguesService {
       }
       return matches;
     });
+  }
+
+  async getPositionsForLeagueSettings(leagueSettingsId: string): Promise<ILeagueSettingsPosition[]> {
+    return this.leaguesRepository.getLeagueSettingsPositions(leagueSettingsId);
+  }
+
+  async getPositionsForLeague(leagueId: string): Promise<ILeagueSettingsPosition[]> {
+    const settings = await this.getLatestLeagueSettingsByLeague(leagueId);
+    return this.getPositionsForLeagueSettings(settings.leagueSettingsId);
   }
 }

@@ -8,7 +8,9 @@ import { withPlayers } from '@/teams/teams.repository';
 import { DB_PROVIDER } from '@/infrastructure/database/database.module';
 import {
   CreateLeagueSettingsDto,
+  CreateLeagueSettingsPositionDto,
   ILeagueSettings,
+  ILeagueSettingsPosition,
 } from '@/leagues/entities/league-settings.entity';
 
 export abstract class LeaguesRepository {
@@ -35,6 +37,13 @@ export abstract class LeaguesRepository {
   ): Promise<ILeagueSettings>;
   abstract getLatestLeagueSettingsByLeague(leagueId: string): Promise<ILeagueSettings | null>;
   abstract findLeagueSettings(leagueSettingsId: string): Promise<ILeagueSettings | null>;
+  abstract createLeagueSettingsPosition(
+    leagueSettingsId: string,
+    input: CreateLeagueSettingsPositionDto,
+  ): Promise<ILeagueSettingsPosition>;
+  abstract getLeagueSettingsPositions(
+    leagueSettingsId: string,
+  ): Promise<ILeagueSettingsPosition[]>;
 }
 
 @Injectable()
@@ -156,21 +165,14 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
         leagueSettingsId,
         leagueId: leagueId,
         scoringType: input.scoringType,
-        positions: stringifyPositions(input.positions), // <-- serialize
-        rbPoolSize: input.rbPoolSize,
-        wrPoolSize: input.wrPoolSize,
-        qbPoolSize: input.qbPoolSize,
-        tePoolSize: input.tePoolSize,
+        sportLeague: input.sportLeague,
         createdAt: now,
         updatedAt: now,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
 
-    return {
-      ...inserted,
-      positions: parsePositions((inserted as any).positions), // <-- deserialize
-    };
+    return inserted as ILeagueSettings;
   }
 
   async getLatestLeagueSettingsByLeague(leagueId: string): Promise<ILeagueSettings | null> {
@@ -182,7 +184,7 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
       .orderBy('createdAt', 'desc')
       .executeTakeFirst();
 
-    return row ? { ...row, positions: parsePositions((row as any).positions) } : null;
+    return row ? row as ILeagueSettings : null;
   }
 
   async findLeagueSettings(leagueSettingsId: string): Promise<ILeagueSettings | null> {
@@ -192,26 +194,41 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
       .where('leagueSettingsId', '=', leagueSettingsId)
       .executeTakeFirst();
 
-    return row ? { ...row, positions: parsePositions((row as any).positions) } : null;
+    return row ? row as ILeagueSettings : null;
+  }
+
+  async createLeagueSettingsPosition(
+    leagueSettingsId: string,
+    input: CreateLeagueSettingsPositionDto,
+  ): Promise<ILeagueSettingsPosition> {
+    const now = new Date().toISOString();
+
+    const inserted = await this.db
+      .insertInto('leagueSettingsPosition')
+      .values({
+        leagueSettingsId,
+        position: input.position,
+        poolSize: input.poolSize,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return inserted as ILeagueSettingsPosition;
+  }
+
+  async getLeagueSettingsPositions(
+    leagueSettingsId: string,
+  ): Promise<ILeagueSettingsPosition[]> {
+    const rows = await this.db
+      .selectFrom('leagueSettingsPosition')
+      .selectAll()
+      .where('leagueSettingsId', '=', leagueSettingsId)
+      .orderBy('position', 'asc')
+      .execute();
+
+    return rows as ILeagueSettingsPosition[];
   }
 }
-// helper parse/stringify (defensive)
-// Accepts already-parsed arrays (when ParseJSONResultsPlugin is active) OR JSON strings.
-const parsePositions = (value: unknown): string[] => {
-  try {
-    if (Array.isArray(value)) {
-      return value.map(String);
-    }
-    if (value == null) return [];
-    if (typeof value === 'string') {
-      const v = value.length ? JSON.parse(value) : [];
-      return Array.isArray(v) ? v.map(String) : [];
-    }
-    // Fallback: unknown JSON shape → coerce to []
-    return [];
-  } catch {
-    return [];
-  }
-};
 
-const stringifyPositions = (arr: string[]): string => JSON.stringify(arr ?? []);
