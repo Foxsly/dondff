@@ -6,7 +6,6 @@ import { tags } from 'typia';
 export interface ISleeperState {
   week: number;
   season_type: string;
-  season_start_date: string;
   season: string;
   previous_season: string;
   leg: number;
