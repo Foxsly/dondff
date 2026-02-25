@@ -11,16 +11,13 @@ import { tags } from 'typia';
  *   Repositories should JSON.stringify/parse when crossing the DB boundary.
  */
 export type ScoringType = 'PPR' | 'HALF_PPR' | 'STANDARD';
+export type SportLeague = 'NFL' | 'GOLF' | 'NBA' | 'NHL' | 'MLB';
 
 export interface ILeagueSettings {
   leagueSettingsId: string & tags.Format<'uuid'>;
   leagueId: string & tags.Format<'uuid'>;
   scoringType: ScoringType;
-  positions: Array<string> & tags.MinItems<1> & tags.UniqueItems;
-  rbPoolSize: number & tags.Minimum<0>;
-  wrPoolSize: number & tags.Minimum<0>;
-  qbPoolSize: number & tags.Minimum<0>;
-  tePoolSize: number & tags.Minimum<0>;
+  sportLeague: SportLeague;
   createdAt: string;
   updatedAt: string;
 }
@@ -32,6 +29,19 @@ export type CreateLeagueSettingsDto = Omit<
 >;
 // Append-only: no Update DTO by design. If needed later, introduce a new row instead.
 export type UpdateLeagueSettingsDto = never;
-export type LeagueSettingsRow = Omit<ILeagueSettings, 'positions'> & {
-  positions: string; // JSON string in DB
-};
+export type LeagueSettingsRow = ILeagueSettings;
+
+export interface ILeagueSettingsPosition {
+  leagueSettingsId: string & tags.Format<'uuid'>;
+  position: string & tags.MinLength<1>;
+  poolSize: number & tags.Minimum<0>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+//TODO determine if we should be excluding the ID or including it in the DTO
+export type CreateLeagueSettingsPositionDto = Omit<
+  ILeagueSettingsPosition,
+  'leagueSettingsId' | 'createdAt' | 'updatedAt'
+>;
+export type LeagueSettingsPositionRow = ILeagueSettingsPosition;

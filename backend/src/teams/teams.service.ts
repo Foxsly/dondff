@@ -43,9 +43,14 @@ export class TeamsService {
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       createdTeam.leagueId,
     );
-    for (const position of leagueSettings.positions) {
-      await this.generateCasesForPosition(createdTeam, position, leagueSettings, this.getNumberOfCases(createTeamDto.week));
+    
+    // Get positions from the new league_settings_position table
+    const positions = await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId);
+    
+    for (const position of positions) {
+      await this.generateCasesForPosition(createdTeam, position.position, leagueSettings, this.getNumberOfCases(createTeamDto.week));
     }
+    
     return createdTeam;
   }
 
@@ -106,7 +111,7 @@ export class TeamsService {
       team.leagueId,
     );
     let teamEntries: ITeamEntry[] = [];
-    for (let position of leagueSettings.positions) {
+    for (let position of ['RB','WR']) {
       let teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
       teamEntries.push(teamEntry);
     }

@@ -5,6 +5,8 @@ import { TypedParam, TypedRoute } from '@nestia/core';
 import { Controller, Query } from '@nestjs/common';
 import { FanduelService } from './fanduel.service';
 
+const shuffle = (v, r = [...v]) => v.map(() => r.splice(~~(Math.random() * r.length), 1)[0]);
+
 @Controller('fanduel')
 export class FanduelController {
   constructor(private readonly fanduelService: FanduelService) {}
@@ -31,6 +33,59 @@ export class FanduelController {
       return this.fanduelService.getGolfProjections(eventId, slateId);
     } else {
       throw new Error('No such sport');
+    }
+  }
+
+  @TypedRoute.Get('GOLF/offer')
+  async getRandomOffer(@Query('loops') loops: number) {
+    let fanduelGolfProjectionEntries = (await this.fanduelService.getGolfProjections()).map((entry) => ({
+      ...entry,
+      salary: Number(entry.salary.replace("$", "")),
+    }));
+
+    let offerMap = new Map();
+
+    for(let x=0; x < loops; x++) {
+      let entries = shuffle(fanduelGolfProjectionEntries).slice(0,10);
+
+      const finalOfferValue = Math.sqrt(
+        entries.map((a) => a.salary ** 2).reduce((sum, v) => sum + v, 0) / 9,
+      );
+
+      const playerIdsInBoxes = entries.map(entry => entry.player.numberFireId)
+      const closestOffer = shuffle(fanduelGolfProjectionEntries.filter(e => !playerIdsInBoxes.includes(e.player.numberFireId)))
+        .reduce((closest, current) => {
+        const currentDiff = Math.abs(current.salary - finalOfferValue);
+        const closestDiff = Math.abs(closest.salary - finalOfferValue);
+        return currentDiff < closestDiff ? current : closest;
+      });
+
+      // Count the player that would be chosen from the closestOffer
+      // const closestPlayer = {
+      //   id: closestOffer.player.numberFireId,
+      //   name: closestOffer.player.name,
+      //   salary: closestOffer.salary,
+      // }
+      const closestPlayer = `${closestOffer.player.numberFireId}|${closestOffer.salary}`;
+      // const closestPlayer = closestOffer.salary;
+      if (offerMap.has(closestPlayer)) {
+        offerMap.set(closestPlayer, offerMap.get(closestPlayer) + 1);
+      } else {
+        offerMap.set(closestPlayer, 1);
+      }
+    }
+
+    return {
+      // selectedGolfer: chosen,
+      // offerValue: finalOfferValue,
+      // closestOffer: closestOffer,
+      numPlayerOffers: offerMap.size,
+      offerMap: Object.fromEntries(offerMap),
+      totalPlayers: fanduelGolfProjectionEntries.length,
+      // offerMap: Object.fromEntries(offerMap),
+      // allSalaries: fanduelGolfProjectionEntries.map((entry) => ({
+      //   salary: entry.salary,
+      // }))
     }
   }
 
