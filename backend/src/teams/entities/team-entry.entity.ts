@@ -1,6 +1,7 @@
+import { AuditableTable } from '@/infrastructure/entities/auditable.table';
 import { PlayerTeams } from '@/player-stats/entities/player-stats.entity';
-import { tags } from 'typia';
 import { Selectable } from 'kysely';
+import { tags } from 'typia';
 
 export type TeamEntryStatus = 'pending' | 'playing' | 'finished';
 export type TeamEntryBoxStatus = 'selected' | 'eliminated' | 'available' | 'swapped' | 'reset';
@@ -81,14 +82,6 @@ export type TeamEntryAudit = Selectable<ITeamEntryAudit>;
 export type TeamEntryOffer = Selectable<ITeamEntryOffer>;
 export type TeamEntryEvent = Selectable<ITeamEntryEvent>;
 
-/**
- * Audit columns that exist in the DB but aren't used in business logic
- */
-export interface AuditableTable {
-  createdAt?: string & tags.Format<'date-time'>;
-  updatedAt?: string & tags.Format<'date-time'>;
-}
-
 // Audit types (for the future, if needed)
 export type TeamEntryTable = ITeamEntry & AuditableTable;
 export type TeamEntryAuditTable = ITeamEntryAudit & AuditableTable;
@@ -115,8 +108,8 @@ export type TeamEntryCasesMetaDto = Pick<
  * That mapping lives only in the audit rows and the server-side
  * game logic, to prevent front-end cheating.
  */
-export type TeamEntryCaseBoxDto = Pick<ITeamEntryAudit, 'boxNumber' | 'boxStatus'>
-  & Partial<Pick<ITeamEntryAudit, 'boxNumber' | 'playerId' | 'playerName' | 'projectedPoints'>>;
+export type TeamEntryCaseBoxDto = Pick<ITeamEntryAudit, 'boxNumber' | 'boxStatus'> &
+  Partial<Pick<ITeamEntryAudit, 'boxNumber' | 'playerId' | 'playerName' | 'projectedPoints'>>;
 
 /**
  * Player summary used when building the “players in cases” list
@@ -125,8 +118,9 @@ export type TeamEntryCaseBoxDto = Pick<ITeamEntryAudit, 'boxNumber' | 'boxStatus
  * which case.
  */
 export type TeamEntryCasePlayerDto = Pick<
-  ITeamEntryAudit, 'playerId' | 'playerName' | 'projectedPoints' | 'injuryStatus' | 'boxStatus'>
-  & { matchup: PlayerTeams};
+  ITeamEntryAudit,
+  'playerId' | 'playerName' | 'projectedPoints' | 'injuryStatus' | 'boxStatus'
+> & { matchup: PlayerTeams };
 
 /**
  * Combined DTO shape returned by GET /teams/:teamId/cases.
@@ -159,4 +153,4 @@ export interface TeamEntryAuditFinalDecisionInputDto {
   position: string & tags.MinLength<1>;
 }
 
-export type PlayerOfferDto = ITeamEntryOffer & {matchup: PlayerTeams};
+export type PlayerOfferDto = ITeamEntryOffer & { matchup: PlayerTeams };

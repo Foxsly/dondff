@@ -166,8 +166,6 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
         leagueId: leagueId,
         scoringType: input.scoringType,
         sportLeague: input.sportLeague,
-        createdAt: now,
-        updatedAt: now,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -175,13 +173,15 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
     return inserted as ILeagueSettings;
   }
 
+  //In the future, this may be a table that tracks history over time (e.g. changes result in inserts instead of updates)
+  //When that happens, we'll probably need to revisit this
   async getLatestLeagueSettingsByLeague(leagueId: string): Promise<ILeagueSettings | null> {
     const row = await this.db
       .selectFrom('leagueSettings')
       .selectAll()
       .where('leagueId', '=', leagueId)
       // Kysely prefers tuple form:
-      .orderBy('createdAt', 'desc')
+      // .orderBy('createdAt', 'desc')
       .executeTakeFirst();
 
     return row ? row as ILeagueSettings : null;
@@ -209,8 +209,6 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
         leagueSettingsId,
         position: input.position,
         poolSize: input.poolSize,
-        createdAt: now,
-        updatedAt: now,
       })
       .returningAll()
       .executeTakeFirstOrThrow();

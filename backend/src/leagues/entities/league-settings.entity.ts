@@ -1,3 +1,4 @@
+import { AuditableTable } from '@/infrastructure/entities/auditable.table';
 import { Selectable } from 'kysely';
 import { tags } from 'typia';
 
@@ -18,8 +19,6 @@ export interface ILeagueSettings {
   leagueId: string & tags.Format<'uuid'>;
   scoringType: ScoringType;
   sportLeague: SportLeague;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export type LeagueSettings = Selectable<ILeagueSettings>;
@@ -35,8 +34,6 @@ export interface ILeagueSettingsPosition {
   leagueSettingsId: string & tags.Format<'uuid'>;
   position: string & tags.MinLength<1>;
   poolSize: number & tags.Minimum<0>;
-  createdAt: string;
-  updatedAt: string;
 }
 
 //TODO determine if we should be excluding the ID or including it in the DTO
@@ -45,3 +42,7 @@ export type CreateLeagueSettingsPositionDto = Omit<
   'leagueSettingsId' | 'createdAt' | 'updatedAt'
 >;
 export type LeagueSettingsPositionRow = ILeagueSettingsPosition;
+
+// Audit types (for the future, if needed)
+export type LeagueSettingsTable = ILeagueSettings & AuditableTable;
+export type LeagueSettingsPositionTable = ILeagueSettingsPosition & AuditableTable;
