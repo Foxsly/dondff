@@ -111,6 +111,7 @@ export class TeamsService {
       team.leagueId,
     );
     let teamEntries: ITeamEntry[] = [];
+    //TODO update this to pull the positions from leagueSettingsPosition
     for (let position of ['RB','WR']) {
       let teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
       teamEntries.push(teamEntry);
