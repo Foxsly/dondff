@@ -54,7 +54,7 @@ export class TeamsController {
   findTeamEntry(
     @TypedParam('teamId') teamId: string,
     @Query('position') position?: string,
-  ): Promise<ITeamEntry> | Promise<ITeamEntry[]> {
+  ): Promise<ITeamEntry | ITeamEntry[]> {
     if (position) {
       return this.teamsService.getTeamEntry(teamId, position);
     } else {

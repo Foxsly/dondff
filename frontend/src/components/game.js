@@ -55,11 +55,8 @@ const Game = ({teamUser, onComplete}) => {
    * status = 'pending'
    */
   const [caseSelected, setCaseSelected] = useState(null);
-  const [position, setPosition] = useState("RB");
-  const [lineUp, setLineUp] = useState([
-    {position: 'RB', playerName: 'awaiting game...', complete: false},
-    {position: 'WR', playerName: 'awaiting game...', complete: false},
-  ]);
+  const [position, setPosition] = useState(null);
+  const [lineUp, setLineUp] = useState([]);
 
   const [thinking, setThinking] = useState(false);
   const [reset, setReset] = useState(false);
@@ -154,6 +151,7 @@ const Game = ({teamUser, onComplete}) => {
         }
       }
 
+      console.log("ResolvedTeamId: ", resolvedTeamId);
       return resolvedTeamId;
     },
     [leagueId, season, week]
@@ -176,13 +174,71 @@ const Game = ({teamUser, onComplete}) => {
     })();
   }, [currentUser, leagueId, season, week, ensureTeamForContext]);
 
-  const setupGame = useCallback(async () => {
-    //TODO get all entries (/teams/{teamId}/entry with no position query) and figure out what position to start at
-    const getCasesResponse = await fetch(`${API_BASE}/teams/${teamId}/cases?position=${position}`, {
+  const fetchTeamEntries = useCallback(async () => {
+    console.log("TRACE: fetchTeamEntries called");
+    const getEntriesResponse = await fetch(`${API_BASE}/teams/${teamId}/entry`, {
       method: "GET",
       headers: {"Content-Type": "application/json"},
       credentials: "include",
     });
+    
+    console.log("TRACE: fetchTeamEntries response status:", getEntriesResponse.status);
+    
+    if (!getEntriesResponse.ok) {
+      throw new Error(`Failed to fetch team entries (status ${getEntriesResponse.status})`);
+    }
+    
+    const entries = await getEntriesResponse.json();
+    console.log("TRACE: fetchTeamEntries received entries:", entries);
+    
+    if (!Array.isArray(entries)) {
+      throw new Error("Invalid team entries data received from server");
+    }
+    
+    if (entries.length === 0) {
+      throw new Error("No team entries found - team may not be properly initialized");
+    }
+    
+    return entries;
+  }, [teamId]);
+
+  const setupGame = useCallback(async () => {
+    // Fetch all team entries to determine game state
+    const entries = await fetchTeamEntries();
+
+    // Find the first incomplete entry to resume
+    let selectedPosition = null;
+    
+    for (const entry of entries) {
+      if (entry.status !== 'finished') {
+        selectedPosition = entry.position;
+        break;
+      }
+    }
+    
+    // If no incomplete entries found, all positions are complete
+    if (!selectedPosition) {
+      console.error("TRACE: setupGame - all positions complete");
+      throw new Error("All positions are already complete for this team");
+    }
+    
+    setPosition(selectedPosition);
+
+    // Initialize lineup based on all entries
+    const initialLineup = entries.map(entry => ({
+      position: entry.position,
+      playerName: entry.playerName || 'awaiting game...',
+      complete: entry.status === 'finished'
+    }));
+    setLineUp(initialLineup);
+    
+    // Now fetch cases for the selected position
+    const getCasesResponse = await fetch(`${API_BASE}/teams/${teamId}/cases?position=${selectedPosition}`, {
+      method: "GET",
+      headers: {"Content-Type": "application/json"},
+      credentials: "include",
+    });
+    
     if (!getCasesResponse.ok) {
       throw new Error(`Failed to retrieve cases (status ${getCasesResponse.status})`);
     }
@@ -190,32 +246,39 @@ const Game = ({teamUser, onComplete}) => {
     setCases(getCases.boxes);
     setPlayers(getCases.players);
     const selectedCase = getCases.boxes.find(c => c.boxStatus === 'selected');
-    setCaseSelected(selectedCase)
+    setCaseSelected(selectedCase);
 
     //Don't retrieve an offer unless there is a case selected already
     if(selectedCase) {
-      const getCurrentOffer = await fetch(`${API_BASE}/teams/${teamId}/offers?position=${position}`, {
+      const getCurrentOffer = await fetch(`${API_BASE}/teams/${teamId}/offers?position=${selectedPosition}`, {
         method: "GET",
         headers: {"Content-Type": "application/json"},
         credentials: "include",
       });
 
       const currentOffer = await getCurrentOffer.json();
-      console.log(currentOffer);
       setOffer(currentOffer);
+    } else {
+      console.log("TRACE: setupGame - no selected case, skipping offer fetch");
     }
-  }, [position, teamId]);
+    /* TODO - this isn't quite right, because we're not actually using `position`, but we need to trigger this
+    *   effect when the position changes in order to setup the board properly. Should look into a separate effect that
+    *   runs when the position changes and does the needful (whatever that means, my brain isn't firing on all cylinders)
+    */
+  }, [teamId, fetchTeamEntries, position]);
 
   useEffect(() => {
+    console.log("TRACE: setupGame entry: ", hasSetupGameRef, teamId);
     // Only run once per mount to set up game
     if (hasSetupGameRef.current) return;
-    if (!teamId || !position) return;
+    if (!teamId) return;
     hasSetupGameRef.current = true;
 
     (async () => {
+      console.log("calling setupGame");
       await setupGame();
     })();
-  }, [teamId, position, setupGame]);
+  }, [teamId, setupGame]);
 
   const resetGameHandler = async () => {
     resetGame(position);
@@ -380,15 +443,50 @@ const Game = ({teamUser, onComplete}) => {
     setOffer(null);
   }, [handleEliminatedCases, lineUp, position, teamId]);
 
-  const advanceToNextPosition = () => {
-    if(position === 'RB') {
-      setPosition('WR');
+  const advanceToNextPosition = async () => {
+    console.log("TRACE: advanceToNextPosition called, current position:", position);
+    // Fetch all team entries to find the next incomplete position
+    const entries = await fetchTeamEntries();
+    console.log("TRACE: advanceToNextPosition received entries:", entries);
+    
+    // Find the next incomplete position (different from current position)
+    let nextPosition = null;
+    let foundCurrent = false;
+    
+    for (const entry of entries) {
+      if (entry.position === position) {
+        foundCurrent = true;
+        console.log("TRACE: advanceToNextPosition found current position:", position);
+        continue; // Skip the current position
+      }
+      
+      if (entry.status !== 'finished') {
+        nextPosition = entry.position;
+        console.log("TRACE: advanceToNextPosition found next position:", nextPosition);
+        break;
+      }
     }
-    setOffer(null);
-    setPlayers(null);
-    setCases(null);
-    setCaseSelected(null);
-    hasSetupGameRef.current = false;
+    
+    // If we didn't find the current position in the entries, that's an error
+    if (!foundCurrent) {
+      console.error("TRACE: advanceToNextPosition - current position not found:", position);
+      throw new Error(`Current position ${position} not found in team entries`);
+    }
+    
+    // If we found a position, switch to it
+    if (nextPosition) {
+      console.log("TRACE: advanceToNextPosition switching to position:", nextPosition);
+      setPosition(nextPosition);
+      setOffer(null);
+      setPlayers(null);
+      setCases(null);
+      setCaseSelected(null);
+      hasSetupGameRef.current = false;
+    } else {
+      // All positions are complete - this shouldn't happen in normal gameplay
+      console.error("TRACE: advanceToNextPosition - no more incomplete positions");
+      throw new Error("No more incomplete positions available");
+    }
   };
 
   const submitLineup = async () => {

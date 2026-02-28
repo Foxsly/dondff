@@ -11,6 +11,7 @@ import { ITeam } from '@/teams/entities/team.entity';
 import type {
   CreateLeagueSettingsDto,
   ILeagueSettings,
+  ILeagueSettingsPosition,
 } from '@/leagues/entities/league-settings.entity';
 
 @Controller('leagues')
@@ -112,5 +113,14 @@ export class LeaguesController {
   @TypedRoute.Get('settings/:settingsId')
   getLeagueSettingsById(@TypedParam('settingsId') settingsId: string): Promise<ILeagueSettings> {
     return this.leaguesService.findLeagueSettings(settingsId);
+  }
+
+  /**
+   * Get the positions configured for a league based on its settings.
+   * Returns the positions from the league_settings_position table.
+   */
+  @TypedRoute.Get(':id/positions')
+  async getLeaguePositions(@TypedParam('id') leagueId: string): Promise<ILeagueSettingsPosition[]> {
+    return this.leaguesService.getPositionsForLeague(leagueId);
   }
 }
