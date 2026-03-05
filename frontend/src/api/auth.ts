@@ -1,18 +1,19 @@
 import { request } from './client';
+import type { User } from '../types';
 
 const STORAGE_KEY = 'authUser';
 
-export function getStoredUser() {
+export function getStoredUser(): User | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw);
+    return JSON.parse(raw) as User;
   } catch {
     return null;
   }
 }
 
-export function clearStoredUser() {
+export function clearStoredUser(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
@@ -29,12 +30,12 @@ export function clearStoredUser() {
  *   - create the user
  *   - ignore password until real auth is implemented
  */
-export async function register(name, email, password) {
+export async function register(name: string, email: string, password: string): Promise<User> {
   if (!email) {
     throw new Error('Email is required');
   }
 
-  const user = await request('/users', {
+  const user = await request<User>('/users', {
     method: 'POST',
     body: {
       name,
@@ -57,13 +58,13 @@ export async function register(name, email, password) {
  * If no user is found, an error is thrown.
  * Registration flow is responsible for creating users.
  */
-export async function login(email, password) {
+export async function login(email: string, _password: string): Promise<User> {
   if (!email) {
     throw new Error('Email is required');
   }
 
   // 1. Get all users
-  const users = await request('/users'); // expects an array from the backend
+  const users = await request<User[]>('/users'); // expects an array from the backend
 
   // 2. Find matching email (case-insensitive compare is usually nicer)
   const user =
@@ -83,7 +84,7 @@ export async function login(email, password) {
   return user;
 }
 
-export async function logout() {
+export async function logout(): Promise<void> {
   // If you later add /auth/logout, you can call it here.
   clearStoredUser();
 }
@@ -94,6 +95,6 @@ export async function logout() {
  * For now this is purely client-side (localStorage).
  * Later you might call GET /users/me or /auth/me to validate the session.
  */
-export async function getCurrentUser() {
+export async function getCurrentUser(): Promise<User | null> {
   return getStoredUser();
 }

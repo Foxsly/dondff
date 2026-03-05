@@ -1,7 +1,18 @@
 import React, { useState } from "react";
 import Entries from "./entries";
 
-const Accordion = ({ weekDoc, leagueId, season, actualWeek }) => {
+interface WeekDoc {
+  week: string | number;
+}
+
+interface AccordionProps {
+  weekDoc: WeekDoc;
+  leagueId: string;
+  season: string;
+  actualWeek: number | null;
+}
+
+const Accordion: React.FC<AccordionProps> = ({ weekDoc, leagueId, season, actualWeek }) => {
   const [isActive, setIsActive] = useState(false);
 
   return (

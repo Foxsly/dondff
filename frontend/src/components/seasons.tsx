@@ -6,10 +6,14 @@ const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
   "http://localhost:3001"; // fallback only for local dev
 
-const Seasons = ({ leagueId }) => {
+interface SeasonsProps {
+  leagueId: string;
+}
+
+const Seasons: React.FC<SeasonsProps> = ({ leagueId }) => {
   const navigate = useNavigate();
 
-  const [seasons, setSeasons] = useState([]);
+  const [seasons, setSeasons] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -23,72 +27,49 @@ const Seasons = ({ leagueId }) => {
 
         const current = await getCurrentUser();
         if (!current) {
-          if (!cancelled) {
-            navigate("/");
-          }
+          if (!cancelled) navigate("/");
           return;
         }
 
         const userId = current.id || current.userId;
         if (!userId) {
           console.warn("No user id found on current user", current);
-          if (!cancelled) {
-            navigate("/");
-          }
+          if (!cancelled) navigate("/");
           return;
         }
 
-        // Fetch all teams and the current Sleeper state in parallel.
-        // We derive seasons from teams belonging to this league,
-        // then append the current NFL season from Sleeper if not present.
         const [teamsRes, stateRes] = await Promise.all([
-          fetch(`${API_BASE}/teams`, {
-            credentials: "include",
-          }),
-          fetch(`${API_BASE}/sleeper/state`, {
-            credentials: "include",
-          }),
+          fetch(`${API_BASE}/teams`, { credentials: "include" }),
+          fetch(`${API_BASE}/sleeper/state`, { credentials: "include" }),
         ]);
 
-        if (!teamsRes.ok) {
-          throw new Error(`Failed to load teams (status ${teamsRes.status})`);
-        }
-        if (!stateRes.ok) {
-          throw new Error(
-            `Failed to load Sleeper state (status ${stateRes.status})`
-          );
-        }
+        if (!teamsRes.ok) throw new Error(`Failed to load teams (status ${teamsRes.status})`);
+        if (!stateRes.ok) throw new Error(`Failed to load Sleeper state (status ${stateRes.status})`);
 
         const teams = await teamsRes.json();
         const sleeperState = await stateRes.json();
 
         if (cancelled) return;
 
-        const seasonSet = new Set();
+        const seasonSet = new Set<string>();
 
         if (Array.isArray(teams)) {
-          const leagueTeams = teams.filter((team) => {
+          const leagueTeams = teams.filter((team: any) => {
             const teamLeagueId = team.leagueId || team.league_id || team.league;
-            return (
-              teamLeagueId &&
-              String(teamLeagueId) === String(leagueId)
-            );
+            return teamLeagueId && String(teamLeagueId) === String(leagueId);
           });
 
-          leagueTeams.forEach((team) => {
+          leagueTeams.forEach((team: any) => {
             const value =
               team.season ??
               team.year ??
               team.seasonYear ??
               team.season_id ??
               null;
-            if (value != null) {
-              seasonSet.add(String(value));
-            }
+            if (value != null) seasonSet.add(String(value));
           });
         }
 
-        // Append current season from Sleeper state if not already present.
         if (sleeperState) {
           const currentSeason =
             sleeperState.season ??
@@ -96,27 +77,17 @@ const Seasons = ({ leagueId }) => {
             sleeperState.seasonId ??
             sleeperState.current_season ??
             null;
-          if (currentSeason != null) {
-            seasonSet.add(String(currentSeason));
-          }
+          if (currentSeason != null) seasonSet.add(String(currentSeason));
         }
 
         const derivedSeasons = Array.from(seasonSet);
-        // Sort seasons in ascending order; if they are numeric-like, this will still be reasonable.
         derivedSeasons.sort();
-
         setSeasons(derivedSeasons);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to load seasons", err);
-        if (!cancelled) {
-          setError(
-            err && err.message ? err.message : "Failed to load seasons"
-          );
-        }
+        if (!cancelled) setError(err?.message ?? "Failed to load seasons");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 

@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DisplayGame from './cases';
 import { getPlayers } from './util';
+import type { PoolPlayer } from '../types';
 import hero from './images/DOND.jpg';
 
-function Home() {
+const Home: React.FC = () => {
   const [week, setWeek] = useState('');
   const [type, setType] = useState('');
-  const [pool, setPool] = useState([]);
+  const [pool, setPool] = useState<PoolPlayer[]>([]);
   const navigate = useNavigate();
 
-  const handleStart = (event) => {
+  const handleStart = (event: React.FormEvent) => {
     event.preventDefault();
     if (!week || !type) return;
     const limit = type === 'WR' ? 95 : 65;
@@ -116,6 +117,6 @@ function Home() {
       </section>
     </>
   );
-}
+};
 
 export default Home;

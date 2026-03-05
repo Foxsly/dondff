@@ -1,13 +1,13 @@
-import React, {useContext, useEffect, useState} from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getCurrentUser,
   register as registerUser,
   login as loginUser,
 } from '../api/auth';
-import {AuthContext} from "./AuthContext";
+import { AuthContext } from "./AuthContext";
 
-const SignUp = () => {
+const SignUp: React.FC = () => {
   const { setUser } = useContext(AuthContext);
   const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
@@ -38,7 +38,7 @@ const SignUp = () => {
     };
   }, [setUser]);
 
-  const handleRegister = async (e) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegisterError('');
     try {
@@ -46,20 +46,19 @@ const SignUp = () => {
         setRegisterError('Email is required.');
         return;
       }
-      // Password is kept in the UI but may be ignored by backend for now.
       const newUser = await registerUser(registerName, registerEmail, registerPassword);
       setUser(newUser);
       setRegisterName('');
       setRegisterEmail('');
       setRegisterPassword('');
       navigate('/dashboard');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Register error', err);
       setRegisterError(err.message || 'Failed to register.');
     }
   };
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
     try {
@@ -72,7 +71,7 @@ const SignUp = () => {
       setLoginEmail('');
       setLoginPassword('');
       navigate('/dashboard');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Login error', err);
       setLoginError(err.message || 'Failed to login.');
     }
@@ -85,13 +84,6 @@ const SignUp = () => {
       </div>
     );
   }
-/*
-
-  if (user) {
-    // If already logged in, redirect to dashboard (or show a small panel)
-    return <Navigate to="/dashboard" replace />;
-  }
-*/
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#020617]">
