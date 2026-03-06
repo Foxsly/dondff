@@ -42,6 +42,7 @@ export class DatabaseTeamsRepository extends TeamsRepository {
       .selectFrom('team')
       .selectAll()
       .select((eb) => [withPlayers(eb)])
+      .where('week', '>=', 1)
       .execute();
     return rows as ITeam[];
   }

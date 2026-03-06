@@ -26,6 +26,7 @@
     "migrate": "tsx -r tsconfig-paths/register src/infrastructure/database/migrate.ts latest",
     "migrate:down": "tsx -r tsconfig-paths/register src/infrastructure/database/migrate.ts down",
     "migrate:status": "tsx -r tsconfig-paths/register src/infrastructure/database/migrate.ts status",
+    "seed": "tsx -r tsconfig-paths/register src/infrastructure/database/seed.ts",
     "jest:config": "jest --showConfig",
     "jest:clearCache": "jest --clearCache",
     "postinstall": "ts-patch install || true",
