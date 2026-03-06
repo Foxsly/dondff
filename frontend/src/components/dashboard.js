@@ -11,6 +11,7 @@ const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [leagues, setLeagues] = useState([]);
   const [newLeague, setNewLeague] = useState("");
+  const [leagueSport, setLeagueSport] = useState("NFL");
   const [joinCode, setJoinCode] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showJoinForm, setShowJoinForm] = useState(false);
@@ -90,6 +91,7 @@ const Dashboard = () => {
   // Wire create league to backend leagues endpoints.
   const addLeague = async () => {
     const name = newLeague.trim();
+    const sport = leagueSport;
     if (!name) return;
     console.log(user);
     const userId = user && (user.id || user.userId);
@@ -106,7 +108,7 @@ const Dashboard = () => {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         credentials: "include",
-        body: JSON.stringify({name}),
+        body: JSON.stringify({name: name, sport: sport}),
       });
 
       if (!createRes.ok) {
@@ -269,6 +271,7 @@ const Dashboard = () => {
             <p className="font-semibold">
               {league.name || league.leagueName || "Unnamed League"}
             </p>
+              <p>{league.sport}</p>
             <p>{role === "admin" ? "Admin" : role}</p>
             <button
               className="px-3 py-1 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
@@ -297,22 +300,29 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {showCreateForm && (
-        <div className="flex mt-4 space-x-2">
-          <input
-            className="flex-1 p-2 bg-transparent border rounded border-[#3a465b]"
-            placeholder="Enter League Name..."
-            value={newLeague}
-            onChange={(e) => setNewLeague(e.target.value)}
-          />
-          <button
-            className="btn-primary"
-            onClick={addLeague}
-          >
-            Submit
-          </button>
-        </div>
-      )}
+        {showCreateForm && (
+            <div className="flex mt-4 space-x-2">
+                <input
+                    className="flex-1 p-2 bg-transparent border rounded border-[#3a465b]"
+                    placeholder="Enter League Name..."
+                    value={newLeague}
+                    onChange={(e) => setNewLeague(e.target.value)}
+                />
+
+                <select
+                    className="p-2 bg-transparent border rounded border-[#3a465b]"
+                    value={leagueSport}
+                    onChange={(e) => setLeagueSport(e.target.value)}
+                >
+                    <option value="NFL">NFL</option>
+                    <option value="GOLF">GOLF</option>
+                </select>
+
+                <button className="btn-primary" onClick={addLeague}>
+                    Submit
+                </button>
+            </div>
+        )}
 
       {showJoinForm && (
         <div className="flex mt-4 space-x-2">
