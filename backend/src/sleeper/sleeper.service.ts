@@ -28,8 +28,8 @@ export class SleeperService {
     const sleeperState: ISleeperState = response.data;
 
     if (process.env.NODE_ENV === 'development') {
-      const devWeek = process.env.DEV_WEEK ? Number(process.env.DEV_WEEK) : null;
-      const devSeason = process.env.DEV_SEASON_YEAR ?? null;
+      const devWeek = process.env.DEV_WEEK ? Number(process.env.DEV_WEEK) : 14;
+      const devSeason = process.env.DEV_SEASON_YEAR ?? '2025';
       if (devWeek !== null && devSeason !== null) {
         sleeperState.week = devWeek;
         sleeperState.display_week = devWeek;
