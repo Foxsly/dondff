@@ -1,10 +1,10 @@
-import React, {useContext, useEffect} from 'react';
-import {Link, useNavigate} from 'react-router-dom';
-import {getCurrentUser, logout as logoutUser} from '../api/auth';
-import {AuthContext} from "./AuthContext";
+import React, { useContext, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { getCurrentUser, logout as logoutUser } from '../api/auth';
+import { AuthContext } from "./AuthContext";
 
-function Navbar() {
-  const {user, setUser} = useContext(AuthContext);
+const Navbar: React.FC = () => {
+  const { user, setUser } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,6 +64,6 @@ function Navbar() {
       </div>
     </nav>
   );
-}
+};
 
 export default Navbar;

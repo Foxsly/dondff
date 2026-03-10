@@ -25,13 +25,21 @@ export class SleeperService {
   async getNflState(): Promise<ISleeperState> {
     const response$ = this.httpService.get(`${this.BASE_URL}/v1/state/nfl`);
     const response = await lastValueFrom(response$);
-    //Temporarily change these for testing
-    // response.data.season_type='regular';
-    // response.data.league_season='2025';
-    // response.data.display_week=18;
-    // response.data.week=18;
-    // response.data.season='2025';
     const sleeperState: ISleeperState = response.data;
+
+    if (process.env.NODE_ENV === 'development') {
+      const devWeek = process.env.DEV_WEEK ? Number(process.env.DEV_WEEK) : null;
+      const devSeason = process.env.DEV_SEASON_YEAR ?? null;
+      if (devWeek !== null && devSeason !== null) {
+        sleeperState.week = devWeek;
+        sleeperState.display_week = devWeek;
+        sleeperState.season = devSeason;
+        sleeperState.league_season = devSeason;
+        sleeperState.season_type = 'regular';
+        return sleeperState;
+      }
+    }
+
     if (sleeperState.season_type === 'post') {
       sleeperState.week = sleeperState.week + 18;
     }

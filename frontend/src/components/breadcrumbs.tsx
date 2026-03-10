@@ -1,7 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import type { BreadcrumbItem } from "../types";
 
-const Breadcrumbs = ({ items }) => {
+interface BreadcrumbsProps {
+  items: BreadcrumbItem[];
+}
+
+const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items }) => {
   return (
     <nav className="breadcrumbs">
       {items.map((item, index) => (

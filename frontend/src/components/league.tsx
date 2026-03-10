@@ -3,17 +3,18 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import Seasons from "./seasons";
 import Breadcrumbs from "./breadcrumbs";
 import { getCurrentUser } from "../api/auth";
+import type { League as LeagueType, LeagueMember } from "../types";
 
 const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
   "http://localhost:3001"; // fallback only for local dev
 
-const League = () => {
-  const { leagueId } = useParams();
+const League: React.FC = () => {
+  const { leagueId } = useParams<{ leagueId: string }>();
   const navigate = useNavigate();
 
-  const [league, setLeague] = useState({});
-  const [member, setMember] = useState(null);
+  const [league, setLeague] = useState<LeagueType>({});
+  const [member, setMember] = useState<LeagueMember | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -27,45 +28,29 @@ const League = () => {
 
         const current = await getCurrentUser();
         if (!current) {
-          if (!cancelled) {
-            navigate("/");
-          }
+          if (!cancelled) navigate("/");
           return;
         }
 
         const userId = current.id || current.userId;
         if (!userId) {
           console.warn("No user id found on current user", current);
-          if (!cancelled) {
-            navigate("/");
-          }
+          if (!cancelled) navigate("/");
           return;
         }
 
         if (cancelled) return;
-        // Fetch league and league users in parallel
+
         const [leagueRes, usersRes] = await Promise.all([
-          fetch(`${API_BASE}/leagues/${leagueId}`, {
-            credentials: "include",
-          }),
-          fetch(`${API_BASE}/leagues/${leagueId}/users`, {
-            credentials: "include",
-          }),
+          fetch(`${API_BASE}/leagues/${leagueId}`, { credentials: "include" }),
+          fetch(`${API_BASE}/leagues/${leagueId}/users`, { credentials: "include" }),
         ]);
 
-        if (!leagueRes.ok) {
-          throw new Error(
-            `Failed to load league (status ${leagueRes.status})`
-          );
-        }
-        if (!usersRes.ok) {
-          throw new Error(
-            `Failed to load league members (status ${usersRes.status})`
-          );
-        }
+        if (!leagueRes.ok) throw new Error(`Failed to load league (status ${leagueRes.status})`);
+        if (!usersRes.ok) throw new Error(`Failed to load league members (status ${usersRes.status})`);
 
-        const leagueData = await leagueRes.json();
-        const users = await usersRes.json();
+        const leagueData: LeagueType = await leagueRes.json();
+        const users: LeagueMember[] = await usersRes.json();
 
         if (cancelled) return;
 
@@ -73,24 +58,18 @@ const League = () => {
 
         if (Array.isArray(users)) {
           const currentMember = users.find((u) => {
-            const uId = u.userId || u.id;
+            const uId = u.userId;
             return uId && uId === userId;
           });
           setMember(currentMember || null);
         } else {
           setMember(null);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to load league", err);
-        if (!cancelled) {
-          setError(
-            err && err.message ? err.message : "Failed to load league"
-          );
-        }
+        if (!cancelled) setError(err?.message ?? "Failed to load league");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 
@@ -108,12 +87,7 @@ const League = () => {
   if (loading) {
     return (
       <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
-        <Breadcrumbs
-          items={[
-            { label: "Dashboard", to: "/dashboard" },
-            { label: "League" },
-          ]}
-        />
+        <Breadcrumbs items={[{ label: "Dashboard", to: "/dashboard" }, { label: "League" }]} />
         <p>Loading league...</p>
       </div>
     );
@@ -122,18 +96,10 @@ const League = () => {
   if (error) {
     return (
       <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
-        <Breadcrumbs
-          items={[
-            { label: "Dashboard", to: "/dashboard" },
-            { label: "League" },
-          ]}
-        />
+        <Breadcrumbs items={[{ label: "Dashboard", to: "/dashboard" }, { label: "League" }]} />
         <h2 className="text-2xl font-bold">Something went wrong</h2>
         <p className="text-red-500">{error}</p>
-        <button
-          className="btn-primary"
-          onClick={() => navigate("/dashboard")}
-        >
+        <button className="btn-primary" onClick={() => navigate("/dashboard")}>
           Return to Dashboard
         </button>
       </div>
@@ -154,7 +120,7 @@ const League = () => {
         <p>Lineup Status: {member.lineupStatus || "Not set"}</p>
       )}
       <h4 className="text-lg font-semibold">Seasons:</h4>
-      <Seasons leagueId={leagueId} />
+      <Seasons leagueId={leagueId!} />
       {member?.role === "player" &&
         league.currentSeason &&
         league.currentWeek && (
@@ -166,9 +132,7 @@ const League = () => {
               week: league.currentWeek,
             }}
           >
-            <button className="btn-primary">
-              Go To Weekly Game
-            </button>
+            <button className="btn-primary">Go To Weekly Game</button>
           </Link>
         )}
     </div>

@@ -2,12 +2,18 @@ const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
   "http://localhost:3001"; // fallback only for local dev
 
-async function request(path, options = {}) {
+interface RequestOptions {
+  method?: string;
+  body?: unknown;
+  headers?: Record<string, string>;
+  credentials?: RequestCredentials;
+}
+
+async function request<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
   const {
     method = 'GET',
     body,
     headers = {},
-    // if you later use cookie-based auth, keep credentials: 'include'
     credentials = 'include',
   } = options;
 
@@ -22,7 +28,6 @@ async function request(path, options = {}) {
   });
 
   if (!res.ok) {
-    // Try to extract a useful message
     let message = `Request failed with status ${res.status}`;
     try {
       const data = await res.json();
@@ -34,16 +39,16 @@ async function request(path, options = {}) {
     } catch {
       // ignore JSON parse errors
     }
-    const error = new Error(message);
+    const error = new Error(message) as Error & { status: number };
     error.status = res.status;
     throw error;
   }
 
-  if (res.status === 204) return null;
+  if (res.status === 204) return null as T;
   try {
-    return await res.json();
+    return await res.json() as T;
   } catch {
-    return null;
+    return null as T;
   }
 }
 

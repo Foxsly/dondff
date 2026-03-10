@@ -99,9 +99,10 @@ export class TeamsService {
   }
 
   async getTeamStatus(teamId: string): Promise<ITeamStatus> {
-    let teamEntries = await this.getAllTeamEntriesForTeam(teamId);
+    const teamEntries = await this.getAllTeamEntriesForTeam(teamId);
     return {
-      playable: !teamEntries.every((teamEntry) => teamEntry.status === 'finished'),
+      // No entries means the game hasn't started yet — always playable
+      playable: teamEntries.length === 0 || !teamEntries.every((e) => e.status === 'finished'),
     } as ITeamStatus;
   }
 
@@ -110,11 +111,11 @@ export class TeamsService {
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       team.leagueId,
     );
-    let teamEntries: ITeamEntry[] = [];
     //TODO update this to pull the positions from leagueSettingsPosition
-    for (let position of ['RB','WR']) {
-      let teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
-      teamEntries.push(teamEntry);
+    const teamEntries: ITeamEntry[] = [];
+    for (const position of ['RB', 'WR']) {
+      const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
+      if (entry) teamEntries.push(entry);
     }
     return teamEntries;
   }

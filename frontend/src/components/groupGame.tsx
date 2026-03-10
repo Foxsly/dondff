@@ -1,10 +1,15 @@
-import React, {useState} from "react";
-import {useLocation, useNavigate} from "react-router-dom";
+import React, { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Game from "./game";
+import type { TeamUser } from "../types";
 
-const GroupGame = () => {
+interface GroupGameLocationState {
+  participants: TeamUser[];
+}
+
+const GroupGame: React.FC = () => {
   const navigate = useNavigate();
-  const {participants} = useLocation().state;
+  const { participants } = useLocation().state as GroupGameLocationState;
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const handleComplete = () => {

@@ -8,12 +8,12 @@ const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
   "http://localhost:3001"; // fallback only for local dev
 
-const Weeks = () => {
-  const { leagueId, season } = useParams();
+const Weeks: React.FC = () => {
+  const { leagueId, season } = useParams<{ leagueId: string; season: string }>();
   const navigate = useNavigate();
 
-  const [weeks, setWeeks] = useState([]);
-  const [actualNFLWeek, setActualNFLWeek] = useState(null);
+  const [weeks, setWeeks] = useState<string[]>([]);
+  const [actualNFLWeek, setActualNFLWeek] = useState<number | null>(null);
   const [leagueName, setLeagueName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -28,49 +28,26 @@ const Weeks = () => {
 
         const current = await getCurrentUser();
         if (!current) {
-          if (!cancelled) {
-            navigate("/");
-          }
+          if (!cancelled) navigate("/");
           return;
         }
 
         const userId = current.id || current.userId;
         if (!userId) {
           console.warn("No user id found on current user", current);
-          if (!cancelled) {
-            navigate("/");
-          }
+          if (!cancelled) navigate("/");
           return;
         }
 
-        // Fetch league details, all teams, and the current Sleeper state in parallel.
         const [leagueRes, teamsRes, stateRes] = await Promise.all([
-          fetch(`${API_BASE}/leagues/${leagueId}`, {
-            credentials: "include",
-          }),
-          fetch(`${API_BASE}/teams`, {
-            credentials: "include",
-          }),
-          fetch(`${API_BASE}/sleeper/state`, {
-            credentials: "include",
-          }),
+          fetch(`${API_BASE}/leagues/${leagueId}`, { credentials: "include" }),
+          fetch(`${API_BASE}/teams`, { credentials: "include" }),
+          fetch(`${API_BASE}/sleeper/state`, { credentials: "include" }),
         ]);
 
-        if (!leagueRes.ok) {
-          throw new Error(
-            `Failed to load league (status ${leagueRes.status})`
-          );
-        }
-        if (!teamsRes.ok) {
-          throw new Error(
-            `Failed to load teams (status ${teamsRes.status})`
-          );
-        }
-        if (!stateRes.ok) {
-          throw new Error(
-            `Failed to load Sleeper state (status ${stateRes.status})`
-          );
-        }
+        if (!leagueRes.ok) throw new Error(`Failed to load league (status ${leagueRes.status})`);
+        if (!teamsRes.ok) throw new Error(`Failed to load teams (status ${teamsRes.status})`);
+        if (!stateRes.ok) throw new Error(`Failed to load Sleeper state (status ${stateRes.status})`);
 
         const leagueData = await leagueRes.json();
         const teams = await teamsRes.json();
@@ -80,29 +57,23 @@ const Weeks = () => {
 
         setLeagueName(leagueData?.name || "");
 
-        const weekSet = new Set();
+        const weekSet = new Set<string>();
 
-        // Derive weeks from teams that belong to this league and season.
         if (Array.isArray(teams)) {
-          const leagueTeams = teams.filter((team) => {
+          const leagueTeams = teams.filter((team: any) => {
             const teamLeagueId = team.leagueId;
             const teamSeason = team.seasonYear;
-
             const matchesLeague = teamLeagueId && String(teamLeagueId) === String(leagueId);
             const matchesSeason = !season || (teamSeason && String(teamSeason) === String(season));
-
             return matchesLeague && matchesSeason;
           });
 
-          leagueTeams.forEach((team) => {
+          leagueTeams.forEach((team: any) => {
             const teamWeek = team.week;
-            if (teamWeek != null) {
-              weekSet.add(String(teamWeek));
-            }
+            if (teamWeek != null) weekSet.add(String(teamWeek));
           });
         }
 
-        // Append the current NFL week from Sleeper state if available.
         if (sleeperState) {
           const currentWeek = sleeperState.week;
           if (currentWeek != null) {
@@ -113,19 +84,12 @@ const Weeks = () => {
 
         const derivedWeeks = Array.from(weekSet);
         derivedWeeks.sort((a, b) => Number(a) - Number(b));
-
         setWeeks(derivedWeeks);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to load weeks", err);
-        if (!cancelled) {
-          setError(
-            err && err.message ? err.message : "Failed to load weeks"
-          );
-        }
+        if (!cancelled) setError(err?.message ?? "Failed to load weeks");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 
@@ -185,8 +149,8 @@ const Weeks = () => {
           <Accordion
             key={w}
             weekDoc={{ week: w }}
-            leagueId={leagueId}
-            season={season}
+            leagueId={leagueId!}
+            season={season!}
             actualWeek={actualNFLWeek}
           />
         ))}
