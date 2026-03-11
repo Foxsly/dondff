@@ -75,8 +75,7 @@ export class DatabaseUsersRepository extends UsersRepository {
       .select([
         'leagueUser.leagueId',
         'leagueUser.role',
-        //TODO get rid of this renaming and fix the frontend to expect name
-        'league.name as leagueName',
+        'league.name',
         'league.sportLeague',
       ])
       .where('leagueUser.userId', '=', userId)

@@ -235,7 +235,7 @@ const Dashboard: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               <p className="font-semibold">
-                {league.name || league.leagueName || "Unnamed League"}
+                {league.name || "Unnamed League"}
               </p>
               {league.sportLeague && (
                 <span className="text-xs px-2 py-0.5 rounded bg-[#00ceb8]/20 text-[#00ceb8]">
