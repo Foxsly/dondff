@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { getCurrentUser } from "../api/auth";
-import type {TeamUser, GameBox, GamePlayer, GameOffer, LineUpSlot, SportLeague, LeagueSettings, League} from '../types';
-import { getPositionDisplayName, isGolfPosition } from './util';
+import React, {useCallback, useEffect, useState} from 'react';
+import {useLocation, useNavigate} from 'react-router-dom';
+import {getCurrentUser} from "../api/auth";
+import type {GameBox, GameOffer, GamePlayer, League, LineUpSlot, SportLeague, TeamUser} from '../types';
+import {getPositionDisplayName} from './util';
 
 const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
