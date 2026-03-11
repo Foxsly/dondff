@@ -47,7 +47,11 @@ async function seed() {
     // League
     await db
       .insertInto('league')
-      .values({ leagueId: LEAGUE_ID, name: 'Dev League 2025' })
+      .values({
+        leagueId: LEAGUE_ID,
+        name: 'Dev League 2025',
+        sportLeague: 'NFL',
+      })
       .onConflict((oc) => oc.column('leagueId').doNothing())
       .execute();
     console.log('  league ok');
@@ -59,7 +63,6 @@ async function seed() {
         leagueSettingsId: LEAGUE_SETTINGS_ID,
         leagueId: LEAGUE_ID,
         scoringType: 'PPR',
-        sportLeague: 'NFL',
       })
       .onConflict((oc) => oc.column('leagueSettingsId').doNothing())
       .execute();
