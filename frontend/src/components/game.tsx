@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentUser } from "../api/auth";
-import type { TeamUser, GameBox, GamePlayer, GameOffer, LineUpSlot, SportLeague, LeagueSettings } from '../types';
+import type {TeamUser, GameBox, GamePlayer, GameOffer, LineUpSlot, SportLeague, LeagueSettings, League} from '../types';
 import { getPositionDisplayName, isGolfPosition } from './util';
 
 const API_BASE =
@@ -56,12 +56,14 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
     loadUserAndName();
 
     // Fetch league settings to determine sport
-    //TODO this should come from the League now - also, create a separate function for this
+    /* TODO - we make this call so many times in the lifespan of the app. Once we get into the 'context' for
+    *  a league, we should consider using react constructs to pass the sportLeague down into child components, so
+    * that we're only making this call in one spot rather than multiple times */
     if (leagueId) {
-      fetch(`${API_BASE}/leagues/${leagueId}/settings/latest`, { credentials: "include" })
+      fetch(`${API_BASE}/leagues/${leagueId}`, { credentials: "include" })
         .then((res) => res.ok ? res.json() : null)
-        .then((settings: LeagueSettings | null) => {
-          if (settings?.sportLeague) setSportLeague(settings.sportLeague);
+        .then((league: League | null) => {
+          if (league?.sportLeague) setSportLeague(league.sportLeague);
         })
         .catch(() => {});
     }
