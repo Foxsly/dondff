@@ -1,6 +1,7 @@
 import {
   ITeamEntry,
   ITeamEntryOffer,
+  PlayerOfferDto,
   TeamEntryAuditFinalDecisionInputDto,
   TeamEntryCasesResponseDto,
   TeamEntryOfferResponseDto,
@@ -110,7 +111,7 @@ export class TeamsController {
     const offer = await this.teamsService.calculateOffer(teamEntry);
     return {
       boxes: eliminatedCases,
-      offer: this.teamsService.addTeamsToOffer(offer),
+      offer: await this.teamsService.addTeamsToOffer(offer, position),
     };
   }
 
@@ -140,7 +141,7 @@ export class TeamsController {
   async getCurrentOffer(
     @TypedParam('teamId') teamId: string,
     @Query('position') position: string,
-  ): Promise<ITeamEntryOffer> {
+  ): Promise<PlayerOfferDto> {
     return await this.teamsService.getCurrentOffer(teamId, position);
   }
 

@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import Seasons from "./seasons";
 import Breadcrumbs from "./breadcrumbs";
 import { getCurrentUser } from "../api/auth";
-import type { League as LeagueType, LeagueMember } from "../types";
+import type { League as LeagueType, LeagueMember, LeagueSettings, SportLeague } from "../types";
 
 const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
@@ -15,6 +15,7 @@ const League: React.FC = () => {
 
   const [league, setLeague] = useState<LeagueType>({});
   const [member, setMember] = useState<LeagueMember | null>(null);
+  const [sportLeague, setSportLeague] = useState<SportLeague>('NFL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -41,9 +42,10 @@ const League: React.FC = () => {
 
         if (cancelled) return;
 
-        const [leagueRes, usersRes] = await Promise.all([
+        const [leagueRes, usersRes, settingsRes] = await Promise.all([
           fetch(`${API_BASE}/leagues/${leagueId}`, { credentials: "include" }),
           fetch(`${API_BASE}/leagues/${leagueId}/users`, { credentials: "include" }),
+          fetch(`${API_BASE}/leagues/${leagueId}/settings/latest`, { credentials: "include" }),
         ]);
 
         if (!leagueRes.ok) throw new Error(`Failed to load league (status ${leagueRes.status})`);
@@ -52,8 +54,15 @@ const League: React.FC = () => {
         const leagueData: LeagueType = await leagueRes.json();
         const users: LeagueMember[] = await usersRes.json();
 
+        let sport: SportLeague = 'NFL';
+        if (settingsRes.ok) {
+          const settings: LeagueSettings = await settingsRes.json();
+          sport = settings.sportLeague || 'NFL';
+        }
+
         if (cancelled) return;
 
+        setSportLeague(sport);
         setLeague(leagueData || {});
 
         if (Array.isArray(users)) {
@@ -120,7 +129,12 @@ const League: React.FC = () => {
         <p>Lineup Status: {member.lineupStatus || "Not set"}</p>
       )}
       <h4 className="text-lg font-semibold">Seasons:</h4>
-      <Seasons leagueId={leagueId!} />
+      {sportLeague && (
+        <span className="text-sm px-2 py-0.5 rounded bg-[#00ceb8]/20 text-[#00ceb8]">
+          {sportLeague}
+        </span>
+      )}
+      <Seasons leagueId={leagueId!} sportLeague={sportLeague} />
       {member?.role === "player" &&
         league.currentSeason &&
         league.currentWeek && (

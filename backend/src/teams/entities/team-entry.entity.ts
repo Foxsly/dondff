@@ -120,7 +120,7 @@ export type TeamEntryCaseBoxDto = Pick<ITeamEntryAudit, 'boxNumber' | 'boxStatus
 export type TeamEntryCasePlayerDto = Pick<
   ITeamEntryAudit,
   'playerId' | 'playerName' | 'projectedPoints' | 'injuryStatus' | 'boxStatus'
-> & { matchup: PlayerTeams };
+> & { matchup: PlayerTeams; salary?: number };
 
 /**
  * Combined DTO shape returned by GET /teams/:teamId/cases.
@@ -153,4 +153,4 @@ export interface TeamEntryAuditFinalDecisionInputDto {
   position: string & tags.MinLength<1>;
 }
 
-export type PlayerOfferDto = ITeamEntryOffer & { matchup: PlayerTeams };
+export type PlayerOfferDto = ITeamEntryOffer & { matchup: PlayerTeams; salary?: number };

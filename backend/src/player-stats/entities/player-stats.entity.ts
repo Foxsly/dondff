@@ -9,6 +9,7 @@ export interface IPlayer {
 export interface IPlayerProjection extends IPlayer {
   projectedPoints: number;
   injuryStatus?: string | null;
+  salary?: number;
 }
 
 export type PlayerProjectionResponse = IPlayerProjection[];
@@ -18,7 +19,7 @@ export interface IPlayerStats extends IPlayer {
 }
 
 export type PlayerStatResponse = IPlayerStats[];
-export type PlayerPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DST';
+export type PlayerPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DST' | 'GOLF_PLAYER';
 
 export type PlayerTeams = {
   team: string;

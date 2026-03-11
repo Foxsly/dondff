@@ -1,4 +1,4 @@
-import type { PoolPlayer, GameCase } from '../types';
+import type { PoolPlayer, GameCase, SportLeague } from '../types';
 
 const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
@@ -35,6 +35,18 @@ export const getPlayers = async (
   } catch (error) {
     console.log(error);
   }
+};
+
+export const getPositionDisplayName = (position: string, sport?: SportLeague): string => {
+  if (sport === 'GOLF' || position.startsWith('GOLF_PLAYER')) {
+    const num = position.replace('GOLF_PLAYER_', '');
+    return `Golfer ${num}`;
+  }
+  return position;
+};
+
+export const isGolfPosition = (position: string): boolean => {
+  return position.startsWith('GOLF_PLAYER');
 };
 
 export const generateCases = (poolArray: PoolPlayer[], numberOfCasesToChoose: number): GameCase[] => {

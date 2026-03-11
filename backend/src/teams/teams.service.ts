@@ -1,4 +1,4 @@
-import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
+import { ILeagueSettings, ILeagueSettingsPosition } from '@/leagues/entities/league-settings.entity';
 import { LeaguesService } from '@/leagues/leagues.service';
 import {
   IPlayerProjection,
@@ -47,8 +47,8 @@ export class TeamsService {
     // Get positions from the new league_settings_position table
     const positions = await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId);
     
-    for (const position of positions) {
-      await this.generateCasesForPosition(createdTeam, position.position, leagueSettings, this.getNumberOfCases(createTeamDto.week));
+    for (const pos of positions) {
+      await this.generateCasesForPosition(createdTeam, pos.position, leagueSettings, pos.poolSize, this.getNumberOfCases(createTeamDto.week));
     }
     
     return createdTeam;
@@ -111,10 +111,10 @@ export class TeamsService {
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       team.leagueId,
     );
-    //TODO update this to pull the positions from leagueSettingsPosition
+    const positions = await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId);
     const teamEntries: ITeamEntry[] = [];
-    for (const position of ['RB', 'WR']) {
-      const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
+    for (const pos of positions) {
+      const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, pos.position);
       if (entry) teamEntries.push(entry);
     }
     return teamEntries;
@@ -134,10 +134,20 @@ export class TeamsService {
   ): Promise<TeamEntryCasesResponseDto> {
     const entry = await this.getTeamEntry(teamId, position);
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(entry.teamEntryId);
+
+    // For golf positions, fetch projections to get salary data
+    let salaryMap: Map<string, number> | null = null;
+    if (this.playerStatsService.isGolfPosition(position)) {
+      const team = await this.findOne(teamId);
+      const projections = await this.playerStatsService.getPlayerProjections(position, team.seasonYear, team.week);
+      salaryMap = new Map(projections.map((p) => [p.playerId, p.salary ?? 0]));
+    }
+
     const playerListAudits = audits.map((audit) => ({
       ...audit,
       boxStatus: audit.boxStatus === 'selected' ? 'available' : audit.boxStatus,
       matchup: this.playerStatsService.getTeamAndOpponentForPlayer(audit.playerId),
+      ...(salaryMap ? { salary: salaryMap.get(audit.playerId) ?? 0 } : {}),
     })) as TeamEntryCasePlayerDto[];
     const boxAudits = audits.map((audit) => ({
       boxNumber: audit.boxNumber,
@@ -206,10 +216,13 @@ export class TeamsService {
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       team.leagueId,
     );
-    await this.generateCasesForPosition(team, position, leagueSettings, this.getNumberOfCases(team.week));
+    const positions = await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId);
+    const posConfig = positions.find((p) => p.position === position);
+    const poolSize = posConfig?.poolSize ?? 150;
+    await this.generateCasesForPosition(team, position, leagueSettings, poolSize, this.getNumberOfCases(team.week));
   }
 
-  async generateCasesForPosition(team: Team, position: string, leagueSettings: ILeagueSettings, numberOfCases: number = 10) {
+  async generateCasesForPosition(team: Team, position: string, leagueSettings: ILeagueSettings, poolSize: number, numberOfCases: number = 10) {
     let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(
       position,
       team.seasonYear,
@@ -222,10 +235,7 @@ export class TeamsService {
     );
     let boxNumber = 1;
 
-    let trimmedPlayers: IPlayerProjection[] = playerProjections.slice(
-      0,
-      leagueSettings[position.toLowerCase() + 'PoolSize'],
-    );
+    let trimmedPlayers: IPlayerProjection[] = playerProjections.slice(0, poolSize);
     let cases: Array<Omit<ITeamEntryAudit, 'auditId'>> = shuffle(trimmedPlayers)
       .slice(0, numberOfCases)
       .map((player: IPlayerProjection) => ({
@@ -256,13 +266,14 @@ export class TeamsService {
     return teamEntry;
   }
 
-  async getCurrentOffer(teamId: string, position: string): Promise<ITeamEntryOffer> {
+  async getCurrentOffer(teamId: string, position: string): Promise<PlayerOfferDto> {
     const teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
     const currentOffer = await this.teamsEntryRepository.getCurrentOffer(teamEntry.teamEntryId);
     if (!currentOffer) {
-      return this.calculateOffer(teamEntry);
+      const newOffer = await this.calculateOffer(teamEntry);
+      return this.addTeamsToOffer(newOffer, position);
     }
-    return currentOffer;
+    return this.addTeamsToOffer(currentOffer, position);
   }
 
   async calculateOffer(teamEntry: ITeamEntry): Promise<ITeamEntryOffer> {
@@ -277,16 +288,28 @@ export class TeamsService {
       throw new Error('No eligible cases found for offer calculation');
     }
 
-    const finalOfferValue = Math.sqrt(
-      eligibleCases.map((a) => a.projectedPoints ** 2).reduce((sum, v) => sum + v, 0) /
-        eligibleCases.length,
-    );
-
     const team: ITeam = await this.findOne(teamEntry.teamId);
     const projections = await this.playerStatsService.getPlayerProjections(
       teamEntry.position,
       team.seasonYear,
       team.week,
+    );
+
+    const isGolf = this.playerStatsService.isGolfPosition(teamEntry.position);
+
+    // For golf, calculate offer based on salary; for NFL, use projected points
+    const getOfferValue = (audit: ITeamEntryAudit): number => {
+      if (isGolf) {
+        const projection = projections.find((p) => p.playerId === audit.playerId);
+        return projection?.salary ?? audit.projectedPoints;
+      }
+      return audit.projectedPoints;
+    };
+
+    const eligibleValues = eligibleCases.map(getOfferValue);
+    const finalOfferValue = Math.sqrt(
+      eligibleValues.map((v) => v ** 2).reduce((sum, v) => sum + v, 0) /
+        eligibleValues.length,
     );
 
     // Get all previous offers (both accepted and rejected) to filter them out
@@ -305,9 +328,13 @@ export class TeamsService {
       throw new Error('No available players left to make an offer');
     }
 
+    const getComparisonValue = (player: IPlayerProjection): number => {
+      return isGolf ? (player.salary ?? player.projectedPoints) : player.projectedPoints;
+    };
+
     const closestOffer = availableOffers.reduce((closest, current) => {
-      const currentDiff = Math.abs(current.projectedPoints - finalOfferValue);
-      const closestDiff = Math.abs(closest.projectedPoints - finalOfferValue);
+      const currentDiff = Math.abs(getComparisonValue(current) - finalOfferValue);
+      const closestDiff = Math.abs(getComparisonValue(closest) - finalOfferValue);
       return currentDiff < closestDiff ? current : closest;
     });
 
@@ -409,7 +436,7 @@ export class TeamsService {
       teamId: teamId
     });
     return {
-      offer: this.addTeamsToOffer(updatedOffer),
+      offer: await this.addTeamsToOffer(updatedOffer, position),
       boxes: audits,
     };
   }
@@ -420,7 +447,7 @@ export class TeamsService {
     const eliminatedCases = await this.eliminateCases(teamId, position);
     const newOffer = await this.calculateOffer(teamEntry);
     return {
-      offer: this.addTeamsToOffer(newOffer),
+      offer: await this.addTeamsToOffer(newOffer, position),
       boxes: eliminatedCases,
     };
   }
@@ -473,11 +500,23 @@ export class TeamsService {
     };
   }
 
-  addTeamsToOffer(offer: ITeamEntryOffer): PlayerOfferDto {
-    return {
+  async addTeamsToOffer(offer: ITeamEntryOffer, position?: string): Promise<PlayerOfferDto> {
+    const dto: PlayerOfferDto = {
       ...offer,
       matchup: this.playerStatsService.getTeamAndOpponentForPlayer(offer.playerId),
     };
+
+    if (position && this.playerStatsService.isGolfPosition(position)) {
+      const teamEntry = await this.teamsEntryRepository.findEntryById(offer.teamEntryId);
+      if (teamEntry) {
+        const team = await this.findOne(teamEntry.teamId);
+        const projections = await this.playerStatsService.getPlayerProjections(position, team.seasonYear, team.week);
+        const projection = projections.find((p) => p.playerId === offer.playerId);
+        dto.salary = projection?.salary ?? 0;
+      }
+    }
+
+    return dto;
   }
 
     /**

@@ -19,11 +19,12 @@ const DEFAULT_LEAGUE_SETTINGS = {
 export class LeaguesService {
   constructor(private readonly leaguesRepository: LeaguesRepository) {}
 
-  async create(createLeagueDto: CreateLeagueDto): Promise<League> {
+  async create(createLeagueDto: CreateLeagueDto, sportLeague?: SportLeague): Promise<League> {
     let league = await this.leaguesRepository.createLeague(createLeagueDto);
     // Create a default league settings when creating a league
     await this.createLeagueSettings(league.leagueId, {
       ...DEFAULT_LEAGUE_SETTINGS,
+      sportLeague: sportLeague ?? DEFAULT_LEAGUE_SETTINGS.sportLeague,
       leagueId: league.leagueId,
     });
     return league;

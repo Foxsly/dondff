@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getCurrentUser } from "../api/auth";
-import type { User, LeagueMember, TeamPlayer } from "../types";
+import { getPositionDisplayName } from "./util";
+import type { User, LeagueMember, TeamPlayer, SportLeague, LeaguePosition } from "../types";
 
 const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
@@ -11,10 +12,14 @@ function roundToTwo(number: number | undefined | null): number {
   return number ? Math.round(number * 100) / 100 : 0;
 }
 
+interface EntryPlayer extends TeamPlayer {
+  points?: number;
+  pprScore?: number;
+}
+
 interface EntryLineUp {
-  RB: (TeamPlayer & { points?: number; pprScore?: number }) | null;
-  WR: (TeamPlayer & { points?: number; pprScore?: number }) | null;
-  finalScore?: number | null;
+  [position: string]: EntryPlayer | null;
+  finalScore?: any;
 }
 
 interface Entry {
@@ -37,17 +42,21 @@ interface EntriesProps {
   season: string | number;
   week: string | number;
   actualWeek?: number | null;
+  sportLeague?: SportLeague;
 }
 
-const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
+const Entries: React.FC<EntriesProps> = ({ leagueId, season, week, sportLeague }) => {
   const [user, setUser] = useState<User | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [members, setMembers] = useState<FullMember[]>([]);
+  const [positions, setPositions] = useState<LeaguePosition[]>([]);
   const [selectedMembers, setSelectedMembers] = useState<FullMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentNflWeek, setCurrentNflWeek] = useState<number | null>(null);
   const [currentNflSeason, setCurrentNflSeason] = useState<number | null>(null);
+
+  const isGolf = sportLeague === 'GOLF';
 
   useEffect(() => {
     let cancelled = false;
@@ -67,12 +76,11 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
 
         if (!leagueId || !season || !week) return;
 
-        const [teamsRes, membersRes, rbProjRes, wrProjRes, stateRes] = await Promise.all([
+        // Fetch positions for this league
+        const [teamsRes, membersRes, positionsRes] = await Promise.all([
           fetch(`${API_BASE}/leagues/${leagueId}/teams?season=${season}&week=${week}`, { credentials: "include" }),
           fetch(`${API_BASE}/leagues/${leagueId}/users`, { credentials: "include" }),
-          fetch(`${API_BASE}/players/projections/${season}/${week}/RB`, { credentials: "include" }),
-          fetch(`${API_BASE}/players/projections/${season}/${week}/WR`, { credentials: "include" }),
-          fetch(`${API_BASE}/sleeper/state`, { credentials: "include" }),
+          fetch(`${API_BASE}/leagues/${leagueId}/positions`, { credentials: "include" }),
         ]);
 
         if (!teamsRes.ok) throw new Error(`Failed to load league teams (status ${teamsRes.status})`);
@@ -81,65 +89,87 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
         const teamsData = await teamsRes.json();
         const membersData: LeagueMember[] = await membersRes.json();
 
-        const rbProjections = new Map<string, number>();
-        const wrProjections = new Map<string, number>();
-
-        try {
-          if (rbProjRes.ok) {
-            const rbData = await rbProjRes.json();
-            if (Array.isArray(rbData)) {
-              rbData.forEach((entry: any) => {
-                const id = entry.playerId;
-                const pts = entry.projectedPoints ?? 0;
-                if (id) rbProjections.set(String(id), pts);
-              });
-            }
-          } else {
-            console.warn(`Failed to load RB projections (status ${rbProjRes.status})`);
-          }
-        } catch (e) {
-          console.error("Error processing RB projections", e);
+        let leaguePositions: LeaguePosition[] = [];
+        if (positionsRes.ok) {
+          leaguePositions = await positionsRes.json();
         }
+        if (leaguePositions.length === 0) {
+          // Fallback to NFL defaults
+          leaguePositions = [
+            { leagueSettingsId: '', position: 'RB', poolSize: 64 },
+            { leagueSettingsId: '', position: 'WR', poolSize: 96 },
+          ];
+        }
+        setPositions(leaguePositions);
 
-        try {
-          if (wrProjRes.ok) {
-            const wrData = await wrProjRes.json();
-            if (Array.isArray(wrData)) {
-              wrData.forEach((entry: any) => {
-                const id = entry.playerId;
-                const pts = entry.projectedPoints ?? 0;
-                if (id) wrProjections.set(String(id), pts);
-              });
+        // Fetch projections for each position
+        const projectionsByPosition = new Map<string, Map<string, number>>();
+        if (isGolf) {
+          // For golf, all positions share the same player pool — fetch once
+          try {
+            const res = await fetch(`${API_BASE}/players/projections/${season}/${week}/${leaguePositions[0].position}`, { credentials: "include" });
+            if (res.ok) {
+              const data = await res.json();
+              const map = new Map<string, number>();
+              if (Array.isArray(data)) {
+                data.forEach((entry: any) => {
+                  if (entry.playerId) map.set(String(entry.playerId), entry.projectedPoints ?? 0);
+                });
+              }
+              // Reuse the same projection map for all golf positions
+              for (const pos of leaguePositions) {
+                projectionsByPosition.set(pos.position, map);
+              }
             }
-          } else {
-            console.warn(`Failed to load WR projections (status ${wrProjRes.status})`);
+          } catch (e) {
+            console.error("Error processing golf projections", e);
           }
-        } catch (e) {
-          console.error("Error processing WR projections", e);
+        } else {
+          // For NFL, fetch projections per position
+          const projectionPromises = leaguePositions.map((pos) =>
+            fetch(`${API_BASE}/players/projections/${season}/${week}/${pos.position}`, { credentials: "include" })
+              .then(async (res) => {
+                if (res.ok) {
+                  const data = await res.json();
+                  const map = new Map<string, number>();
+                  if (Array.isArray(data)) {
+                    data.forEach((entry: any) => {
+                      if (entry.playerId) map.set(String(entry.playerId), entry.projectedPoints ?? 0);
+                    });
+                  }
+                  projectionsByPosition.set(pos.position, map);
+                }
+              })
+              .catch((e) => console.error(`Error processing ${pos.position} projections`, e))
+          );
+          await Promise.all(projectionPromises);
         }
 
         if (cancelled) return;
 
-        let stateWeekNumber: number | null = null;
-        let seasonNumber: number | null = null;
-        try {
-          if (stateRes.ok) {
-            const sleeperState = await stateRes.json();
-            if (sleeperState) {
-              const currentWeek = sleeperState.week ?? null;
-              const currentSeason = sleeperState.season ?? null;
-              if (currentWeek != null) stateWeekNumber = Number(currentWeek);
-              if (currentSeason != null) seasonNumber = Number(currentSeason);
+        // Fetch current state (NFL only)
+        if (!isGolf) {
+          try {
+            const stateRes = await fetch(`${API_BASE}/sleeper/state`, { credentials: "include" });
+            if (stateRes.ok) {
+              const sleeperState = await stateRes.json();
+              if (sleeperState) {
+                const currentWeek = sleeperState.week ?? null;
+                const currentSeason = sleeperState.season ?? null;
+                if (currentWeek != null && !cancelled) setCurrentNflWeek(Number(currentWeek));
+                if (currentSeason != null && !cancelled) setCurrentNflSeason(Number(currentSeason));
+              }
             }
-          } else {
-            console.warn(`Failed to load Sleeper state (status ${stateRes.status})`);
+          } catch (e) {
+            console.error("Error processing Sleeper state", e);
           }
-        } catch (e) {
-          console.error("Error processing Sleeper state", e);
+        } else {
+          // For golf, treat current year/week as always current
+          if (!cancelled) {
+            setCurrentNflSeason(Number(season));
+            setCurrentNflWeek(Number(week));
+          }
         }
-
-        if (!cancelled && stateWeekNumber != null) setCurrentNflWeek(stateWeekNumber);
-        if (!cancelled && seasonNumber != null) setCurrentNflSeason(seasonNumber);
 
         const fullMembers: FullMember[] = await Promise.all(
           membersData.map(async (leagueMember) => {
@@ -159,17 +189,17 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
             const teamStatusResponse = await fetch(`${API_BASE}/teams/${team.teamId}/status`, { credentials: "include" });
             const teamStatus = await teamStatusResponse.json();
 
-            const rb = team.players?.find((p: any) => p.position === 'RB') || null;
-            const wr = team.players?.find((p: any) => p.position === 'WR') || null;
-
-            const rbId = rb?.playerId ?? null;
-            const wrId = wr?.playerId ?? null;
-
-            const rbProjection = rbId ? rbProjections.get(String(rbId)) ?? 0 : 0;
-            const wrProjection = wrId ? wrProjections.get(String(wrId)) ?? 0 : 0;
-
-            const rbWithProjection = rb ? { ...rb, points: rbProjection } : null;
-            const wrWithProjection = wr ? { ...wr, points: wrProjection } : null;
+            const lineUp: EntryLineUp = {};
+            for (const pos of leaguePositions) {
+              const player = team.players?.find((p: any) => p.position === pos.position) || null;
+              if (player) {
+                const projMap = projectionsByPosition.get(pos.position);
+                const projection = projMap ? (projMap.get(String(player.playerId)) ?? 0) : 0;
+                lineUp[pos.position] = { ...player, points: projection };
+              } else {
+                lineUp[pos.position] = null;
+              }
+            }
 
             const finalScore = team.finalScore ?? team.result?.finalScore ?? null;
 
@@ -177,7 +207,7 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
               ...team,
               name: member?.user?.name,
               email: member?.user?.email,
-              lineUp: { RB: rbWithProjection, WR: wrWithProjection, finalScore },
+              lineUp: { ...lineUp, finalScore },
               finalScore,
               playable: teamStatus.playable,
             };
@@ -237,53 +267,49 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
   const isCurrentSeason = currentNflSeason != null && seasonNum === currentNflSeason;
   const showResults = isPastWeek && (isCurrentSeason || isPastSeason);
 
-  const projectedTotal = (entry: Entry) =>
-    (entry.lineUp?.RB?.points ?? 0) + (entry.lineUp?.WR?.points ?? 0);
+  const projectedTotal = (entry: Entry) => {
+    let total = 0;
+    for (const pos of positions) {
+      const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
+      total += player?.points ?? 0;
+    }
+    return total;
+  };
 
   const calculateScores = useCallback(async () => {
-    if (!entries || entries.length === 0) return;
+    if (!entries || entries.length === 0 || isGolf) return;
     try {
-      const rbUrl = `${API_BASE}/players/stats/${season}/${week}/RB`;
-      const wrUrl = `${API_BASE}/players/stats/${season}/${week}/WR`;
-      const [rbResponse, wrResponse] = await Promise.all([
-        fetch(rbUrl, { credentials: "include" }),
-        fetch(wrUrl, { credentials: "include" }),
-      ]);
-
-      if (!rbResponse.ok || !wrResponse.ok) throw new Error("Failed to load Sleeper stats");
-
-      const rbJson = await rbResponse.json();
-      const wrJson = await wrResponse.json();
-      const finalStats = [...rbJson, ...wrJson];
+      const statsPromises = positions.map((pos) =>
+        fetch(`${API_BASE}/players/stats/${season}/${week}/${pos.position}`, { credentials: "include" })
+          .then((res) => res.ok ? res.json() : [])
+      );
+      const allStats = await Promise.all(statsPromises);
+      const finalStats = allStats.flat();
 
       const updatedEntries = entries.map((entry) => {
-        const rbId = entry.lineUp?.RB?.playerId;
-        const wrId = entry.lineUp?.WR?.playerId;
-        const rb = finalStats.find((p: any) => p.playerId === rbId);
-        const wr = finalStats.find((p: any) => p.playerId === wrId);
-        const rbScore = rb?.points ? rb.points : 0.0;
-        const wrScore = wr?.points ? wr.points : 0.0;
-        const finalScore = rbScore + wrScore;
+        let finalScore = 0;
+        const updatedLineUp: EntryLineUp = { ...entry.lineUp };
 
-        return {
-          ...entry,
-          lineUp: {
-            ...entry.lineUp,
-            RB: { ...(entry.lineUp?.RB ?? {}), pprScore: rbScore },
-            WR: { ...(entry.lineUp?.WR ?? {}), pprScore: wrScore },
-            finalScore,
-          },
-          finalScore,
-        };
+        for (const pos of positions) {
+          const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
+          if (player?.playerId) {
+            const stat = finalStats.find((p: any) => p.playerId === player.playerId);
+            const score = stat?.points ?? 0;
+            finalScore += score;
+            updatedLineUp[pos.position] = { ...player, pprScore: score };
+          }
+        }
+
+        updatedLineUp.finalScore = finalScore;
+        return { ...entry, lineUp: updatedLineUp, finalScore };
       });
 
       setEntries(updatedEntries);
-      console.warn("Score calculation updated entries locally; backend persistence for entries has not been implemented yet.");
     } catch (err: any) {
       console.error("Failed to calculate scores", err);
       setError(err?.message ?? "Failed to calculate scores");
     }
-  }, [entries, season, week]);
+  }, [entries, season, week, positions, isGolf]);
 
   useEffect(() => {
     if (!showResults) return;
@@ -293,35 +319,43 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
     void calculateScores();
   }, [showResults, entries, calculateScores]);
 
+  const thClass = "p-2 border-b border-[#3a465b]";
+  const tdClass = "p-2 border-b border-[#3a465b]";
+
   function ResultsTable({ entries }: { entries: Entry[] }) {
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full text-left border border-[#3a465b]">
           <thead className="bg-[#3a465b]">
             <tr>
-              <th className="p-2 border-b border-[#3a465b]">Member</th>
-              <th className="p-2 border-b border-[#3a465b]">RB</th>
-              <th className="p-2 border-b border-[#3a465b]">RB Projection</th>
-              <th className="p-2 border-b border-[#3a465b]">RB Final</th>
-              <th className="p-2 border-b border-[#3a465b]">WR</th>
-              <th className="p-2 border-b border-[#3a465b]">WR Projection</th>
-              <th className="p-2 border-b border-[#3a465b]">WR Final</th>
-              <th className="p-2 border-b border-[#3a465b]">Projected Total</th>
-              <th className="p-2 border-b border-[#3a465b]">Final Score</th>
+              <th className={thClass}>Member</th>
+              {positions.map((pos) => (
+                <React.Fragment key={pos.position}>
+                  <th className={thClass}>{getPositionDisplayName(pos.position, sportLeague)}</th>
+                  <th className={thClass}>{getPositionDisplayName(pos.position, sportLeague)} Proj</th>
+                  <th className={thClass}>{getPositionDisplayName(pos.position, sportLeague)} Final</th>
+                </React.Fragment>
+              ))}
+              <th className={thClass}>Projected Total</th>
+              <th className={thClass}>Final Score</th>
             </tr>
           </thead>
           <tbody>
             {entries.map((entry) => (
               <tr key={entry.teamId || entry.name || entry.email} className="odd:bg-[#3a465b]/20">
-                <td className="p-2 border-b border-[#3a465b]">{memberLabel(entry.name || entry.email)}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.RB?.playerName ?? ""}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.RB?.points) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.RB?.pprScore) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.WR?.playerName ?? ""}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.WR?.points) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.WR?.pprScore) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(projectedTotal(entry))}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.finalScore ? roundToTwo(entry.finalScore) : ""}</td>
+                <td className={tdClass}>{memberLabel(entry.name || entry.email)}</td>
+                {positions.map((pos) => {
+                  const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
+                  return (
+                    <React.Fragment key={pos.position}>
+                      <td className={tdClass}>{player?.playerName ?? ""}</td>
+                      <td className={tdClass}>{roundToTwo(player?.points)}</td>
+                      <td className={tdClass}>{roundToTwo(player?.pprScore)}</td>
+                    </React.Fragment>
+                  );
+                })}
+                <td className={tdClass}>{roundToTwo(projectedTotal(entry))}</td>
+                <td className={tdClass}>{entry.finalScore ? roundToTwo(entry.finalScore) : ""}</td>
               </tr>
             ))}
           </tbody>
@@ -336,23 +370,30 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
         <table className="min-w-full text-left border border-[#3a465b]">
           <thead className="bg-[#3a465b]">
             <tr>
-              <th className="p-2 border-b border-[#3a465b]">Member</th>
-              <th className="p-2 border-b border-[#3a465b]">RB</th>
-              <th className="p-2 border-b border-[#3a465b]">RB Projection</th>
-              <th className="p-2 border-b border-[#3a465b]">WR</th>
-              <th className="p-2 border-b border-[#3a465b]">WR Projection</th>
-              <th className="p-2 border-b border-[#3a465b]">Projected Total</th>
+              <th className={thClass}>Member</th>
+              {positions.map((pos) => (
+                <React.Fragment key={pos.position}>
+                  <th className={thClass}>{getPositionDisplayName(pos.position, sportLeague)}</th>
+                  <th className={thClass}>{getPositionDisplayName(pos.position, sportLeague)} Proj</th>
+                </React.Fragment>
+              ))}
+              <th className={thClass}>Projected Total</th>
             </tr>
           </thead>
           <tbody>
             {entries.map((entry) => (
               <tr key={entry.teamId || entry.name || entry.email} className="odd:bg-[#3a465b]/20">
-                <td className="p-2 border-b border-[#3a465b]">{memberLabel(entry.name || entry.email)}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.RB?.playerName ?? ""}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.RB?.points) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.WR?.playerName ?? ""}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.WR?.points) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(projectedTotal(entry))}</td>
+                <td className={tdClass}>{memberLabel(entry.name || entry.email)}</td>
+                {positions.map((pos) => {
+                  const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
+                  return (
+                    <React.Fragment key={pos.position}>
+                      <td className={tdClass}>{player?.playerName ?? ""}</td>
+                      <td className={tdClass}>{roundToTwo(player?.points)}</td>
+                    </React.Fragment>
+                  );
+                })}
+                <td className={tdClass}>{roundToTwo(projectedTotal(entry))}</td>
               </tr>
             ))}
           </tbody>

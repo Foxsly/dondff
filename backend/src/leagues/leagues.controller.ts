@@ -7,6 +7,7 @@ import type {
   UpdateLeagueUserDto,
 } from './entities/league-user.entity';
 import type { CreateLeagueDto, League, UpdateLeagueDto } from '@/leagues/entities/league.entity';
+import type { SportLeague } from '@/leagues/entities/league-settings.entity';
 import { ITeam } from '@/teams/entities/team.entity';
 import type {
   CreateLeagueSettingsDto,
@@ -19,8 +20,9 @@ export class LeaguesController {
   constructor(private readonly leaguesService: LeaguesService) {}
 
   @TypedRoute.Post()
-  create(@Body() createLeagueDto: CreateLeagueDto): Promise<League> {
-    return this.leaguesService.create(createLeagueDto);
+  create(@Body() body: CreateLeagueDto & { sportLeague?: SportLeague }): Promise<League> {
+    const { sportLeague, ...createLeagueDto } = body;
+    return this.leaguesService.create(createLeagueDto, sportLeague);
   }
 
   @TypedRoute.Get()

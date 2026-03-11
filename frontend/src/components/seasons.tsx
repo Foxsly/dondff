@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getCurrentUser } from "../api/auth";
+import type { SportLeague } from "../types";
 
 const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
@@ -8,9 +9,10 @@ const API_BASE =
 
 interface SeasonsProps {
   leagueId: string;
+  sportLeague?: SportLeague;
 }
 
-const Seasons: React.FC<SeasonsProps> = ({ leagueId }) => {
+const Seasons: React.FC<SeasonsProps> = ({ leagueId, sportLeague }) => {
   const navigate = useNavigate();
 
   const [seasons, setSeasons] = useState<string[]>([]);
@@ -38,16 +40,11 @@ const Seasons: React.FC<SeasonsProps> = ({ leagueId }) => {
           return;
         }
 
-        const [teamsRes, stateRes] = await Promise.all([
-          fetch(`${API_BASE}/teams`, { credentials: "include" }),
-          fetch(`${API_BASE}/sleeper/state`, { credentials: "include" }),
-        ]);
+        const isGolf = sportLeague === 'GOLF';
 
+        const teamsRes = await fetch(`${API_BASE}/teams`, { credentials: "include" });
         if (!teamsRes.ok) throw new Error(`Failed to load teams (status ${teamsRes.status})`);
-        if (!stateRes.ok) throw new Error(`Failed to load Sleeper state (status ${stateRes.status})`);
-
         const teams = await teamsRes.json();
-        const sleeperState = await stateRes.json();
 
         if (cancelled) return;
 
@@ -70,14 +67,28 @@ const Seasons: React.FC<SeasonsProps> = ({ leagueId }) => {
           });
         }
 
-        if (sleeperState) {
-          const currentSeason =
-            sleeperState.season ??
-            sleeperState.year ??
-            sleeperState.seasonId ??
-            sleeperState.current_season ??
-            null;
-          if (currentSeason != null) seasonSet.add(String(currentSeason));
+        if (isGolf) {
+          // For golf, use the current year as the season
+          seasonSet.add(String(new Date().getFullYear()));
+        } else {
+          // For NFL, fetch from Sleeper
+          try {
+            const stateRes = await fetch(`${API_BASE}/sleeper/state`, { credentials: "include" });
+            if (stateRes.ok) {
+              const sleeperState = await stateRes.json();
+              if (sleeperState) {
+                const currentSeason =
+                  sleeperState.season ??
+                  sleeperState.year ??
+                  sleeperState.seasonId ??
+                  sleeperState.current_season ??
+                  null;
+                if (currentSeason != null) seasonSet.add(String(currentSeason));
+              }
+            }
+          } catch (e) {
+            console.warn("Failed to load Sleeper state", e);
+          }
         }
 
         const derivedSeasons = Array.from(seasonSet);
