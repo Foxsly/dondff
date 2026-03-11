@@ -42,11 +42,9 @@ const League: React.FC = () => {
 
         if (cancelled) return;
 
-        const [leagueRes, usersRes, settingsRes] = await Promise.all([
+        const [leagueRes, usersRes] = await Promise.all([
           fetch(`${API_BASE}/leagues/${leagueId}`, { credentials: "include" }),
           fetch(`${API_BASE}/leagues/${leagueId}/users`, { credentials: "include" }),
-            //TODO this should come from the League now
-          fetch(`${API_BASE}/leagues/${leagueId}/settings/latest`, { credentials: "include" }),
         ]);
 
         if (!leagueRes.ok) throw new Error(`Failed to load league (status ${leagueRes.status})`);
@@ -55,14 +53,9 @@ const League: React.FC = () => {
         const leagueData: LeagueType = await leagueRes.json();
         const users: LeagueMember[] = await usersRes.json();
 
-        let sport: SportLeague = 'NFL';
-        if (settingsRes.ok) {
-          const settings: LeagueSettings = await settingsRes.json();
-          sport = settings.sportLeague || 'NFL';
-        }
-
         if (cancelled) return;
 
+        const sport: SportLeague = leagueData.sportLeague;
         setSportLeague(sport);
         setLeague(leagueData || {});
 

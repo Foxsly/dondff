@@ -13,7 +13,6 @@ export interface League {
   id?: string;
   leagueId?: string;
   name?: string;
-  leagueName?: string;
   role?: string;
   membershipRole?: string;
   userRole?: string;
