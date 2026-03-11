@@ -13,4 +13,6 @@ export type CreateUserDto = Omit<IUser, 'userId'>;
 export type UpdateUserDto = Partial<IUser>;
 // export type UpdateUserDto = { userId: IUser['userId'] } & Partial<Omit<IUser, 'userId'>>;
 export type User = Selectable<IUser>;
+//TODO check usages of this
+//export type UserLeagues = Omit<ILeagueUser, 'userId'> & Omit<ILeague, 'leagueId'>;
 export type UserLeagues = Omit<ILeagueUser, 'userId'> & { leagueName: ILeague['name']; sportLeague?: SportLeague };

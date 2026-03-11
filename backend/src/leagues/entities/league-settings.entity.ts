@@ -1,5 +1,4 @@
 import { AuditableTable } from '@/infrastructure/entities/auditable.table';
-import { SportLeague } from '@/leagues/entities/league.entity';
 import { Selectable } from 'kysely';
 import { tags } from 'typia';
 

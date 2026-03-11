@@ -56,6 +56,7 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
     loadUserAndName();
 
     // Fetch league settings to determine sport
+    //TODO this should come from the League now
     if (leagueId) {
       fetch(`${API_BASE}/leagues/${leagueId}/settings/latest`, { credentials: "include" })
         .then((res) => res.ok ? res.json() : null)

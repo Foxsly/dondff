@@ -72,12 +72,12 @@ export class DatabaseUsersRepository extends UsersRepository {
     const rows = await this.db
       .selectFrom('leagueUser')
       .innerJoin('league', 'league.leagueId', 'leagueUser.leagueId')
-      .leftJoin('leagueSettings', 'leagueSettings.leagueId', 'leagueUser.leagueId')
       .select([
         'leagueUser.leagueId',
         'leagueUser.role',
+        //TODO get rid of this renaming and fix the frontend to expect name
         'league.name as leagueName',
-        'leagueSettings.sportLeague',
+        'league.sportLeague',
       ])
       .where('leagueUser.userId', '=', userId)
       .execute();

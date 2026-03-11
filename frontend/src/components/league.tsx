@@ -45,6 +45,7 @@ const League: React.FC = () => {
         const [leagueRes, usersRes, settingsRes] = await Promise.all([
           fetch(`${API_BASE}/leagues/${leagueId}`, { credentials: "include" }),
           fetch(`${API_BASE}/leagues/${leagueId}/users`, { credentials: "include" }),
+            //TODO this should come from the League now
           fetch(`${API_BASE}/leagues/${leagueId}/settings/latest`, { credentials: "include" }),
         ]);
 

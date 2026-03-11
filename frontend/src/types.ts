@@ -26,6 +26,7 @@ export interface LeagueSettings {
   leagueSettingsId: string;
   leagueId: string;
   scoringType: string;
+  //TODO check this
   sportLeague: SportLeague;
 }
 
