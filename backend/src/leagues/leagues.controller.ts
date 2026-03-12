@@ -19,8 +19,8 @@ export class LeaguesController {
   constructor(private readonly leaguesService: LeaguesService) {}
 
   @TypedRoute.Post()
-  create(@Body() body: CreateLeagueDto): Promise<League> {
-    return this.leaguesService.create(body);
+  create(@Body() createLeagueDto: CreateLeagueDto): Promise<League> {
+    return this.leaguesService.create(createLeagueDto);
   }
 
   @TypedRoute.Get()
