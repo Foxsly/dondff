@@ -89,16 +89,10 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week, sportLeague }
         const teamsData = await teamsRes.json();
         const membersData: LeagueMember[] = await membersRes.json();
 
-        let leaguePositions: LeaguePosition[] = [];
-        if (positionsRes.ok) {
-          leaguePositions = await positionsRes.json();
-        }
+        if (!positionsRes.ok) throw new Error(`Failed to load league positions (status ${positionsRes.status})`);
+        const leaguePositions: LeaguePosition[] = await positionsRes.json();
         if (leaguePositions.length === 0) {
-          // Fallback to NFL defaults
-          leaguePositions = [
-            { leagueSettingsId: '', position: 'RB', poolSize: 64 },
-            { leagueSettingsId: '', position: 'WR', poolSize: 96 },
-          ];
+          throw new Error('No positions configured for this league');
         }
         setPositions(leaguePositions);
 
