@@ -122,7 +122,6 @@ export class PlayerStatsService {
       position: 'GOLF_PLAYER' as PlayerPosition,
       projectedPoints: projection.fantasy,
       injuryStatus: null,
-      oppTeam: '',
       team: '',
     }));
   }
@@ -139,7 +138,7 @@ export class PlayerStatsService {
   }
 
   private setPlayerTeamMappings(projection: IPlayerProjection) {
-    this.playerTeams.set(projection.playerId, {team: projection.team, opponent: projection.oppTeam});
+    this.playerTeams.set(projection.playerId, {team: projection.team, opponent: projection.oppTeam!});
   }
 
   private mapPosition(position:string): PlayerPosition {
