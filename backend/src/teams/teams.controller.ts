@@ -111,7 +111,7 @@ export class TeamsController {
     const offer = await this.teamsService.calculateOffer(teamEntry);
     return {
       boxes: eliminatedCases,
-      offer: await this.teamsService.addTeamsToOffer(offer, position),
+      offer: this.teamsService.addTeamsToOffer(offer),
     };
   }
 
