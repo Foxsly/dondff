@@ -1,4 +1,5 @@
 import { FanduelService } from '@/fanduel/fanduel.service';
+import { SportLeague } from '@/leagues/entities/league.entity';
 import {
   IPlayerProjection,
   IPlayerStats,
@@ -21,16 +22,13 @@ export class PlayerStatsService {
     this.playerTeams = new Map<string, PlayerTeams>()
   }
 
-  isGolfPosition(position: string): boolean {
-    return position.startsWith('GOLF_PLAYER');
-  }
-
   async getPlayerProjections(
     position: string,
     season: number,
     week: number,
+    sportLeague: SportLeague = 'NFL',
   ): Promise<PlayerProjectionResponse> {
-    if (this.isGolfPosition(position)) {
+    if (sportLeague === 'GOLF') {
       return this.getGolfProjections();
     }
 

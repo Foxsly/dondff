@@ -1,4 +1,5 @@
 import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
+import { SportLeague } from '@/leagues/entities/league.entity';
 import { LeaguesService } from '@/leagues/leagues.service';
 import {
   IPlayerProjection,
@@ -40,17 +41,18 @@ export class TeamsService {
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
     let createdTeam: Team = await this.teamsRepository.create(createTeamDto);
+    const league = await this.leaguesService.findOne(createdTeam.leagueId);
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       createdTeam.leagueId,
     );
-    
+
     // Get positions from the new league_settings_position table
     const positions = await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId);
-    
+
     for (const pos of positions) {
-      await this.generateCasesForPosition(createdTeam, pos.position, leagueSettings, pos.poolSize, this.getNumberOfCases(createTeamDto.week));
+      await this.generateCasesForPosition(createdTeam, pos.position, leagueSettings, league.sportLeague, pos.poolSize, this.getNumberOfCases(createTeamDto.week));
     }
-    
+
     return createdTeam;
   }
 
@@ -204,20 +206,22 @@ export class TeamsService {
       throw new NotFoundException(`Could not update TeamEntry with id ${teamEntry.teamEntryId}`);
     }
     let team: Team = await this.findOne(teamId);
+    const league = await this.leaguesService.findOne(team.leagueId);
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       team.leagueId,
     );
     const positions = await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId);
     const posConfig = positions.find((p) => p.position === position);
     const poolSize = posConfig?.poolSize ?? 150;
-    await this.generateCasesForPosition(team, position, leagueSettings, poolSize, this.getNumberOfCases(team.week));
+    await this.generateCasesForPosition(team, position, leagueSettings, league.sportLeague, poolSize, this.getNumberOfCases(team.week));
   }
 
-  async generateCasesForPosition(team: Team, position: string, leagueSettings: ILeagueSettings, poolSize: number, numberOfCases: number = 10) {
+  async generateCasesForPosition(team: Team, position: string, leagueSettings: ILeagueSettings, sportLeague: SportLeague, poolSize: number, numberOfCases: number = 10) {
     let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(
       position,
       team.seasonYear,
       team.week,
+      sportLeague,
     );
     let teamEntry: ITeamEntry = await this.getOrCreateTeamEntry(
       team.teamId,
@@ -280,10 +284,12 @@ export class TeamsService {
     }
 
     const team: ITeam = await this.findOne(teamEntry.teamId);
+    const league = await this.leaguesService.findOne(team.leagueId);
     const projections = await this.playerStatsService.getPlayerProjections(
       teamEntry.position,
       team.seasonYear,
       team.week,
+      league.sportLeague,
     );
 
     const eligibleValues = eligibleCases.map((audit) => audit.projectedPoints);
