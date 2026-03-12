@@ -3,7 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import Accordion from "./accordion";
 import Breadcrumbs from "./breadcrumbs";
 import { getCurrentUser } from "../api/auth";
-import type { LeagueSettings, SportLeague } from "../types";
+import type { SportLeague } from "../types";
+
+interface GolfEvent {
+  id: string;
+  name: string;
+}
 
 const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
@@ -18,6 +23,7 @@ const Weeks: React.FC = () => {
   const [actualNFLWeek, setActualNFLWeek] = useState<number | null>(null);
   const [sportLeague, setSportLeague] = useState<SportLeague>('NFL');
   const [leagueName, setLeagueName] = useState("");
+  const [golfEvents, setGolfEvents] = useState<GolfEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -78,26 +84,16 @@ const Weeks: React.FC = () => {
         }
 
         if (sport === 'GOLF') {
-          // For golf, fetch current event from FanDuel
           try {
-            const eventRes = await fetch(`${API_BASE}/fanduel/GOLF/current-event`, { credentials: "include" });
+            const eventRes = await fetch(`${API_BASE}/fanduel/GOLF/events`, { credentials: "include" });
             if (eventRes.ok) {
-              const event = await eventRes.json();
-              if (event?.name) {
-                // Use week number 1 if no weeks exist yet, otherwise next available
-                const existingWeeks = Array.from(weekSet).map(Number);
-                const nextWeek = existingWeeks.length > 0 ? Math.max(...existingWeeks) + 1 : 1;
-                // Only add if no existing week maps to this event
-                if (existingWeeks.length === 0) {
-                  weekSet.add(String(nextWeek));
-                }
-                // Label the current/latest week with the event name
-                const latestWeek = existingWeeks.length > 0 ? Math.max(...existingWeeks) : nextWeek;
-                labels[String(latestWeek)] = event.name;
+              const events: GolfEvent[] = await eventRes.json();
+              if (Array.isArray(events) && events.length > 0) {
+                setGolfEvents(events);
               }
             }
           } catch (e) {
-            console.warn("Failed to load golf event", e);
+            console.warn("Failed to load golf events", e);
           }
         } else {
           // For NFL, fetch from Sleeper
@@ -140,6 +136,16 @@ const Weeks: React.FC = () => {
       cancelled = true;
     };
   }, [leagueId, season, navigate]);
+
+  const handleCreateGolfWeek = (event: GolfEvent) => {
+    const existingWeeks = weeks.map(Number);
+    const nextWeek = existingWeeks.length > 0 ? Math.max(...existingWeeks) + 1 : 1;
+    const weekStr = String(nextWeek);
+
+    setWeeks((prev) => [...prev, weekStr].sort((a, b) => Number(a) - Number(b)));
+    setWeekLabels((prev) => ({ ...prev, [weekStr]: event.name }));
+    setGolfEvents((prev) => prev.filter((e) => e.id !== event.id));
+  };
 
   if (loading) {
     return (
@@ -193,6 +199,23 @@ const Weeks: React.FC = () => {
           />
         ))}
       </div>
+      {sportLeague === 'GOLF' && golfEvents.length > 0 && (
+        <div className="space-y-2 mt-4">
+          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
+            Available Tournaments
+          </h3>
+          {golfEvents.map((event) => (
+            <button
+              key={event.id}
+              onClick={() => handleCreateGolfWeek(event)}
+              className="w-full text-left px-4 py-3 rounded bg-[#2a3447] hover:bg-[#344054] border border-[#3a465b] transition-colors"
+            >
+              <span className="text-white font-medium">{event.name}</span>
+              <span className="text-gray-400 text-sm ml-2">— Create week</span>
+            </button>
+          ))}
+        </div>
+      )}
       {sportLeague === 'NFL' && (
         <div>Current NFL Week: {actualNFLWeek ?? "Unknown"}</div>
       )}

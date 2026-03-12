@@ -11,17 +11,8 @@ const shuffle = (v, r = [...v]) => v.map(() => r.splice(~~(Math.random() * r.len
 export class FanduelController {
   constructor(private readonly fanduelService: FanduelService) {}
 
-  @TypedRoute.Get('GOLF/current-event')
-  async getCurrentGolfEvent() {
-    const events = await this.fanduelService.getGolfEvents();
-    if (events.length === 0) {
-      return { id: null, name: null };
-    }
-    return events[0];
-  }
-
   @TypedRoute.Get('GOLF/events')
-  getGolfEvents() {
+  async getGolfEvents() {
     return this.fanduelService.getGolfEvents();
   }
 
