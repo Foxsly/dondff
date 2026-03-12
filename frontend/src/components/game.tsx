@@ -476,7 +476,7 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
     if (isGolf) {
       return (
         <>
-          <span className="proj">Proj: {player.projectedPoints} | Salary: ${player.salary ?? 'N/A'}</span>
+          <span className="proj">Proj: {player.projectedPoints}</span>
         </>
       );
     }
@@ -545,7 +545,7 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
             <div className="list-player">
               {offer.playerName}
               {isGolf ? (
-                <><br /><span className="proj">Proj: {offer.projectedPoints} | Salary: ${offer.salary ?? 'N/A'}</span></>
+                <><br /><span className="proj">Proj: {offer.projectedPoints}</span></>
               ) : (
                 <><span className="status"> {offer.matchup?.team} {offer.injuryStatus}</span><br />
                 <span className="proj">Proj: {offer.projectedPoints} Opp: {offer.matchup?.opponent}</span></>

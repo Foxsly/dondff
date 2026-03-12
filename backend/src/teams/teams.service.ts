@@ -1,4 +1,4 @@
-import { ILeagueSettings, ILeagueSettingsPosition } from '@/leagues/entities/league-settings.entity';
+import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
 import { LeaguesService } from '@/leagues/leagues.service';
 import {
   IPlayerProjection,
@@ -135,19 +135,10 @@ export class TeamsService {
     const entry = await this.getTeamEntry(teamId, position);
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(entry.teamEntryId);
 
-    // For golf positions, fetch projections to get salary data
-    let salaryMap: Map<string, number> | null = null;
-    if (this.playerStatsService.isGolfPosition(position)) {
-      const team = await this.findOne(teamId);
-      const projections = await this.playerStatsService.getPlayerProjections(position, team.seasonYear, team.week);
-      salaryMap = new Map(projections.map((p) => [p.playerId, p.salary ?? 0]));
-    }
-
     const playerListAudits = audits.map((audit) => ({
       ...audit,
       boxStatus: audit.boxStatus === 'selected' ? 'available' : audit.boxStatus,
       matchup: this.playerStatsService.getTeamAndOpponentForPlayer(audit.playerId),
-      ...(salaryMap ? { salary: salaryMap.get(audit.playerId) ?? 0 } : {}),
     })) as TeamEntryCasePlayerDto[];
     const boxAudits = audits.map((audit) => ({
       boxNumber: audit.boxNumber,
@@ -295,18 +286,7 @@ export class TeamsService {
       team.week,
     );
 
-    const isGolf = this.playerStatsService.isGolfPosition(teamEntry.position);
-
-    // For golf, calculate offer based on salary; for NFL, use projected points
-    const getOfferValue = (audit: ITeamEntryAudit): number => {
-      if (isGolf) {
-        const projection = projections.find((p) => p.playerId === audit.playerId);
-        return projection?.salary ?? audit.projectedPoints;
-      }
-      return audit.projectedPoints;
-    };
-
-    const eligibleValues = eligibleCases.map(getOfferValue);
+    const eligibleValues = eligibleCases.map((audit) => audit.projectedPoints);
     const finalOfferValue = Math.sqrt(
       eligibleValues.map((v) => v ** 2).reduce((sum, v) => sum + v, 0) /
         eligibleValues.length,
@@ -328,13 +308,9 @@ export class TeamsService {
       throw new Error('No available players left to make an offer');
     }
 
-    const getComparisonValue = (player: IPlayerProjection): number => {
-      return isGolf ? (player.salary ?? player.projectedPoints) : player.projectedPoints;
-    };
-
     const closestOffer = availableOffers.reduce((closest, current) => {
-      const currentDiff = Math.abs(getComparisonValue(current) - finalOfferValue);
-      const closestDiff = Math.abs(getComparisonValue(closest) - finalOfferValue);
+      const currentDiff = Math.abs(current.projectedPoints - finalOfferValue);
+      const closestDiff = Math.abs(closest.projectedPoints - finalOfferValue);
       return currentDiff < closestDiff ? current : closest;
     });
 
@@ -501,22 +477,10 @@ export class TeamsService {
   }
 
   async addTeamsToOffer(offer: ITeamEntryOffer, position?: string): Promise<PlayerOfferDto> {
-    const dto: PlayerOfferDto = {
+    return {
       ...offer,
       matchup: this.playerStatsService.getTeamAndOpponentForPlayer(offer.playerId),
     };
-
-    if (position && this.playerStatsService.isGolfPosition(position)) {
-      const teamEntry = await this.teamsEntryRepository.findEntryById(offer.teamEntryId);
-      if (teamEntry) {
-        const team = await this.findOne(teamEntry.teamId);
-        const projections = await this.playerStatsService.getPlayerProjections(position, team.seasonYear, team.week);
-        const projection = projections.find((p) => p.playerId === offer.playerId);
-        dto.salary = projection?.salary ?? 0;
-      }
-    }
-
-    return dto;
   }
 
     /**

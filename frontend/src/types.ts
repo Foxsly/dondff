@@ -102,7 +102,6 @@ export interface GamePlayer {
   injuryStatus?: string;
   boxStatus: string;
   matchup?: Matchup;
-  salary?: number;
 }
 
 export interface GameBox {
@@ -120,7 +119,6 @@ export interface GameOffer {
   injuryStatus?: string;
   matchup?: Matchup;
   status?: string;
-  salary?: number;
 }
 
 export interface LineUpSlot {

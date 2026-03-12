@@ -124,7 +124,6 @@ export class PlayerStatsService {
       position: 'GOLF_PLAYER' as PlayerPosition,
       projectedPoints: projection.fantasy,
       injuryStatus: null,
-      salary: Number(projection.salary.replace('$', '').replace(',', '')),
       oppTeam: '',
       team: '',
     }));

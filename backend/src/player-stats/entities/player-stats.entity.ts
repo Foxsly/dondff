@@ -9,7 +9,6 @@ export interface IPlayer {
 export interface IPlayerProjection extends IPlayer {
   projectedPoints: number;
   injuryStatus?: string | null;
-  salary?: number;
 }
 
 export type PlayerProjectionResponse = IPlayerProjection[];
