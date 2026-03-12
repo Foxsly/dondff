@@ -21,7 +21,7 @@ const Weeks: React.FC = () => {
   const [weeks, setWeeks] = useState<string[]>([]);
   const [weekLabels, setWeekLabels] = useState<Record<string, string>>({});
   const [actualNFLWeek, setActualNFLWeek] = useState<number | null>(null);
-  const [sportLeague, setSportLeague] = useState<SportLeague>('NFL');
+  const [sportLeague, setSportLeague] = useState<SportLeague | undefined>(undefined);
   const [leagueName, setLeagueName] = useState("");
   const [golfEvents, setGolfEvents] = useState<GolfEvent[]>([]);
   const [loading, setLoading] = useState(true);

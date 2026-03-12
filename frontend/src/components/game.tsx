@@ -33,7 +33,8 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
   const [thinking, setThinking] = useState(false);
   const [reset, setReset] = useState(false);
   const [resetUsed, setResetUsed] = useState<Record<string, boolean>>({});
-  const [sportLeague, setSportLeague] = useState<SportLeague>('NFL');
+  const [sportLeague, setSportLeague] = useState<SportLeague | undefined>(undefined);
+  const [error, setError] = useState("");
   const [teamId, setTeamId] = useState<string | null>(null);
   const hasEnsuredTeamRef = React.useRef(false);
   const hasSetupGameRef = React.useRef(false);
@@ -61,11 +62,17 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
     * that we're only making this call in one spot rather than multiple times */
     if (leagueId) {
       fetch(`${API_BASE}/leagues/${leagueId}`, { credentials: "include" })
-        .then((res) => res.ok ? res.json() : null)
-        .then((league: League | null) => {
-          if (league?.sportLeague) setSportLeague(league.sportLeague);
+        .then((res) => {
+          if (!res.ok) throw new Error(`Failed to load league (status ${res.status})`);
+          return res.json();
         })
-        .catch(() => {});
+        .then((league: League) => {
+          setSportLeague(league.sportLeague);
+        })
+        .catch((err) => {
+          console.error("Failed to load league for game", err);
+          setError(err?.message ?? "Failed to load league");
+        });
     }
   }, [teamUser, leagueId]);
 
@@ -615,6 +622,15 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
       );
     }
   };
+
+  if (error) {
+    return (
+      <div className="p-4">
+        <h2 className="text-2xl font-bold">Something went wrong</h2>
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <>

@@ -15,7 +15,7 @@ const League: React.FC = () => {
 
   const [league, setLeague] = useState<LeagueType>({});
   const [member, setMember] = useState<LeagueMember | null>(null);
-  const [sportLeague, setSportLeague] = useState<SportLeague>('NFL');
+  const [sportLeague, setSportLeague] = useState<SportLeague | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
