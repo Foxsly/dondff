@@ -51,20 +51,8 @@ const Seasons: React.FC<SeasonsProps> = ({ leagueId, sportLeague }) => {
         const seasonSet = new Set<string>();
 
         if (Array.isArray(teams)) {
-          const leagueTeams = teams.filter((team: any) => {
-            const teamLeagueId = team.leagueId || team.league_id || team.league;
-            return teamLeagueId && String(teamLeagueId) === String(leagueId);
-          });
-
-          leagueTeams.forEach((team: any) => {
-            const value =
-              team.season ??
-              team.year ??
-              team.seasonYear ??
-              team.season_id ??
-              null;
-            if (value != null) seasonSet.add(String(value));
-          });
+            const leagueTeams = teams.filter((team: any) => team.leagueId === leagueId);
+            leagueTeams.forEach((team: any) => seasonSet.add(String(team.seasonYear)));
         }
 
         if (isGolf) {
@@ -77,12 +65,7 @@ const Seasons: React.FC<SeasonsProps> = ({ leagueId, sportLeague }) => {
             if (stateRes.ok) {
               const sleeperState = await stateRes.json();
               if (sleeperState) {
-                const currentSeason =
-                  sleeperState.season ??
-                  sleeperState.year ??
-                  sleeperState.seasonId ??
-                  sleeperState.current_season ??
-                  null;
+                const currentSeason = sleeperState.season;
                 if (currentSeason != null) seasonSet.add(String(currentSeason));
               }
             }
