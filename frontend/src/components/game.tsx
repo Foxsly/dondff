@@ -503,12 +503,12 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
           {players.map((player) =>
             player.boxStatus === 'available' || player.boxStatus === 'selected' ? (
               <div className="list-player" key={player.playerId}>
-                {player.playerName} {!isGolf && <span className="status">{player.matchup?.team} {player.injuryStatus}</span>}<br />
+                {player.playerName}<br />
                 {renderPlayerDetails(player)}
               </div>
             ) : (
               <div className="list-player eliminated" key={player.playerId}>
-                {player.playerName} {!isGolf && <span className="status">{player.matchup?.team} {player.boxStatus}</span>}<br />
+                {player.playerName} <span className="status">{player.boxStatus}</span><br />
                 {renderPlayerDetails(player)}
               </div>
             )
