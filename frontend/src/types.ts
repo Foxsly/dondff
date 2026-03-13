@@ -1,5 +1,7 @@
 // ─── Domain types shared across components ────────────────────────────────────
 
+export type SportLeague = 'NFL' | 'GOLF';
+
 export interface User {
   id?: string;
   userId?: string;
@@ -11,12 +13,24 @@ export interface League {
   id?: string;
   leagueId?: string;
   name?: string;
-  leagueName?: string;
   role?: string;
   membershipRole?: string;
   userRole?: string;
   currentSeason?: string | number;
   currentWeek?: string | number;
+  sportLeague?: SportLeague;
+}
+
+export interface LeagueSettings {
+  leagueSettingsId: string;
+  leagueId: string;
+  scoringType: string;
+}
+
+export interface LeaguePosition {
+  leagueSettingsId: string;
+  position: string;
+  poolSize: number;
 }
 
 export interface LeagueMember {

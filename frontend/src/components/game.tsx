@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { getCurrentUser } from "../api/auth";
-import type { TeamUser, GameBox, GamePlayer, GameOffer, LineUpSlot } from '../types';
+import React, {useCallback, useEffect, useState} from 'react';
+import {useLocation, useNavigate} from 'react-router-dom';
+import {getCurrentUser} from "../api/auth";
+import type {GameBox, GameOffer, GamePlayer, League, LineUpSlot, SportLeague, TeamUser} from '../types';
+import {getPositionDisplayName} from './util';
 
 const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
@@ -31,13 +32,14 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
   const [lineUp, setLineUp] = useState<LineUpSlot[]>([]);
   const [thinking, setThinking] = useState(false);
   const [reset, setReset] = useState(false);
-  const [resetUsed, setResetUsed] = useState<Record<string, boolean>>({ RB: false, WR: false });
+  const [resetUsed, setResetUsed] = useState<Record<string, boolean>>({});
+  const [sportLeague, setSportLeague] = useState<SportLeague | undefined>(undefined);
+  const [error, setError] = useState("");
   const [teamId, setTeamId] = useState<string | null>(null);
   const hasEnsuredTeamRef = React.useRef(false);
   const hasSetupGameRef = React.useRef(false);
 
   useEffect(() => {
-    console.log("loadUserAndName useEffect", teamUser, getCurrentUser());
     const loadUserAndName = async () => {
       try {
         if (teamUser) {
@@ -53,6 +55,25 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
       }
     };
     loadUserAndName();
+
+    // Fetch league settings to determine sport
+    /* TODO - we make this call so many times in the lifespan of the app. Once we get into the 'context' for
+    *  a league, we should consider using react constructs to pass the sportLeague down into child components, so
+    * that we're only making this call in one spot rather than multiple times */
+    if (leagueId) {
+      fetch(`${API_BASE}/leagues/${leagueId}`, { credentials: "include" })
+        .then((res) => {
+          if (!res.ok) throw new Error(`Failed to load league (status ${res.status})`);
+          return res.json();
+        })
+        .then((league: League) => {
+          setSportLeague(league.sportLeague);
+        })
+        .catch((err) => {
+          console.error("Failed to load league for game", err);
+          setError(err?.message ?? "Failed to load league");
+        });
+    }
   }, [teamUser, leagueId]);
 
   const ensureTeamForContext = useCallback(
@@ -148,6 +169,18 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
   const setupGame = useCallback(async () => {
     const entries = await fetchTeamEntries();
 
+    // Fetch team data to get player names for finished positions
+    let teamPlayers: any[] = [];
+    try {
+      const teamRes = await fetch(`${API_BASE}/teams/${teamId}`, { credentials: "include" });
+      if (teamRes.ok) {
+        const teamData = await teamRes.json();
+        teamPlayers = teamData.players || [];
+      }
+    } catch (e) {
+      console.warn("Failed to fetch team players", e);
+    }
+
     let selectedPosition: string | null = null;
     for (const entry of entries) {
       if (entry.status !== 'finished') {
@@ -163,12 +196,27 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
 
     setPosition(selectedPosition);
 
-    const initialLineup: LineUpSlot[] = entries.map((entry: any) => ({
-      position: entry.position,
-      playerName: entry.playerName || 'awaiting game...',
-      complete: entry.status === 'finished',
-    }));
+    const initialLineup: LineUpSlot[] = entries.map((entry: any) => {
+      const player = teamPlayers.find((p: any) => p.position === entry.position);
+      return {
+        position: entry.position,
+        playerName: entry.status === 'finished' && player ? player.playerName : 'awaiting game...',
+        complete: entry.status === 'finished',
+      };
+    });
     setLineUp(initialLineup);
+
+    // Initialize resetUsed for all positions
+    const initialResetUsed: Record<string, boolean> = {};
+    entries.forEach((entry: any) => { initialResetUsed[entry.position] = false; });
+    setResetUsed((prev) => {
+      // Preserve any already-used resets
+      const merged = { ...initialResetUsed };
+      for (const key of Object.keys(prev)) {
+        if (prev[key]) merged[key] = true;
+      }
+      return merged;
+    });
 
     const getCasesResponse = await fetch(`${API_BASE}/teams/${teamId}/cases?position=${selectedPosition}`, {
       method: "GET",
@@ -429,8 +477,25 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
     }
   };
 
+  const isGolf = sportLeague === 'GOLF';
+
+  const renderPlayerDetails = (player: GamePlayer) => {
+    if (isGolf) {
+      return (
+        <>
+          <span className="proj">Proj: {player.projectedPoints}</span>
+        </>
+      );
+    }
+    return (
+      <>
+        <span className="status">{player.matchup?.team} {player.injuryStatus}</span><br />
+        <span className="proj">Proj: {player.projectedPoints} Opp: {player.matchup?.opponent}</span>
+      </>
+    );
+  };
+
   const renderPlayerList = () => {
-    console.log("rendering player list", players);
     if (players) {
       return (
         <div className="display-cases">
@@ -438,13 +503,13 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
           {players.map((player) =>
             player.boxStatus === 'available' || player.boxStatus === 'selected' ? (
               <div className="list-player" key={player.playerId}>
-                {player.playerName} <span className="status">{player.matchup?.team} {player.injuryStatus}</span><br />
-                <span className="proj">Proj: {player.projectedPoints} Opp: {player.matchup?.opponent}</span>
+                {player.playerName}<br />
+                {renderPlayerDetails(player)}
               </div>
             ) : (
               <div className="list-player eliminated" key={player.playerId}>
-                {player.playerName} <span className="status">{player.matchup?.team} {player.boxStatus}</span><br />
-                <span className="proj">Proj: {player.projectedPoints} Opp: {player.matchup?.opponent}</span>
+                {player.playerName} <span className="status">{player.boxStatus}</span><br />
+                {renderPlayerDetails(player)}
               </div>
             )
           )}
@@ -485,8 +550,13 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
         <div className="action-box">
           <div className="offer-box">The Banker offers you:
             <div className="list-player">
-              {offer.playerName} <span className="status">{offer.matchup?.team} {offer.injuryStatus}</span><br />
-              <span className="proj">Proj: {offer.projectedPoints} Opp: {offer.matchup?.opponent}</span>
+              {offer.playerName}
+              {isGolf ? (
+                <><br /><span className="proj">Proj: {offer.projectedPoints}</span></>
+              ) : (
+                <><span className="status"> {offer.matchup?.team} {offer.injuryStatus}</span><br />
+                <span className="proj">Proj: {offer.projectedPoints} Opp: {offer.matchup?.opponent}</span></>
+              )}
             </div>
           </div>
           <div className="action-buttons">
@@ -553,9 +623,19 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
     }
   };
 
+  if (error) {
+    return (
+      <div className="p-4">
+        <h2 className="text-2xl font-bold">Something went wrong</h2>
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <h3>Current User: {currentName}</h3>
+      {position && <h4>Position: {getPositionDisplayName(position, sportLeague)}</h4>}
       <div className="game">
         <div className="board">{renderCases()}</div>
         <div className="side">
@@ -567,7 +647,7 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
         <div className="contestant-card">
           <p>{currentName}</p>
           {lineUp.map((lineUpData, index) => (
-            <p key={index}><b>{lineUpData.position}:</b> {lineUpData.playerName}</p>
+            <p key={index}><b>{getPositionDisplayName(lineUpData.position, sportLeague)}:</b> {lineUpData.playerName}</p>
           ))}
         </div>
       </div>

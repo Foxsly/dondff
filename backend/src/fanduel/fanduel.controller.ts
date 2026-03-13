@@ -12,7 +12,7 @@ export class FanduelController {
   constructor(private readonly fanduelService: FanduelService) {}
 
   @TypedRoute.Get('GOLF/events')
-  getGolfEvents() {
+  async getGolfEvents() {
     return this.fanduelService.getGolfEvents();
   }
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Breadcrumbs from "./breadcrumbs";
 import { getCurrentUser } from "../api/auth";
-import type { User, League } from "../types";
+import type { User, League, SportLeague } from "../types";
 
 const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
@@ -14,6 +14,7 @@ const Dashboard: React.FC = () => {
   const [newLeague, setNewLeague] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [sportLeague, setSportLeague] = useState<SportLeague>("NFL");
   const [showJoinForm, setShowJoinForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -93,7 +94,7 @@ const Dashboard: React.FC = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, sportLeague }),
       });
 
       if (!createRes.ok) {
@@ -134,6 +135,7 @@ const Dashboard: React.FC = () => {
       }
 
       setNewLeague("");
+      setSportLeague("NFL");
       setShowCreateForm(false);
     } catch (err: any) {
       console.error("Failed to create league", err);
@@ -231,9 +233,16 @@ const Dashboard: React.FC = () => {
             key={league.id || league.leagueId}
             className="flex items-center justify-between p-4 mb-2 rounded bg-[#3a465b]/50"
           >
-            <p className="font-semibold">
-              {league.name || league.leagueName || "Unnamed League"}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="font-semibold">
+                {league.name || "Unnamed League"}
+              </p>
+              {league.sportLeague && (
+                <span className="text-xs px-2 py-0.5 rounded bg-[#00ceb8]/20 text-[#00ceb8]">
+                  {league.sportLeague}
+                </span>
+              )}
+            </div>
             <p>{role === "admin" ? "Admin" : role}</p>
             <button
               className="px-3 py-1 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
@@ -255,16 +264,26 @@ const Dashboard: React.FC = () => {
       </div>
 
       {showCreateForm && (
-        <div className="flex mt-4 space-x-2">
-          <input
-            className="flex-1 p-2 bg-transparent border rounded border-[#3a465b]"
-            placeholder="Enter League Name..."
-            value={newLeague}
-            onChange={(e) => setNewLeague(e.target.value)}
-          />
-          <button className="btn-primary" onClick={addLeague}>
-            Submit
-          </button>
+        <div className="mt-4 space-y-2">
+          <div className="flex space-x-2">
+            <input
+              className="flex-1 p-2 bg-transparent border rounded border-[#3a465b]"
+              placeholder="Enter League Name..."
+              value={newLeague}
+              onChange={(e) => setNewLeague(e.target.value)}
+            />
+            <select
+              className="p-2 bg-[#102131] border rounded border-[#3a465b] text-white"
+              value={sportLeague}
+              onChange={(e) => setSportLeague(e.target.value as SportLeague)}
+            >
+              <option value="NFL">NFL</option>
+              <option value="GOLF">Golf</option>
+            </select>
+            <button className="btn-primary" onClick={addLeague}>
+              Submit
+            </button>
+          </div>
         </div>
       )}
 

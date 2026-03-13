@@ -3,6 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import Accordion from "./accordion";
 import Breadcrumbs from "./breadcrumbs";
 import { getCurrentUser } from "../api/auth";
+import type { SportLeague } from "../types";
+
+interface GolfEvent {
+  id: string;
+  name: string;
+}
 
 const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
@@ -13,8 +19,11 @@ const Weeks: React.FC = () => {
   const navigate = useNavigate();
 
   const [weeks, setWeeks] = useState<string[]>([]);
+  const [weekLabels, setWeekLabels] = useState<Record<string, string>>({});
   const [actualNFLWeek, setActualNFLWeek] = useState<number | null>(null);
+  const [sportLeague, setSportLeague] = useState<SportLeague | undefined>(undefined);
   const [leagueName, setLeagueName] = useState("");
+  const [golfEvents, setGolfEvents] = useState<GolfEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -39,25 +48,25 @@ const Weeks: React.FC = () => {
           return;
         }
 
-        const [leagueRes, teamsRes, stateRes] = await Promise.all([
+        const [leagueRes, teamsRes] = await Promise.all([
           fetch(`${API_BASE}/leagues/${leagueId}`, { credentials: "include" }),
           fetch(`${API_BASE}/teams`, { credentials: "include" }),
-          fetch(`${API_BASE}/sleeper/state`, { credentials: "include" }),
         ]);
 
         if (!leagueRes.ok) throw new Error(`Failed to load league (status ${leagueRes.status})`);
         if (!teamsRes.ok) throw new Error(`Failed to load teams (status ${teamsRes.status})`);
-        if (!stateRes.ok) throw new Error(`Failed to load Sleeper state (status ${stateRes.status})`);
 
         const leagueData = await leagueRes.json();
         const teams = await teamsRes.json();
-        const sleeperState = await stateRes.json();
 
         if (cancelled) return;
 
+        const sport: SportLeague = leagueData.sportLeague;
+        setSportLeague(sport);
         setLeagueName(leagueData?.name || "");
 
         const weekSet = new Set<string>();
+        const labels: Record<string, string> = {};
 
         if (Array.isArray(teams)) {
           const leagueTeams = teams.filter((team: any) => {
@@ -74,14 +83,38 @@ const Weeks: React.FC = () => {
           });
         }
 
-        if (sleeperState) {
-          const currentWeek = sleeperState.week;
-          if (currentWeek != null) {
-            setActualNFLWeek(Number(currentWeek));
-            weekSet.add(String(currentWeek));
+        if (sport === 'GOLF') {
+          try {
+            const eventRes = await fetch(`${API_BASE}/fanduel/GOLF/events`, { credentials: "include" });
+            if (eventRes.ok) {
+              const events: GolfEvent[] = await eventRes.json();
+              if (Array.isArray(events) && events.length > 0) {
+                setGolfEvents(events);
+              }
+            }
+          } catch (e) {
+            console.warn("Failed to load golf events", e);
+          }
+        } else {
+          // For NFL, fetch from Sleeper
+          try {
+            const stateRes = await fetch(`${API_BASE}/sleeper/state`, { credentials: "include" });
+            if (stateRes.ok) {
+              const sleeperState = await stateRes.json();
+              if (sleeperState) {
+                const currentWeek = sleeperState.week;
+                if (currentWeek != null) {
+                  setActualNFLWeek(Number(currentWeek));
+                  weekSet.add(String(currentWeek));
+                }
+              }
+            }
+          } catch (e) {
+            console.warn("Failed to load Sleeper state", e);
           }
         }
 
+        setWeekLabels(labels);
         const derivedWeeks = Array.from(weekSet);
         derivedWeeks.sort((a, b) => Number(a) - Number(b));
         setWeeks(derivedWeeks);
@@ -103,6 +136,16 @@ const Weeks: React.FC = () => {
       cancelled = true;
     };
   }, [leagueId, season, navigate]);
+
+  const handleCreateGolfWeek = (event: GolfEvent) => {
+    const existingWeeks = weeks.map(Number);
+    const nextWeek = existingWeeks.length > 0 ? Math.max(...existingWeeks) + 1 : 1;
+    const weekStr = String(nextWeek);
+
+    setWeeks((prev) => [...prev, weekStr].sort((a, b) => Number(a) - Number(b)));
+    setWeekLabels((prev) => ({ ...prev, [weekStr]: event.name }));
+    setGolfEvents((prev) => prev.filter((e) => e.id !== event.id));
+  };
 
   if (loading) {
     return (
@@ -148,14 +191,34 @@ const Weeks: React.FC = () => {
         {weeks.map((w) => (
           <Accordion
             key={w}
-            weekDoc={{ week: w }}
+            weekDoc={{ week: w, label: weekLabels[w] }}
             leagueId={leagueId!}
             season={season!}
             actualWeek={actualNFLWeek}
+            sportLeague={sportLeague}
           />
         ))}
       </div>
-      <div>Current NFL Week: {actualNFLWeek ?? "Unknown"}</div>
+      {sportLeague === 'GOLF' && golfEvents.length > 0 && (
+        <div className="space-y-2 mt-4">
+          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
+            Available Tournaments
+          </h3>
+          {golfEvents.map((event) => (
+            <button
+              key={event.id}
+              onClick={() => handleCreateGolfWeek(event)}
+              className="w-full text-left px-4 py-3 rounded bg-[#2a3447] hover:bg-[#344054] border border-[#3a465b] transition-colors"
+            >
+              <span className="text-white font-medium">{event.name}</span>
+              <span className="text-gray-400 text-sm ml-2">— Create week</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {sportLeague === 'NFL' && (
+        <div>Current NFL Week: {actualNFLWeek ?? "Unknown"}</div>
+      )}
     </div>
   );
 };

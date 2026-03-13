@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import Seasons from "./seasons";
 import Breadcrumbs from "./breadcrumbs";
 import { getCurrentUser } from "../api/auth";
-import type { League as LeagueType, LeagueMember } from "../types";
+import type { League as LeagueType, LeagueMember, LeagueSettings, SportLeague } from "../types";
 
 const API_BASE =
   (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
@@ -15,6 +15,7 @@ const League: React.FC = () => {
 
   const [league, setLeague] = useState<LeagueType>({});
   const [member, setMember] = useState<LeagueMember | null>(null);
+  const [sportLeague, setSportLeague] = useState<SportLeague | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -54,6 +55,8 @@ const League: React.FC = () => {
 
         if (cancelled) return;
 
+        const sport: SportLeague = leagueData.sportLeague;
+        setSportLeague(sport);
         setLeague(leagueData || {});
 
         if (Array.isArray(users)) {
@@ -120,7 +123,12 @@ const League: React.FC = () => {
         <p>Lineup Status: {member.lineupStatus || "Not set"}</p>
       )}
       <h4 className="text-lg font-semibold">Seasons:</h4>
-      <Seasons leagueId={leagueId!} />
+      {sportLeague && (
+        <span className="text-sm px-2 py-0.5 rounded bg-[#00ceb8]/20 text-[#00ceb8]">
+          {sportLeague}
+        </span>
+      )}
+      <Seasons leagueId={leagueId!} sportLeague={sportLeague} />
       {member?.role === "player" &&
         league.currentSeason &&
         league.currentWeek && (

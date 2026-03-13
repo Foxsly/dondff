@@ -1,4 +1,5 @@
 import { FanduelService } from '@/fanduel/fanduel.service';
+import { SportLeague } from '@/leagues/entities/league.entity';
 import {
   IPlayerProjection,
   IPlayerStats,
@@ -25,7 +26,12 @@ export class PlayerStatsService {
     position: string,
     season: number,
     week: number,
+    sportLeague: SportLeague = 'NFL',
   ): Promise<PlayerProjectionResponse> {
+    if (sportLeague === 'GOLF') {
+      return this.getGolfProjections();
+    }
+
     const isPostseason = week > 18;
     //This currently works because the two APIs share a BetGenius ID. If we add more sources, this could become problematic.
     if (isPostseason) {
@@ -108,6 +114,18 @@ export class PlayerStatsService {
     })) as IPlayerStats[];
   }
 
+  async getGolfProjections(): Promise<PlayerProjectionResponse> {
+    const golfProjections = await this.fanduelService.getGolfProjections();
+    return golfProjections.map((projection) => ({
+      playerId: `${projection.player.numberFireId}`,
+      name: projection.player.name,
+      position: 'GOLF_PLAYER' as PlayerPosition,
+      projectedPoints: projection.fantasy,
+      injuryStatus: null,
+      team: '',
+    }));
+  }
+
   getTeamAndOpponentForPlayer(playerId: string): PlayerTeams {
     const matchup = this.playerTeams.get(playerId);
     if(!matchup) {
@@ -120,7 +138,7 @@ export class PlayerStatsService {
   }
 
   private setPlayerTeamMappings(projection: IPlayerProjection) {
-    this.playerTeams.set(projection.playerId, {team: projection.team, opponent: projection.oppTeam});
+    this.playerTeams.set(projection.playerId, {team: projection.team, opponent: projection.oppTeam!});
   }
 
   private mapPosition(position:string): PlayerPosition {
