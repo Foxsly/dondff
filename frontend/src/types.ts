@@ -1,6 +1,6 @@
 // ─── Domain types shared across components ────────────────────────────────────
 
-export type SportLeague = 'NFL' | 'GOLF';
+export type SportLeague = 'NFL' | 'GOLF' | 'NBA' | 'NHL' | 'MLB';
 
 export interface User {
   id?: string;

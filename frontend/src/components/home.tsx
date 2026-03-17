@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DisplayGame from './cases';
 import { getPlayers } from './util';
+import { nflConfig } from '../sports/nfl';
 import type { PoolPlayer } from '../types';
 import hero from './images/DOND.jpg';
 
@@ -10,6 +11,9 @@ const Home: React.FC = () => {
   const [type, setType] = useState('');
   const [pool, setPool] = useState<PoolPlayer[]>([]);
   const navigate = useNavigate();
+
+  const positions = nflConfig.quickPlayPositions ?? [];
+  const weekCount = nflConfig.quickPlayWeekCount ?? 21;
 
   const handleStart = (event: React.FormEvent) => {
     event.preventDefault();
@@ -28,7 +32,7 @@ const Home: React.FC = () => {
           className="p-2 rounded bg-gray-800 border border-gray-700"
         >
           <option></option>
-          {Array.from({ length: 21 }, (_, i) => (
+          {Array.from({ length: weekCount }, (_, i) => (
             <option key={i + 1} value={i + 1}>
               {i + 1}
             </option>
@@ -43,8 +47,9 @@ const Home: React.FC = () => {
           className="p-2 rounded bg-gray-800 border border-gray-700"
         >
           <option></option>
-          <option value="WR">WR</option>
-          <option value="RB">RB</option>
+          {positions.map((pos) => (
+            <option key={pos} value={pos}>{pos}</option>
+          ))}
         </select>
       </label>
       <button

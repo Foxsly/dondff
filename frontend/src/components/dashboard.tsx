@@ -2,11 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Breadcrumbs from "./breadcrumbs";
 import { getCurrentUser } from "../api/auth";
+import { createLeague, addLeagueUser } from "../api/leagues";
+import { getUserLeagues } from "../api/users";
+import { getAllSports } from "../sports/registry";
+import LoadingSpinner from "./ui/LoadingSpinner";
+import ErrorDisplay from "./ui/ErrorDisplay";
 import type { User, League, SportLeague } from "../types";
-
-const API_BASE =
-  (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
-  "http://localhost:3001"; // fallback only for local dev
 
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -20,6 +21,7 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
+  const sports = getAllSports();
 
   useEffect(() => {
     let cancelled = false;
@@ -29,33 +31,19 @@ const Dashboard: React.FC = () => {
         const current = await getCurrentUser();
         const userId = current && (current.id || current.userId);
         if (!userId) {
-          console.warn("No user id found on current user", current);
-          if (!cancelled) {
-            navigate("/");
-          }
+          if (!cancelled) navigate("/");
           return;
         }
 
         if (!current) {
-          if (!cancelled) {
-            navigate("/");
-          }
+          if (!cancelled) navigate("/");
           return;
         }
 
         if (cancelled) return;
         setUser({ ...current, id: current.id || current.userId });
 
-        const res = await fetch(
-          `${API_BASE}/users/${userId}/leagues`,
-          { credentials: "include" }
-        );
-
-        if (!res.ok) {
-          throw new Error(`Failed to load leagues (status ${res.status})`);
-        }
-
-        const data = await res.json();
+        const data = await getUserLeagues(userId);
         if (!cancelled) {
           setLeagues(Array.isArray(data) ? data : []);
         }
@@ -73,63 +61,32 @@ const Dashboard: React.FC = () => {
 
     load();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [navigate]);
 
-  const addLeague = async () => {
+  const addLeagueHandler = async () => {
     const name = newLeague.trim();
     if (!name) return;
     const userId = user && (user.id || user.userId);
-    if (!userId) {
-      console.warn("Cannot create league: user is not loaded");
-      return;
-    }
+    if (!userId) return;
 
     try {
       setError("");
 
-      const createRes = await fetch(`${API_BASE}/leagues`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ name, sportLeague }),
-      });
-
-      if (!createRes.ok) {
-        throw new Error(`Failed to create league (status ${createRes.status})`);
-      }
-
-      const createdLeague: League = await createRes.json();
+      const createdLeague = await createLeague({ name, sportLeague });
 
       try {
-        const memberRes = await fetch(
-          `${API_BASE}/leagues/${createdLeague.id || createdLeague.leagueId}/users`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ userId, role: "admin" }),
-          }
+        await addLeagueUser(
+          (createdLeague.id || createdLeague.leagueId)!,
+          { userId, role: "admin" }
         );
-
-        if (!memberRes.ok) {
-          console.error("Failed to add user to league after creation", memberRes.status);
-        }
       } catch (err) {
         console.error("Error while adding user to league", err);
       }
 
       try {
-        const leaguesRes = await fetch(
-          `${API_BASE}/users/${userId}/leagues`,
-          { credentials: "include" }
-        );
-        if (leaguesRes.ok) {
-          const data = await leaguesRes.json();
-          setLeagues(Array.isArray(data) ? data : []);
-        }
+        const data = await getUserLeagues(userId);
+        setLeagues(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to refresh leagues list", err);
       }
@@ -148,37 +105,16 @@ const Dashboard: React.FC = () => {
     if (!code) return;
 
     const userId = user && (user.id || user.userId);
-    if (!userId) {
-      console.warn("Cannot join league: user is not loaded");
-      return;
-    }
+    if (!userId) return;
 
     try {
       setError("");
 
-      const memberRes = await fetch(
-        `${API_BASE}/leagues/${code}/users`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ userId, role: "player" }),
-        }
-      );
-
-      if (!memberRes.ok) {
-        throw new Error(`Failed to join league (status ${memberRes.status})`);
-      }
+      await addLeagueUser(code, { userId, role: "player" });
 
       try {
-        const leaguesRes = await fetch(
-          `${API_BASE}/users/${userId}/leagues`,
-          { credentials: "include" }
-        );
-        if (leaguesRes.ok) {
-          const data = await leaguesRes.json();
-          setLeagues(Array.isArray(data) ? data : []);
-        }
+        const data = await getUserLeagues(userId);
+        setLeagues(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to refresh leagues list after join", err);
       }
@@ -195,7 +131,7 @@ const Dashboard: React.FC = () => {
     return (
       <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
         <Breadcrumbs items={[{ label: "Dashboard" }]} />
-        <p>Loading your dashboard...</p>
+        <LoadingSpinner message="Loading your dashboard..." />
       </div>
     );
   }
@@ -204,11 +140,7 @@ const Dashboard: React.FC = () => {
     return (
       <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
         <Breadcrumbs items={[{ label: "Dashboard" }]} />
-        <h2 className="text-2xl font-bold">Something went wrong</h2>
-        <p className="text-red-500">{error}</p>
-        <button className="btn-primary" onClick={() => navigate("/")}>
-          Return to Sign In
-        </button>
+        <ErrorDisplay message={error} action={{ label: "Return to Sign In", onClick: () => navigate("/") }} />
       </div>
     );
   }
@@ -277,10 +209,11 @@ const Dashboard: React.FC = () => {
               value={sportLeague}
               onChange={(e) => setSportLeague(e.target.value as SportLeague)}
             >
-              <option value="NFL">NFL</option>
-              <option value="GOLF">Golf</option>
+              {sports.map((s) => (
+                <option key={s.key} value={s.key}>{s.displayName}</option>
+              ))}
             </select>
-            <button className="btn-primary" onClick={addLeague}>
+            <button className="btn-primary" onClick={addLeagueHandler}>
               Submit
             </button>
           </div>

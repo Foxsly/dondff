@@ -1,19 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getCurrentUser } from "../api/auth";
-import type { SportLeague } from "../types";
-
-const API_BASE =
-  (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
-  "http://localhost:3001"; // fallback only for local dev
+import { getLeagueTeams } from "../api/leagues";
+import { useLeague } from "../contexts/LeagueContext";
+import LoadingSpinner from "./ui/LoadingSpinner";
 
 interface SeasonsProps {
   leagueId: string;
-  sportLeague?: SportLeague;
 }
 
-const Seasons: React.FC<SeasonsProps> = ({ leagueId, sportLeague }) => {
+const Seasons: React.FC<SeasonsProps> = ({ leagueId }) => {
   const navigate = useNavigate();
+  const { sportConfig } = useLeague();
 
   const [seasons, setSeasons] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,43 +33,24 @@ const Seasons: React.FC<SeasonsProps> = ({ leagueId, sportLeague }) => {
 
         const userId = current.id || current.userId;
         if (!userId) {
-          console.warn("No user id found on current user", current);
           if (!cancelled) navigate("/");
           return;
         }
 
-        const isGolf = sportLeague === 'GOLF';
-
-        const teamsRes = await fetch(`${API_BASE}/teams`, { credentials: "include" });
-        if (!teamsRes.ok) throw new Error(`Failed to load teams (status ${teamsRes.status})`);
-        const teams = await teamsRes.json();
+        const teams = await getLeagueTeams(leagueId);
 
         if (cancelled) return;
 
         const seasonSet = new Set<string>();
 
         if (Array.isArray(teams)) {
-            const leagueTeams = teams.filter((team: any) => team.leagueId === leagueId);
-            leagueTeams.forEach((team: any) => seasonSet.add(String(team.seasonYear)));
+          const leagueTeams = teams.filter((team: any) => team.leagueId === leagueId);
+          leagueTeams.forEach((team: any) => seasonSet.add(String(team.seasonYear)));
         }
 
-        if (isGolf) {
-          // For golf, use the current year as the season
-          seasonSet.add(String(new Date().getFullYear()));
-        } else {
-          // For NFL, fetch from Sleeper
-          try {
-            const stateRes = await fetch(`${API_BASE}/sleeper/state`, { credentials: "include" });
-            if (stateRes.ok) {
-              const sleeperState = await stateRes.json();
-              if (sleeperState) {
-                const currentSeason = sleeperState.season;
-                if (currentSeason != null) seasonSet.add(String(currentSeason));
-              }
-            }
-          } catch (e) {
-            console.warn("Failed to load Sleeper state", e);
-          }
+        if (sportConfig) {
+          const currentSeason = await sportConfig.fetchCurrentSeason();
+          if (currentSeason != null) seasonSet.add(currentSeason);
         }
 
         const derivedSeasons = Array.from(seasonSet);
@@ -91,15 +70,13 @@ const Seasons: React.FC<SeasonsProps> = ({ leagueId, sportLeague }) => {
       setLoading(false);
     }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [leagueId, navigate]);
+    return () => { cancelled = true; };
+  }, [leagueId, navigate, sportConfig]);
 
   if (loading) {
     return (
       <div className="mx-auto p-4 space-y-4">
-        <p>Loading seasons...</p>
+        <LoadingSpinner message="Loading seasons..." />
       </div>
     );
   }
