@@ -92,7 +92,7 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
         if (sportConfig?.sharedProjectionPool) {
           // Shared pool — fetch once, reuse for all positions
           try {
-            const data = await getProjections(season, week, effectivePositions[0].position);
+            const data = await getProjections(season, week, effectivePositions[0].position, sportConfig.key);
             const map = new Map<string, number>();
             if (Array.isArray(data)) {
               data.forEach((entry: any) => {
@@ -108,7 +108,7 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
         } else {
           // Per-position projections
           const projectionPromises = effectivePositions.map((pos) =>
-            getProjections(season, week, pos.position)
+            getProjections(season, week, pos.position, sportConfig?.key)
               .then((data) => {
                 const map = new Map<string, number>();
                 if (Array.isArray(data)) {

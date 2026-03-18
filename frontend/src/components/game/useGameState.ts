@@ -26,6 +26,7 @@ export const useGameState = ({ leagueId, season, week, teamUser }: UseGameStateP
   const [sportConfig, setSportConfig] = useState<SportConfig | null>(null);
   const [error, setError] = useState("");
   const [teamId, setTeamId] = useState<string | null>(null);
+  const [setupTrigger, setSetupTrigger] = useState(0);
   const hasEnsuredTeamRef = useRef(false);
   const hasSetupGameRef = useRef(false);
 
@@ -191,7 +192,7 @@ export const useGameState = ({ leagueId, season, week, teamUser }: UseGameStateP
     hasSetupGameRef.current = true;
 
     (async () => { await setupGame(); })();
-  }, [teamId, setupGame]);
+  }, [teamId, setupGame, setupTrigger]);
 
   // Handle eliminated cases (update local state)
   const handleEliminatedCases = useCallback(
@@ -320,6 +321,7 @@ export const useGameState = ({ leagueId, season, week, teamUser }: UseGameStateP
       setCases(null);
       setCaseSelected(null);
       hasSetupGameRef.current = false;
+      setSetupTrigger((n) => n + 1);
     } else {
       throw new Error("No more incomplete positions available");
     }
