@@ -27,6 +27,14 @@ export class EventsService {
     return eventGroup;
   }
 
+  async getOrCreateEventGroup(name: string): Promise<EventGroup> {
+    const existing = await this.eventsRepository.findEventGroupByName(name);
+    if (existing) {
+      return existing;
+    }
+    return this.createEventGroup({ name });
+  }
+
   async updateEventGroup(id: string, dto: UpdateEventGroupDto): Promise<EventGroup> {
     const updated = await this.eventsRepository.updateEventGroup(id, dto);
     if (!updated) {

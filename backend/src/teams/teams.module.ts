@@ -11,6 +11,7 @@ import { TeamsController } from './teams.controller';
 import { db } from '@/infrastructure/database/database';
 import { DatabaseTeamsRepository, TeamsRepository } from './teams.repository';
 import { DatabaseModule } from '@/infrastructure/database/database.module';
+import { EventsModule } from '@/events/events.module';
 
 @Module({
   controllers: [TeamsController],
@@ -29,6 +30,6 @@ import { DatabaseModule } from '@/infrastructure/database/database.module';
       useClass: DatabaseTeamsEntryRepository,
     }
   ],
-  imports: [DatabaseModule, LeaguesModule, PlayerStatsModule],
+  imports: [DatabaseModule, LeaguesModule, PlayerStatsModule, EventsModule],
 })
 export class TeamsModule {}

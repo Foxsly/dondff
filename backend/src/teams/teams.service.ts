@@ -7,6 +7,7 @@ import {ITeamPlayer, TeamPlayer} from '@/teams/entities/team-player.entity';
 import {ITeamStatus} from '@/teams/entities/team-status.entity';
 import {TeamsEntryRepository} from '@/teams/teams-entry.repository';
 import {TeamsRepository} from '@/teams/teams.repository';
+import {EventsService} from '@/events/events.service';
 import {Injectable, NotFoundException} from '@nestjs/common';
 import {
     ITeamEntry,
@@ -34,10 +35,30 @@ export class TeamsService {
     private readonly teamsEntryRepository: TeamsEntryRepository,
     private readonly leaguesService: LeaguesService,
     private readonly playerStatsService: PlayerStatsService,
+    private readonly eventsService: EventsService,
   ) {}
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
-    let createdTeam: Team = await this.teamsRepository.create(createTeamDto);
+    let eventGroupId: string;
+    if (createTeamDto.week) {
+      const eventGroup = await this.eventsService.getOrCreateEventGroup(
+        `NFL Week ${createTeamDto.week}`,
+      );
+      eventGroupId = eventGroup.eventGroupId;
+    } else if (createTeamDto.eventGroupId) {
+      eventGroupId = createTeamDto.eventGroupId;
+    } else {
+      throw new Error('Either week or eventGroupId must be provided');
+    }
+
+    const teamData = {
+      leagueId: createTeamDto.leagueId,
+      userId: createTeamDto.userId,
+      seasonYear: createTeamDto.seasonYear,
+      eventGroupId,
+    };
+
+    let createdTeam: Team = await this.teamsRepository.create(teamData);
     const league = await this.leaguesService.findOne(createdTeam.leagueId);
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       createdTeam.leagueId,
@@ -55,7 +76,7 @@ export class TeamsService {
         position.position,
         leagueSettings,
         league.sportLeague,
-        this.getNumberOfCases(createTeamDto.week),
+        this.getNumberOfCases(createTeamDto.week ?? await this.getWeekNumberFromEventGroup(eventGroupId)),
       );
     }
 
@@ -226,7 +247,7 @@ export class TeamsService {
       position,
       leagueSettings,
       league.sportLeague,
-      this.getNumberOfCases(team.week),
+      this.getNumberOfCases(await this.getWeekNumberFromEventGroup(team.eventGroupId)),
     );
   }
 
@@ -237,7 +258,7 @@ export class TeamsService {
     sportLeague: SportLeague,
     numberOfCases: number = 10,
   ) {
-    let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(position, team.seasonYear, team.week, sportLeague,);
+    let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(position, team.seasonYear, await this.getWeekNumberFromEventGroup(team.eventGroupId), sportLeague,);
     let teamEntry: ITeamEntry = await this.getOrCreateTeamEntry(
       team.teamId,
       position,
@@ -306,7 +327,7 @@ export class TeamsService {
     const projections = await this.playerStatsService.getPlayerProjections(
       teamEntry.position,
       team.seasonYear,
-      team.week,
+      await this.getWeekNumberFromEventGroup(team.eventGroupId),
       league.sportLeague,
     );
 
@@ -530,5 +551,10 @@ export class TeamsService {
       throw new Error(`Invalid week format: ${week}`);
     }
     return parseInt(match[1], 10);
+  }
+
+  async getWeekNumberFromEventGroup(eventGroupId: string): Promise<number> {
+    const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
+    return this.getWeekNumberFromString(eventGroup.name);
   }
 }

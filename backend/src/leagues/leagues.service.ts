@@ -9,13 +9,17 @@ import { ITeam } from '@/teams/entities/team.entity';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AddLeagueUserDto, ILeagueUser, UpdateLeagueUserDto } from './entities/league-user.entity';
 import { CreateLeagueDto, ILeague, League, UpdateLeagueDto } from './entities/league.entity';
+import { EventsService } from '@/events/events.service';
 
 const DEFAULT_LEAGUE_SETTINGS = {
   scoringType: 'PPR' as ScoringType,
 };
 @Injectable()
 export class LeaguesService {
-  constructor(private readonly leaguesRepository: LeaguesRepository) {}
+  constructor(
+    private readonly leaguesRepository: LeaguesRepository,
+    private readonly eventsService: EventsService,
+  ) {}
 
   async create(createLeagueDto: CreateLeagueDto): Promise<League> {
     let league = await this.leaguesRepository.createLeague(createLeagueDto);
@@ -132,16 +136,26 @@ export class LeaguesService {
 
   async getLeagueTeams(leagueId: string, season?: number, week?: number): Promise<ITeam[]> {
     let teams: ITeam[] = await this.leaguesRepository.findLeagueTeams(leagueId);
-    return Array.from(teams).filter((team) => {
+    return Array.from(teams).filter(async (team) => {
       let matches = true;
       if (season) {
         matches = matches && team.seasonYear == season;
       }
       if (week) {
-        matches = matches && team.week == week;
+        const eventGroup = await this.eventsService.findOneEventGroup(team.eventGroupId);
+        const teamWeek = this.getWeekNumberFromString(eventGroup.name);
+        matches = matches && teamWeek === week;
       }
       return matches;
     });
+  }
+
+  getWeekNumberFromString(week: string): number {
+    const match = week.match(/Week\s+(\d+)/);
+    if (!match) {
+      throw new Error(`Invalid week format: ${week}`);
+    }
+    return parseInt(match[1], 10);
   }
 
   async getPositionsForLeagueSettings(

@@ -13,6 +13,7 @@ export abstract class EventsRepository {
   abstract createEventGroup(dto: CreateEventGroupDto): Promise<EventGroup>;
   abstract findAllEventGroups(): Promise<EventGroup[]>;
   abstract findOneEventGroup(id: string): Promise<EventGroup | null>;
+  abstract findEventGroupByName(name: string): Promise<EventGroup | null>;
   abstract updateEventGroup(id: string, dto: UpdateEventGroupDto): Promise<EventGroup | null>;
   abstract deleteEventGroup(id: string): Promise<boolean>;
 
@@ -53,6 +54,15 @@ export class DatabaseEventsRepository extends EventsRepository {
       .selectFrom('eventGroup')
       .selectAll()
       .where('eventGroupId', '=', id)
+      .executeTakeFirst();
+    return row ? (row as EventGroup) : null;
+  }
+
+  async findEventGroupByName(name: string): Promise<EventGroup | null> {
+    const row = await this.db
+      .selectFrom('eventGroup')
+      .selectAll()
+      .where('name', '=', name)
       .executeTakeFirst();
     return row ? (row as EventGroup) : null;
   }

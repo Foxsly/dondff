@@ -103,13 +103,27 @@ async function seed() {
     if (existing) {
       console.log('  teams already seeded — skipping');
     } else {
+      // Create event groups for each week first
+      const eventGroupIds: Record<number, string> = {};
+      for (const week of WEEKS) {
+        const eventGroupId = crypto.randomUUID() as string;
+        eventGroupIds[week] = eventGroupId;
+        await db
+          .insertInto('eventGroup')
+          .values({
+            eventGroupId: eventGroupId,
+            name: `NFL Week ${week}`,
+          })
+          .execute();
+      }
+
       const teamRows = USERS.flatMap(({ userId }) =>
         WEEKS.map((week) => ({
-          teamId:     crypto.randomUUID() as string,
-          leagueId:   LEAGUE_ID,
+          teamId: crypto.randomUUID() as string,
+          leagueId: LEAGUE_ID,
           userId,
           seasonYear: SEASON_YEAR,
-          week,
+          eventGroupId: eventGroupIds[week],
         })),
       );
       await db.insertInto('team').values(teamRows).execute();
