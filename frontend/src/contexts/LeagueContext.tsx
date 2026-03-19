@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import type { League, LeaguePosition, SportLeague } from '../types';
-import type { SportConfig } from '../sports/types';
-import { getLeague, getLeaguePositions } from '../api/leagues';
-import { getSportConfig } from '../sports/registry';
+import React, {createContext, useContext, useEffect, useState} from 'react';
+import {getLeague, getLeaguePositions} from '../api/leagues';
+import {getSportConfig} from '../sports/registry';
+import type {SportConfig} from '../sports/types';
+import type {League, LeaguePosition} from '../types';
 
 interface LeagueContextValue {
   league: League | null;

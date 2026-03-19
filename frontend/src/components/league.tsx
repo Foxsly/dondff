@@ -97,7 +97,7 @@ const League: React.FC = () => {
         ]}
       />
       <h2 className="text-2xl font-bold">{league?.name}</h2>
-      <p>Access Code: {league?.id || leagueId}</p>
+      <p>Access Code: {leagueId}</p>
       {member?.role === "player" && (
         <p>Lineup Status: {member.lineupStatus || "Not set"}</p>
       )}

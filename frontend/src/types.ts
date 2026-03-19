@@ -10,12 +10,9 @@ export interface User {
 }
 
 export interface League {
-  id?: string;
   leagueId?: string;
   name?: string;
   role?: string;
-  membershipRole?: string;
-  userRole?: string;
   currentSeason?: string | number;
   currentWeek?: string | number;
   sportLeague?: SportLeague;

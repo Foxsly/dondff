@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, {useEffect, useState} from "react";
+import {useNavigate} from "react-router-dom";
+import {getCurrentUser} from "../api/auth";
+import {addLeagueUser, createLeague} from "../api/leagues";
+import {getUserLeagues} from "../api/users";
+import {getAllSports} from "../sports/registry";
+import type {League, SportLeague, User} from "../types";
 import Breadcrumbs from "./breadcrumbs";
-import { getCurrentUser } from "../api/auth";
-import { createLeague, addLeagueUser } from "../api/leagues";
-import { getUserLeagues } from "../api/users";
-import { getAllSports } from "../sports/registry";
-import LoadingSpinner from "./ui/LoadingSpinner";
 import ErrorDisplay from "./ui/ErrorDisplay";
-import type { User, League, SportLeague } from "../types";
+import LoadingSpinner from "./ui/LoadingSpinner";
 
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -29,7 +29,7 @@ const Dashboard: React.FC = () => {
     async function load() {
       try {
         const current = await getCurrentUser();
-        const userId = current && (current.id || current.userId);
+        const userId = current?.userId;
         if (!userId) {
           if (!cancelled) navigate("/");
           return;
@@ -41,7 +41,7 @@ const Dashboard: React.FC = () => {
         }
 
         if (cancelled) return;
-        setUser({ ...current, id: current.id || current.userId });
+        setUser({ ...current, id: current.userId });
 
         const data = await getUserLeagues(userId);
         if (!cancelled) {
@@ -67,7 +67,7 @@ const Dashboard: React.FC = () => {
   const addLeagueHandler = async () => {
     const name = newLeague.trim();
     if (!name) return;
-    const userId = user && (user.id || user.userId);
+    const userId = user?.userId;
     if (!userId) return;
 
     try {
@@ -76,10 +76,7 @@ const Dashboard: React.FC = () => {
       const createdLeague = await createLeague({ name, sportLeague });
 
       try {
-        await addLeagueUser(
-          (createdLeague.id || createdLeague.leagueId)!,
-          { userId, role: "admin" }
-        );
+        await addLeagueUser(createdLeague.leagueId!, { userId, role: "admin" });
       } catch (err) {
         console.error("Error while adding user to league", err);
       }
@@ -104,7 +101,7 @@ const Dashboard: React.FC = () => {
     const code = joinCode.trim();
     if (!code) return;
 
-    const userId = user && (user.id || user.userId);
+    const userId = user?.userId;
     if (!userId) return;
 
     try {
@@ -158,11 +155,9 @@ const Dashboard: React.FC = () => {
         </p>
       )}
       {leagues.map((league) => {
-        const role =
-          league.role || league.membershipRole || league.userRole || "Player";
-        return (
+          return (
           <div
-            key={league.id || league.leagueId}
+            key={league.leagueId}
             className="flex items-center justify-between p-4 mb-2 rounded bg-[#3a465b]/50"
           >
             <div className="flex items-center gap-2">
@@ -175,10 +170,10 @@ const Dashboard: React.FC = () => {
                 </span>
               )}
             </div>
-            <p>{role === "admin" ? "Admin" : role}</p>
+            <p>{league.role === "admin" ? "Admin" : league.role}</p>
             <button
               className="px-3 py-1 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
-              onClick={() => navigate(`/league/${league.id || league.leagueId}`)}
+              onClick={() => navigate(`/league/${league.leagueId}`)}
             >
               View
             </button>
@@ -209,8 +204,8 @@ const Dashboard: React.FC = () => {
               value={sportLeague}
               onChange={(e) => setSportLeague(e.target.value as SportLeague)}
             >
-              {sports.map((s) => (
-                <option key={s.key} value={s.key}>{s.displayName}</option>
+              {sports.map((sport) => (
+                <option key={sport.key} value={sport.key}>{sport.displayName}</option>
               ))}
             </select>
             <button className="btn-primary" onClick={addLeagueHandler}>

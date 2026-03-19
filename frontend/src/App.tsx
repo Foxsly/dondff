@@ -12,7 +12,7 @@ import Weeks from './components/weeks';
 import Navbar from './components/navbar';
 import Footer from './components/footer';
 import ProtectedRoute from './components/ui/ProtectedRoute';
-import { AuthContext } from './components/AuthContext';
+import { AuthContext } from './contexts/AuthContext';
 import { LeagueProvider } from './contexts/LeagueContext';
 import type { User } from './types';
 
