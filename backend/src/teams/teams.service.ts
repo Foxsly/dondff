@@ -1,31 +1,28 @@
-import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
-import { SportLeague } from '@/leagues/entities/league.entity';
-import { LeaguesService } from '@/leagues/leagues.service';
+import {ILeagueSettings} from '@/leagues/entities/league-settings.entity';
+import {SportLeague} from '@/leagues/entities/league.entity';
+import {LeaguesService} from '@/leagues/leagues.service';
+import {IPlayerProjection, PlayerProjectionResponse,} from '@/player-stats/entities/player-stats.entity';
+import {PlayerStatsService} from '@/player-stats/player-stats.service';
+import {ITeamPlayer, TeamPlayer} from '@/teams/entities/team-player.entity';
+import {ITeamStatus} from '@/teams/entities/team-status.entity';
+import {TeamsEntryRepository} from '@/teams/teams-entry.repository';
+import {TeamsRepository} from '@/teams/teams.repository';
+import {Injectable, NotFoundException} from '@nestjs/common';
 import {
-  IPlayerProjection,
-  PlayerProjectionResponse,
-} from '@/player-stats/entities/player-stats.entity';
-import { PlayerStatsService } from '@/player-stats/player-stats.service';
-import { ITeamPlayer, TeamPlayer } from '@/teams/entities/team-player.entity';
-import { ITeamStatus } from '@/teams/entities/team-status.entity';
-import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
-import { TeamsRepository } from '@/teams/teams.repository';
-import { Injectable, NotFoundException } from '@nestjs/common';
-import {
-  ITeamEntry,
-  ITeamEntryAudit,
-  ITeamEntryOffer,
-  PlayerOfferDto,
-  TeamEntryAuditFinalDecision,
-  TeamEntryBoxStatus,
-  TeamEntryCaseBoxDto,
-  TeamEntryCasePlayerDto,
-  TeamEntryCasesResponseDto,
-  TeamEntryFinalResponseDto,
-  TeamEntryOfferResponseDto,
-  TeamEntryOfferStatus,
+    ITeamEntry,
+    ITeamEntryAudit,
+    ITeamEntryOffer,
+    PlayerOfferDto,
+    TeamEntryAuditFinalDecision,
+    TeamEntryBoxStatus,
+    TeamEntryCaseBoxDto,
+    TeamEntryCasePlayerDto,
+    TeamEntryCasesResponseDto,
+    TeamEntryFinalResponseDto,
+    TeamEntryOfferResponseDto,
+    TeamEntryOfferStatus,
 } from './entities/team-entry.entity';
-import { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
+import {CreateTeamDto, ITeam, Team, UpdateTeamDto} from './entities/team.entity';
 
 //yacht-fisher shuffle: https://github.com/queviva/yacht-fisher
 const shuffle = (v, r = [...v]) => v.map(() => r.splice(~~(Math.random() * r.length), 1)[0]);
@@ -525,5 +522,13 @@ export class TeamsService {
       default:
         return 10;
     }
+  }
+
+  getWeekNumberFromString(week: string): number {
+    const match = week.match(/Week\s+(\d+)/);
+    if (!match) {
+      throw new Error(`Invalid week format: ${week}`);
+    }
+    return parseInt(match[1], 10);
   }
 }

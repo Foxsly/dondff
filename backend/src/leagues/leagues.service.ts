@@ -131,7 +131,7 @@ export class LeaguesService {
   }
 
   async getLeagueTeams(leagueId: string, season?: number, week?: number): Promise<ITeam[]> {
-    let teams = await this.leaguesRepository.findLeagueTeams(leagueId);
+    let teams: ITeam[] = await this.leaguesRepository.findLeagueTeams(leagueId);
     return Array.from(teams).filter((team) => {
       let matches = true;
       if (season) {
