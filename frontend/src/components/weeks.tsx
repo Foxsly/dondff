@@ -1,18 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, {useEffect, useState} from "react";
+import {useNavigate, useParams} from "react-router-dom";
+import {getCurrentUser} from "../api/auth";
+import {getLeagueTeams} from "../api/leagues";
+import {useLeague} from "../contexts/LeagueContext";
+import type {WeekOption} from "../sports/types";
 import Accordion from "./accordion";
 import Breadcrumbs from "./breadcrumbs";
-import { getCurrentUser } from "../api/auth";
-import { getLeagueTeams } from "../api/leagues";
-import { useLeague } from "../contexts/LeagueContext";
-import LoadingSpinner from "./ui/LoadingSpinner";
 import ErrorDisplay from "./ui/ErrorDisplay";
-import type { WeekOption } from "../sports/types";
-
-interface GolfEvent {
-  id: string;
-  name: string;
-}
+import LoadingSpinner from "./ui/LoadingSpinner";
 
 const Weeks: React.FC = () => {
   const { leagueId, season } = useParams<{ leagueId: string; season: string }>();
@@ -56,9 +51,7 @@ const Weeks: React.FC = () => {
 
         if (Array.isArray(teams)) {
           const leagueTeams = teams.filter((team: any) => {
-            const matchesLeague = team.leagueId && String(team.leagueId) === String(leagueId);
-            const matchesSeason = !season || (team.seasonYear && String(team.seasonYear) === String(season));
-            return matchesLeague && matchesSeason;
+              return !season || (team.seasonYear && String(team.seasonYear) === String(season));
           });
 
           leagueTeams.forEach((team: any) => {
@@ -67,13 +60,14 @@ const Weeks: React.FC = () => {
         }
 
         // Fetch current week from sport config
-        const week = await sportConfig.fetchCurrentWeek();
-        if (week != null) {
-          if (!cancelled) setCurrentWeek(week);
-          weekSet.add(String(week));
+        const currentWeek = await sportConfig.fetchCurrentWeek();
+        if (currentWeek != null) {
+          if (!cancelled) setCurrentWeek(currentWeek);
+          weekSet.add(String(currentWeek));
         }
 
         // Fetch available events (golf tournaments, etc.)
+        // TODO this will become EventGroups in the near future
         const events = await sportConfig.fetchAvailableWeeks(season!);
         if (!cancelled) setAvailableEvents(events);
 
@@ -138,10 +132,10 @@ const Weeks: React.FC = () => {
     <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
       <Breadcrumbs items={breadcrumbs} />
       <div className="space-y-4 max-w-[90%] mx-auto">
-        {weeks.map((w) => (
+        {weeks.map((week) => (
           <Accordion
-            key={w}
-            weekDoc={{ week: w, label: weekLabels[w] }}
+            key={week}
+            weekDoc={{ week: week, label: weekLabels[week] }}
             leagueId={leagueId!}
             season={season!}
             actualWeek={currentWeek}
