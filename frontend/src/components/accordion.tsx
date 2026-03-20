@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, {useState} from "react";
+import {useLeague} from "../contexts/LeagueContext";
 import Entries from "./entries";
-import { useLeague } from "../contexts/LeagueContext";
 
 interface WeekDoc {
   week: string | number;

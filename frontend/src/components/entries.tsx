@@ -1,13 +1,13 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { getCurrentUser } from "../api/auth";
-import { getLeagueTeams, getLeagueUsers } from "../api/leagues";
-import { getProjections, getStats } from "../api/players";
-import { getUser } from "../api/users";
+import React, {useCallback, useEffect, useState} from "react";
+import {Link} from "react-router-dom";
+import {getCurrentUser} from "../api/auth";
+import {getLeagueTeams, getLeagueUsers} from "../api/leagues";
+import {getProjections, getStats} from "../api/players";
 import * as teamsApi from "../api/teams";
-import { useLeague } from "../contexts/LeagueContext";
+import {getUser} from "../api/users";
+import {useLeague} from "../contexts/LeagueContext";
+import type {LeagueMember, LeaguePosition, TeamPlayer, User} from "../types";
 import LoadingSpinner from "./ui/LoadingSpinner";
-import type { User, LeagueMember, TeamPlayer, LeaguePosition } from "../types";
 
 function roundToTwo(number: number | undefined | null): number {
   return number ? Math.round(number * 100) / 100 : 0;
@@ -162,14 +162,14 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
             const teamStatus = await teamsApi.getTeamStatus(team.teamId);
 
             const lineUp: EntryLineUp = {};
-            for (const pos of effectivePositions) {
-              const player = team.players?.find((p: any) => p.position === pos.position) || null;
+            for (const leaguePosition of effectivePositions) {
+              const player = team.players?.find((p: any) => p.position === leaguePosition.position) || null;
               if (player) {
-                const projMap = projectionsByPosition.get(pos.position);
+                const projMap = projectionsByPosition.get(leaguePosition.position);
                 const projection = projMap ? (projMap.get(String(player.playerId)) ?? 0) : 0;
-                lineUp[pos.position] = { ...player, points: projection };
+                lineUp[leaguePosition.position] = { ...player, points: projection };
               } else {
-                lineUp[pos.position] = null;
+                lineUp[leaguePosition.position] = null;
               }
             }
 
@@ -203,6 +203,7 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
     const member = members?.find(
       (m) => m.email === email || m.user?.email === email
     );
+    //TODO figure out what the right values here are
     return member?.user?.name || member?.name || member?.email || email;
   };
 
