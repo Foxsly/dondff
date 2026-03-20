@@ -7,7 +7,7 @@ export type FanduelGolfProjectionEntry = {
 export type GolferInfo = {
   numberFireId: number;
   name: string;
-  imageUrl: string;
+  imageUrl: string | null;
 };
 
 export type FanduelGolfProjectionsResponse = FanduelGolfProjectionEntry[];

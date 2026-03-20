@@ -15,7 +15,6 @@ describe('SleeperController', () => {
   const mockState: ISleeperState = {
     week: 3,
     season_type: 'regular',
-    season_start_date: '2025-09-01',
     season: '2025',
     previous_season: '2024',
     leg: 3,

@@ -30,7 +30,7 @@ export class DatabaseTeamsRepository extends TeamsRepository {
         leagueId: team.leagueId,
         userId: team.userId,
         seasonYear: team.seasonYear,
-        week: team.week,
+        eventGroupId: team.eventGroupId,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -42,7 +42,6 @@ export class DatabaseTeamsRepository extends TeamsRepository {
       .selectFrom('team')
       .selectAll()
       .select((eb) => [withPlayers(eb)])
-      .where('week', '>=', 1)
       .execute();
     return rows as ITeam[];
   }
@@ -65,7 +64,7 @@ export class DatabaseTeamsRepository extends TeamsRepository {
         ...(team.leagueId && { leagueId: team.leagueId }),
         ...(team.userId && { userId: team.userId }),
         ...(team.seasonYear && { seasonYear: team.seasonYear }),
-        ...(team.week && { week: team.week }),
+        ...(team.eventGroupId && { eventGroupId: team.eventGroupId }),
       })
       .where('teamId', '=', id)
       .returningAll()

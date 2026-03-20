@@ -1,20 +1,23 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, {useEffect, useState} from "react";
+import {useNavigate, useParams} from "react-router-dom";
+import {getCurrentUser} from "../api/auth";
+import {getLeagueTeams} from "../api/leagues";
+import {useLeague} from "../contexts/LeagueContext";
+import type {WeekOption} from "../sports/types";
 import Accordion from "./accordion";
 import Breadcrumbs from "./breadcrumbs";
-import { getCurrentUser } from "../api/auth";
-
-const API_BASE =
-  (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
-  "http://localhost:3001"; // fallback only for local dev
+import ErrorDisplay from "./ui/ErrorDisplay";
+import LoadingSpinner from "./ui/LoadingSpinner";
 
 const Weeks: React.FC = () => {
   const { leagueId, season } = useParams<{ leagueId: string; season: string }>();
   const navigate = useNavigate();
+  const { league, sportConfig, loading: leagueLoading, error: leagueError } = useLeague();
 
   const [weeks, setWeeks] = useState<string[]>([]);
-  const [actualNFLWeek, setActualNFLWeek] = useState<number | null>(null);
-  const [leagueName, setLeagueName] = useState("");
+  const [weekLabels, setWeekLabels] = useState<Record<string, string>>({});
+  const [currentWeek, setCurrentWeek] = useState<number | null>(null);
+  const [availableEvents, setAvailableEvents] = useState<WeekOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -22,6 +25,8 @@ const Weeks: React.FC = () => {
     let cancelled = false;
 
     async function load() {
+      if (!sportConfig) return;
+
       try {
         setError("");
         setLoading(true);
@@ -34,57 +39,41 @@ const Weeks: React.FC = () => {
 
         const userId = current.id || current.userId;
         if (!userId) {
-          console.warn("No user id found on current user", current);
           if (!cancelled) navigate("/");
           return;
         }
 
-        const [leagueRes, teamsRes, stateRes] = await Promise.all([
-          fetch(`${API_BASE}/leagues/${leagueId}`, { credentials: "include" }),
-          fetch(`${API_BASE}/teams`, { credentials: "include" }),
-          fetch(`${API_BASE}/sleeper/state`, { credentials: "include" }),
-        ]);
-
-        if (!leagueRes.ok) throw new Error(`Failed to load league (status ${leagueRes.status})`);
-        if (!teamsRes.ok) throw new Error(`Failed to load teams (status ${teamsRes.status})`);
-        if (!stateRes.ok) throw new Error(`Failed to load Sleeper state (status ${stateRes.status})`);
-
-        const leagueData = await leagueRes.json();
-        const teams = await teamsRes.json();
-        const sleeperState = await stateRes.json();
+        const teams = await getLeagueTeams(leagueId!);
 
         if (cancelled) return;
-
-        setLeagueName(leagueData?.name || "");
 
         const weekSet = new Set<string>();
 
         if (Array.isArray(teams)) {
           const leagueTeams = teams.filter((team: any) => {
-            const teamLeagueId = team.leagueId;
-            const teamSeason = team.seasonYear;
-            const matchesLeague = teamLeagueId && String(teamLeagueId) === String(leagueId);
-            const matchesSeason = !season || (teamSeason && String(teamSeason) === String(season));
-            return matchesLeague && matchesSeason;
+              return !season || (team.seasonYear && String(team.seasonYear) === String(season));
           });
 
           leagueTeams.forEach((team: any) => {
-            const teamWeek = team.week;
-            if (teamWeek != null) weekSet.add(String(teamWeek));
+            if (team.week != null) weekSet.add(String(team.week));
           });
         }
 
-        if (sleeperState) {
-          const currentWeek = sleeperState.week;
-          if (currentWeek != null) {
-            setActualNFLWeek(Number(currentWeek));
-            weekSet.add(String(currentWeek));
-          }
+        // Fetch current week from sport config
+        const currentWeek = await sportConfig.fetchCurrentWeek();
+        if (currentWeek != null) {
+          if (!cancelled) setCurrentWeek(currentWeek);
+          weekSet.add(String(currentWeek));
         }
+
+        // Fetch available events (golf tournaments, etc.)
+        // TODO this will become EventGroups in the near future
+        const events = await sportConfig.fetchAvailableWeeks(season!);
+        if (!cancelled) setAvailableEvents(events);
 
         const derivedWeeks = Array.from(weekSet);
         derivedWeeks.sort((a, b) => Number(a) - Number(b));
-        setWeeks(derivedWeeks);
+        if (!cancelled) setWeeks(derivedWeeks);
       } catch (err: any) {
         console.error("Failed to load weeks", err);
         if (!cancelled) setError(err?.message ?? "Failed to load weeks");
@@ -93,69 +82,86 @@ const Weeks: React.FC = () => {
       }
     }
 
-    if (leagueId && season) {
+    if (leagueId && season && sportConfig) {
       load();
-    } else {
+    } else if (!leagueLoading) {
       setLoading(false);
     }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [leagueId, season, navigate]);
+    return () => { cancelled = true; };
+  }, [leagueId, season, navigate, sportConfig, leagueLoading]);
 
-  if (loading) {
+  const handleCreateEventWeek = (event: WeekOption) => {
+    const existingWeeks = weeks.map(Number);
+    const nextWeek = existingWeeks.length > 0 ? Math.max(...existingWeeks) + 1 : 1;
+    const weekStr = String(nextWeek);
+
+    setWeeks((prev) => [...prev, weekStr].sort((a, b) => Number(a) - Number(b)));
+    setWeekLabels((prev) => ({ ...prev, [weekStr]: event.label }));
+    setAvailableEvents((prev) => prev.filter((e) => e.value !== event.value));
+  };
+
+  const breadcrumbs = [
+    { label: "Dashboard", to: "/dashboard" },
+    { label: league?.name || "League", to: `/league/${leagueId}` },
+    { label: `Season ${season}` },
+  ];
+
+  const isLoading = loading || leagueLoading;
+  const displayError = error || leagueError;
+
+  if (isLoading) {
     return (
       <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
-        <Breadcrumbs
-          items={[
-            { label: "Dashboard", to: "/dashboard" },
-            { label: leagueName || "League", to: `/league/${leagueId}` },
-            { label: `Season ${season}` },
-          ]}
-        />
-        <p>Loading weeks...</p>
+        <Breadcrumbs items={breadcrumbs} />
+        <LoadingSpinner message="Loading weeks..." />
       </div>
     );
   }
 
-  if (error) {
+  if (displayError) {
     return (
       <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
-        <Breadcrumbs
-          items={[
-            { label: "Dashboard", to: "/dashboard" },
-            { label: leagueName || "League", to: `/league/${leagueId}` },
-            { label: `Season ${season}` },
-          ]}
-        />
-        <h2 className="text-2xl font-bold">Something went wrong</h2>
-        <p className="text-red-500">{error}</p>
+        <Breadcrumbs items={breadcrumbs} />
+        <ErrorDisplay message={displayError} />
       </div>
     );
   }
 
   return (
     <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", to: "/dashboard" },
-          { label: leagueName || "League", to: `/league/${leagueId}` },
-          { label: `Season ${season}` },
-        ]}
-      />
+      <Breadcrumbs items={breadcrumbs} />
       <div className="space-y-4 max-w-[90%] mx-auto">
-        {weeks.map((w) => (
+        {weeks.map((week) => (
           <Accordion
-            key={w}
-            weekDoc={{ week: w }}
+            key={week}
+            weekDoc={{ week: week, label: weekLabels[week] }}
             leagueId={leagueId!}
             season={season!}
-            actualWeek={actualNFLWeek}
+            actualWeek={currentWeek}
           />
         ))}
       </div>
-      <div>Current NFL Week: {actualNFLWeek ?? "Unknown"}</div>
+      {availableEvents.length > 0 && (
+        <div className="space-y-2 mt-4">
+          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
+            Available {sportConfig?.weekLabel}s
+          </h3>
+          {availableEvents.map((event) => (
+            <button
+              key={event.value}
+              onClick={() => handleCreateEventWeek(event)}
+              className="w-full text-left px-4 py-3 rounded bg-[#2a3447] hover:bg-[#344054] border border-[#3a465b] transition-colors"
+            >
+              <span className="text-white font-medium">{event.label}</span>
+              <span className="text-gray-400 text-sm ml-2">— Create {sportConfig?.weekLabel?.toLowerCase()}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {sportConfig?.key === 'NFL' && (
+        <div>Current NFL Week: {currentWeek ?? "Unknown"}</div>
+      )}
     </div>
   );
 };

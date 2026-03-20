@@ -7,10 +7,10 @@ export interface ITeam {
   leagueId: string & tags.Format<'uuid'>;
   userId: string & tags.Format<'uuid'>;
   seasonYear: number & tags.Minimum<2020>;
-  week: number & tags.Minimum<1> & tags.Maximum<25>;
+  eventGroupId: string & tags.Format<'uuid'>;
   players: ITeamPlayer[];
 }
 
 export type Team = Selectable<Omit<ITeam, 'players'>>;
-export type CreateTeamDto = Omit<ITeam, 'teamId' | 'players'>;
+export type CreateTeamDto = Omit<ITeam, 'teamId' | 'players'> & { week?: number };
 export type UpdateTeamDto = Partial<Omit<ITeam, 'players'>>;

@@ -3,17 +3,17 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import Seasons from "./seasons";
 import Breadcrumbs from "./breadcrumbs";
 import { getCurrentUser } from "../api/auth";
-import type { League as LeagueType, LeagueMember } from "../types";
-
-const API_BASE =
-  (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
-  "http://localhost:3001"; // fallback only for local dev
+import { getLeagueUsers } from "../api/leagues";
+import { useLeague } from "../contexts/LeagueContext";
+import LoadingSpinner from "./ui/LoadingSpinner";
+import ErrorDisplay from "./ui/ErrorDisplay";
+import type { LeagueMember } from "../types";
 
 const League: React.FC = () => {
   const { leagueId } = useParams<{ leagueId: string }>();
   const navigate = useNavigate();
+  const { league, sportConfig, loading: leagueLoading, error: leagueError } = useLeague();
 
-  const [league, setLeague] = useState<LeagueType>({});
   const [member, setMember] = useState<LeagueMember | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -34,33 +34,18 @@ const League: React.FC = () => {
 
         const userId = current.id || current.userId;
         if (!userId) {
-          console.warn("No user id found on current user", current);
           if (!cancelled) navigate("/");
           return;
         }
 
         if (cancelled) return;
 
-        const [leagueRes, usersRes] = await Promise.all([
-          fetch(`${API_BASE}/leagues/${leagueId}`, { credentials: "include" }),
-          fetch(`${API_BASE}/leagues/${leagueId}/users`, { credentials: "include" }),
-        ]);
-
-        if (!leagueRes.ok) throw new Error(`Failed to load league (status ${leagueRes.status})`);
-        if (!usersRes.ok) throw new Error(`Failed to load league members (status ${usersRes.status})`);
-
-        const leagueData: LeagueType = await leagueRes.json();
-        const users: LeagueMember[] = await usersRes.json();
+        const users = await getLeagueUsers(leagueId!);
 
         if (cancelled) return;
 
-        setLeague(leagueData || {});
-
         if (Array.isArray(users)) {
-          const currentMember = users.find((u) => {
-            const uId = u.userId;
-            return uId && uId === userId;
-          });
+          const currentMember = users.find((u) => u.userId === userId);
           setMember(currentMember || null);
         } else {
           setMember(null);
@@ -79,29 +64,26 @@ const League: React.FC = () => {
       setLoading(false);
     }
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [leagueId, navigate]);
 
-  if (loading) {
+  const isLoading = loading || leagueLoading;
+  const displayError = error || leagueError;
+
+  if (isLoading) {
     return (
       <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
         <Breadcrumbs items={[{ label: "Dashboard", to: "/dashboard" }, { label: "League" }]} />
-        <p>Loading league...</p>
+        <LoadingSpinner message="Loading league..." />
       </div>
     );
   }
 
-  if (error) {
+  if (displayError) {
     return (
       <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
         <Breadcrumbs items={[{ label: "Dashboard", to: "/dashboard" }, { label: "League" }]} />
-        <h2 className="text-2xl font-bold">Something went wrong</h2>
-        <p className="text-red-500">{error}</p>
-        <button className="btn-primary" onClick={() => navigate("/dashboard")}>
-          Return to Dashboard
-        </button>
+        <ErrorDisplay message={displayError} action={{ label: "Return to Dashboard", onClick: () => navigate("/dashboard") }} />
       </div>
     );
   }
@@ -111,19 +93,24 @@ const League: React.FC = () => {
       <Breadcrumbs
         items={[
           { label: "Dashboard", to: "/dashboard" },
-          { label: league.name || "League" },
+          { label: league?.name || "League" },
         ]}
       />
-      <h2 className="text-2xl font-bold">{league.name}</h2>
-      <p>Access Code: {league.id || leagueId}</p>
+      <h2 className="text-2xl font-bold">{league?.name}</h2>
+      <p>Access Code: {leagueId}</p>
       {member?.role === "player" && (
         <p>Lineup Status: {member.lineupStatus || "Not set"}</p>
       )}
       <h4 className="text-lg font-semibold">Seasons:</h4>
+      {sportConfig && (
+        <span className="text-sm px-2 py-0.5 rounded bg-[#00ceb8]/20 text-[#00ceb8]">
+          {sportConfig.displayName}
+        </span>
+      )}
       <Seasons leagueId={leagueId!} />
       {member?.role === "player" &&
-        league.currentSeason &&
-        league.currentWeek && (
+        league?.currentSeason &&
+        league?.currentWeek && (
           <Link
             to="/game/setting-lineups"
             state={{

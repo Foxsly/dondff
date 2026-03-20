@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import Game from "./game";
+import Game from "./game/Game";
 import type { TeamUser } from "../types";
 
 interface GroupGameLocationState {

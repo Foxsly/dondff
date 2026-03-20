@@ -1,6 +1,7 @@
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import { DatabaseModule } from '@/infrastructure/database/database.module';
+import { EventsModule } from '@/events/events.module';
 import { LeaguesModule } from '@/leagues/leagues.module';
 import { PlayerStatsModule } from '@/player-stats/player-stats.module';
 import { SleeperModule } from '@/sleeper/sleeper.module';
@@ -16,6 +17,7 @@ import { FanduelModule } from './fanduel/fanduel.module';
     DatabaseModule,
     ConfigModule.forRoot(),
     UsersModule,
+    EventsModule,
     LeaguesModule,
     TeamsModule,
     SleeperModule,

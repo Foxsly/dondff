@@ -1,23 +1,25 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateLeagueDto, League, UpdateLeagueDto } from './entities/league.entity';
-import { AddLeagueUserDto, ILeagueUser, UpdateLeagueUserDto } from './entities/league-user.entity';
-import { ITeam } from '@/teams/entities/team.entity';
-import { LeaguesRepository } from '@/leagues/leagues.repository';
 import {
   CreateLeagueSettingsDto,
   ILeagueSettings,
   ILeagueSettingsPosition,
   ScoringType,
-  SportLeague,
 } from '@/leagues/entities/league-settings.entity';
+import { LeaguesRepository } from '@/leagues/leagues.repository';
+import { ITeam } from '@/teams/entities/team.entity';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { AddLeagueUserDto, ILeagueUser, UpdateLeagueUserDto } from './entities/league-user.entity';
+import { CreateLeagueDto, ILeague, League, UpdateLeagueDto } from './entities/league.entity';
+import { EventsService } from '@/events/events.service';
 
 const DEFAULT_LEAGUE_SETTINGS = {
   scoringType: 'PPR' as ScoringType,
-  sportLeague: 'NFL' as SportLeague,
 };
 @Injectable()
 export class LeaguesService {
-  constructor(private readonly leaguesRepository: LeaguesRepository) {}
+  constructor(
+    private readonly leaguesRepository: LeaguesRepository,
+    private readonly eventsService: EventsService,
+  ) {}
 
   async create(createLeagueDto: CreateLeagueDto): Promise<League> {
     let league = await this.leaguesRepository.createLeague(createLeagueDto);
@@ -33,6 +35,7 @@ export class LeaguesService {
     return this.leaguesRepository.findAllLeagues();
   }
 
+  //TODO rename this method to something a little more descriptive
   async findOne(id: string): Promise<League> {
     const league = await this.leaguesRepository.findOneLeague(id);
     if (!league) {
@@ -85,14 +88,14 @@ export class LeaguesService {
     dto: CreateLeagueSettingsDto,
   ): Promise<ILeagueSettings> {
     const settings = await this.leaguesRepository.createLeagueSettings(leagueId, dto);
-    
+    const league: ILeague = await this.findOne(leagueId);
     // Create default positions based on sport
-    if (dto.sportLeague === 'NFL') {
+    if (league.sportLeague === 'NFL') {
       await this.createDefaultNflPositions(settings.leagueSettingsId);
-    } else if (dto.sportLeague === 'GOLF') {
+    } else if (league.sportLeague === 'GOLF') {
       await this.createDefaultGolfPositions(settings.leagueSettingsId);
     }
-    
+
     return settings;
   }
 
@@ -101,7 +104,7 @@ export class LeaguesService {
       { position: 'RB', poolSize: 64 },
       { position: 'WR', poolSize: 96 },
     ];
-    
+
     for (const pos of defaultNflPositions) {
       await this.leaguesRepository.createLeagueSettingsPosition(leagueSettingsId, pos);
     }
@@ -113,7 +116,7 @@ export class LeaguesService {
       { position: 'GOLF_PLAYER_2', poolSize: 150 },
       { position: 'GOLF_PLAYER_3', poolSize: 150 },
     ];
-    
+
     for (const pos of defaultGolfPositions) {
       await this.leaguesRepository.createLeagueSettingsPosition(leagueSettingsId, pos);
     }
@@ -132,20 +135,32 @@ export class LeaguesService {
   }
 
   async getLeagueTeams(leagueId: string, season?: number, week?: number): Promise<ITeam[]> {
-    let teams = await this.leaguesRepository.findLeagueTeams(leagueId);
-    return Array.from(teams).filter((team) => {
+    let teams: ITeam[] = await this.leaguesRepository.findLeagueTeams(leagueId);
+    return Array.from(teams).filter(async (team) => {
       let matches = true;
       if (season) {
         matches = matches && team.seasonYear == season;
       }
       if (week) {
-        matches = matches && team.week == week;
+        const eventGroup = await this.eventsService.findOneEventGroup(team.eventGroupId);
+        const teamWeek = this.getWeekNumberFromString(eventGroup.name);
+        matches = matches && teamWeek === week;
       }
       return matches;
     });
   }
 
-  async getPositionsForLeagueSettings(leagueSettingsId: string): Promise<ILeagueSettingsPosition[]> {
+  getWeekNumberFromString(week: string): number {
+    const match = week.match(/Week\s+(\d+)/);
+    if (!match) {
+      throw new Error(`Invalid week format: ${week}`);
+    }
+    return parseInt(match[1], 10);
+  }
+
+  async getPositionsForLeagueSettings(
+    leagueSettingsId: string,
+  ): Promise<ILeagueSettingsPosition[]> {
     return this.leaguesRepository.getLeagueSettingsPositions(leagueSettingsId);
   }
 

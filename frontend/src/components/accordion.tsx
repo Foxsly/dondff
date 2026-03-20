@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import Entries from "./entries";
+import { useLeague } from "../contexts/LeagueContext";
 
 interface WeekDoc {
   week: string | number;
+  label?: string;
 }
 
 interface AccordionProps {
@@ -14,11 +16,16 @@ interface AccordionProps {
 
 const Accordion: React.FC<AccordionProps> = ({ weekDoc, leagueId, season, actualWeek }) => {
   const [isActive, setIsActive] = useState(false);
+  const { sportConfig } = useLeague();
+
+  const weekTitle = sportConfig?.weekLabel === 'Event' && weekDoc.label
+    ? `Event: ${weekDoc.label}`
+    : `${sportConfig?.weekLabel ?? 'Week'} ${weekDoc.week}`;
 
   return (
     <div className="accordion-item">
       <div className="accordion-title" onClick={() => setIsActive(!isActive)}>
-        <div>Week {weekDoc.week}</div>
+        <div>{weekTitle}</div>
         <div>{isActive ? '-' : '+'}</div>
       </div>
       {isActive && (

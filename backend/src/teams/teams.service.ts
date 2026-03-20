@@ -1,30 +1,29 @@
-import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
-import { LeaguesService } from '@/leagues/leagues.service';
+import {ILeagueSettings} from '@/leagues/entities/league-settings.entity';
+import {SportLeague} from '@/leagues/entities/league.entity';
+import {LeaguesService} from '@/leagues/leagues.service';
+import {IPlayerProjection, PlayerProjectionResponse,} from '@/player-stats/entities/player-stats.entity';
+import {PlayerStatsService} from '@/player-stats/player-stats.service';
+import {ITeamPlayer, TeamPlayer} from '@/teams/entities/team-player.entity';
+import {ITeamStatus} from '@/teams/entities/team-status.entity';
+import {TeamsEntryRepository} from '@/teams/teams-entry.repository';
+import {TeamsRepository} from '@/teams/teams.repository';
+import {EventsService} from '@/events/events.service';
+import {Injectable, NotFoundException} from '@nestjs/common';
 import {
-  IPlayerProjection,
-  PlayerProjectionResponse,
-} from '@/player-stats/entities/player-stats.entity';
-import { PlayerStatsService } from '@/player-stats/player-stats.service';
-import { ITeamPlayer, TeamPlayer } from '@/teams/entities/team-player.entity';
-import { ITeamStatus } from '@/teams/entities/team-status.entity';
-import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
-import { TeamsRepository } from '@/teams/teams.repository';
-import { Injectable, NotFoundException } from '@nestjs/common';
-import {
-  ITeamEntry,
-  ITeamEntryAudit,
-  ITeamEntryOffer,
-  PlayerOfferDto,
-  TeamEntryAuditFinalDecision,
-  TeamEntryBoxStatus,
-  TeamEntryCaseBoxDto,
-  TeamEntryCasePlayerDto,
-  TeamEntryCasesResponseDto,
-  TeamEntryFinalResponseDto,
-  TeamEntryOfferResponseDto,
-  TeamEntryOfferStatus,
+    ITeamEntry,
+    ITeamEntryAudit,
+    ITeamEntryOffer,
+    PlayerOfferDto,
+    TeamEntryAuditFinalDecision,
+    TeamEntryBoxStatus,
+    TeamEntryCaseBoxDto,
+    TeamEntryCasePlayerDto,
+    TeamEntryCasesResponseDto,
+    TeamEntryFinalResponseDto,
+    TeamEntryOfferResponseDto,
+    TeamEntryOfferStatus,
 } from './entities/team-entry.entity';
-import { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
+import {CreateTeamDto, ITeam, Team, UpdateTeamDto} from './entities/team.entity';
 
 //yacht-fisher shuffle: https://github.com/queviva/yacht-fisher
 const shuffle = (v, r = [...v]) => v.map(() => r.splice(~~(Math.random() * r.length), 1)[0]);
@@ -36,21 +35,51 @@ export class TeamsService {
     private readonly teamsEntryRepository: TeamsEntryRepository,
     private readonly leaguesService: LeaguesService,
     private readonly playerStatsService: PlayerStatsService,
+    private readonly eventsService: EventsService,
   ) {}
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
-    let createdTeam: Team = await this.teamsRepository.create(createTeamDto);
+    let eventGroupId: string;
+    if (createTeamDto.week) {
+      const eventGroup = await this.eventsService.getOrCreateEventGroup(
+        `NFL Week ${createTeamDto.week}`,
+      );
+      eventGroupId = eventGroup.eventGroupId;
+    } else if (createTeamDto.eventGroupId) {
+      eventGroupId = createTeamDto.eventGroupId;
+    } else {
+      throw new Error('Either week or eventGroupId must be provided');
+    }
+
+    const teamData = {
+      leagueId: createTeamDto.leagueId,
+      userId: createTeamDto.userId,
+      seasonYear: createTeamDto.seasonYear,
+      eventGroupId,
+    };
+
+    let createdTeam: Team = await this.teamsRepository.create(teamData);
+    const league = await this.leaguesService.findOne(createdTeam.leagueId);
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       createdTeam.leagueId,
     );
-    
+
     // Get positions from the new league_settings_position table
-    const positions = await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId);
-    
+    const positions = await this.leaguesService.getPositionsForLeagueSettings(
+      leagueSettings.leagueSettingsId,
+    );
+
+    //TODO extract this into a 'generateCasesForTeam' that just takes the leagueId and the createdTeam, and does the position looping within it
     for (const position of positions) {
-      await this.generateCasesForPosition(createdTeam, position.position, leagueSettings, this.getNumberOfCases(createTeamDto.week));
+      await this.generateCasesForPosition(
+        createdTeam,
+        position.position,
+        leagueSettings,
+        league.sportLeague,
+        this.getNumberOfCases(createTeamDto.week ?? await this.getWeekNumberFromEventGroup(eventGroupId)),
+      );
     }
-    
+
     return createdTeam;
   }
 
@@ -111,10 +140,15 @@ export class TeamsService {
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       team.leagueId,
     );
-    //TODO update this to pull the positions from leagueSettingsPosition
+    const positions = await this.leaguesService.getPositionsForLeagueSettings(
+      leagueSettings.leagueSettingsId,
+    );
     const teamEntries: ITeamEntry[] = [];
-    for (const position of ['RB', 'WR']) {
-      const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
+    for (const position of positions) {
+      const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(
+        teamId,
+        position.position,
+      );
       if (entry) teamEntries.push(entry);
     }
     return teamEntries;
@@ -134,6 +168,7 @@ export class TeamsService {
   ): Promise<TeamEntryCasesResponseDto> {
     const entry = await this.getTeamEntry(teamId, position);
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(entry.teamEntryId);
+
     const playerListAudits = audits.map((audit) => ({
       ...audit,
       boxStatus: audit.boxStatus === 'selected' ? 'available' : audit.boxStatus,
@@ -203,18 +238,27 @@ export class TeamsService {
       throw new NotFoundException(`Could not update TeamEntry with id ${teamEntry.teamEntryId}`);
     }
     let team: Team = await this.findOne(teamId);
+    const league = await this.leaguesService.findOne(team.leagueId);
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       team.leagueId,
     );
-    await this.generateCasesForPosition(team, position, leagueSettings, this.getNumberOfCases(team.week));
+    await this.generateCasesForPosition(
+      team,
+      position,
+      leagueSettings,
+      league.sportLeague,
+      this.getNumberOfCases(await this.getWeekNumberFromEventGroup(team.eventGroupId)),
+    );
   }
 
-  async generateCasesForPosition(team: Team, position: string, leagueSettings: ILeagueSettings, numberOfCases: number = 10) {
-    let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(
-      position,
-      team.seasonYear,
-      team.week,
-    );
+  async generateCasesForPosition(
+    team: Team,
+    position: string,
+    leagueSettings: ILeagueSettings,
+    sportLeague: SportLeague,
+    numberOfCases: number = 10,
+  ) {
+    let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(position, team.seasonYear, await this.getWeekNumberFromEventGroup(team.eventGroupId), sportLeague,);
     let teamEntry: ITeamEntry = await this.getOrCreateTeamEntry(
       team.teamId,
       position,
@@ -222,10 +266,10 @@ export class TeamsService {
     );
     let boxNumber = 1;
 
-    let trimmedPlayers: IPlayerProjection[] = playerProjections.slice(
-      0,
-      leagueSettings[position.toLowerCase() + 'PoolSize'],
-    );
+    //TODO this seems like we could probably extract this logic to a "getPositionForLeagueSettings" method on LeaguesService
+    const poolSize = (await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId))
+      .find((positionSettings) => positionSettings.position === position)?.poolSize;
+    let trimmedPlayers: IPlayerProjection[] = playerProjections.slice(0, poolSize);
     let cases: Array<Omit<ITeamEntryAudit, 'auditId'>> = shuffle(trimmedPlayers)
       .slice(0, numberOfCases)
       .map((player: IPlayerProjection) => ({
@@ -256,13 +300,14 @@ export class TeamsService {
     return teamEntry;
   }
 
-  async getCurrentOffer(teamId: string, position: string): Promise<ITeamEntryOffer> {
+  async getCurrentOffer(teamId: string, position: string): Promise<PlayerOfferDto> {
     const teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
     const currentOffer = await this.teamsEntryRepository.getCurrentOffer(teamEntry.teamEntryId);
     if (!currentOffer) {
-      return this.calculateOffer(teamEntry);
+      const newOffer = await this.calculateOffer(teamEntry);
+      return this.addTeamsToOffer(newOffer);
     }
-    return currentOffer;
+    return this.addTeamsToOffer(currentOffer);
   }
 
   async calculateOffer(teamEntry: ITeamEntry): Promise<ITeamEntryOffer> {
@@ -277,16 +322,13 @@ export class TeamsService {
       throw new Error('No eligible cases found for offer calculation');
     }
 
-    const finalOfferValue = Math.sqrt(
-      eligibleCases.map((a) => a.projectedPoints ** 2).reduce((sum, v) => sum + v, 0) /
-        eligibleCases.length,
-    );
-
     const team: ITeam = await this.findOne(teamEntry.teamId);
+    const league = await this.leaguesService.findOne(team.leagueId);
     const projections = await this.playerStatsService.getPlayerProjections(
       teamEntry.position,
       team.seasonYear,
-      team.week,
+      await this.getWeekNumberFromEventGroup(team.eventGroupId),
+      league.sportLeague,
     );
 
     // Get all previous offers (both accepted and rejected) to filter them out
@@ -305,6 +347,11 @@ export class TeamsService {
       throw new Error('No available players left to make an offer');
     }
 
+    const finalOfferValue = Math.sqrt(
+      eligibleCases.map((a) => a.projectedPoints ** 2)
+                   .reduce((sum, v) => sum + v, 0)
+      / eligibleCases.length,
+    );
     const closestOffer = availableOffers.reduce((closest, current) => {
       const currentDiff = Math.abs(current.projectedPoints - finalOfferValue);
       const closestDiff = Math.abs(closest.projectedPoints - finalOfferValue);
@@ -368,7 +415,9 @@ export class TeamsService {
     }
 
     if (availableAudits.length < casesToEliminate) {
-      throw new Error(`Not enough available cases to eliminate (need at least ${casesToEliminate})`);
+      throw new Error(
+        `Not enough available cases to eliminate (need at least ${casesToEliminate})`,
+      );
     }
 
     // Randomly select the specified number of audits to eliminate
@@ -406,7 +455,7 @@ export class TeamsService {
       playerId: updatedOffer.playerId,
       playerName: updatedOffer.playerName,
       position: position,
-      teamId: teamId
+      teamId: teamId,
     });
     return {
       offer: this.addTeamsToOffer(updatedOffer),
@@ -451,9 +500,12 @@ export class TeamsService {
     // Update team entry status to finished
     await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, { status: 'finished' });
     // Set player on teamPlayer
-    const finalPlayer = decision === 'keep' ? audits.find(audit => audit.boxStatus === 'selected') : lastNonSelectedBox;
+    const finalPlayer =
+      decision === 'keep'
+        ? audits.find((audit) => audit.boxStatus === 'selected')
+        : lastNonSelectedBox;
 
-    if(!finalPlayer) {
+    if (!finalPlayer) {
       throw new Error(`Could not save final player. Decision: ${decision}`);
     }
 
@@ -480,16 +532,29 @@ export class TeamsService {
     };
   }
 
-    /**
-     * As we get further into the playoffs, the number of available players drops.
-     * To account for this, we limit the number of cases as well
-     */
+  /**
+   * As we get further into the playoffs, the number of available players drops.
+   * To account for this, we limit the number of cases as well
+   */
   getNumberOfCases(week: number): number {
-      switch(week) {
-          case 20:
-              return 6
-          default:
-              return 10;
-      }
+    switch (week) {
+      case 20:
+        return 6;
+      default:
+        return 10;
+    }
+  }
+
+  getWeekNumberFromString(week: string): number {
+    const match = week.match(/Week\s+(\d+)/);
+    if (!match) {
+      throw new Error(`Invalid week format: ${week}`);
+    }
+    return parseInt(match[1], 10);
+  }
+
+  async getWeekNumberFromEventGroup(eventGroupId: string): Promise<number> {
+    const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
+    return this.getWeekNumberFromString(eventGroup.name);
   }
 }

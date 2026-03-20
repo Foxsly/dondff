@@ -54,6 +54,7 @@ export class FanduelService {
       slateId: slateId,
     });
     const filtered = projections.filter((projection) => projection?.salary && projection.salary !== 'N/A');
+    //TODO would be nice to return the event details (or at least the event name) with this
     return this.assertGolfProjections(filtered);
   }
 
