@@ -7,7 +7,6 @@ interface OfferPanelProps {
   sportConfig: SportConfig | null;
   onAccept: () => void;
   onDecline: () => void;
-  onReset: () => void;
 }
 
 const OfferPanel: React.FC<OfferPanelProps> = ({

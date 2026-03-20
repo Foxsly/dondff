@@ -1,6 +1,6 @@
 import React from 'react';
-import type { GamePlayer } from '../../types';
-import type { SportConfig } from '../../sports/types';
+import type {SportConfig} from '../../sports/types';
+import type {GamePlayer} from '../../types';
 
 interface PlayerListProps {
   players: GamePlayer[] | null;

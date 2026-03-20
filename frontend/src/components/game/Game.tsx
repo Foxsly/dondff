@@ -1,14 +1,14 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useGameState } from './useGameState';
-import CaseBoard from './CaseBoard';
-import PlayerList from './PlayerList';
-import OfferPanel from './OfferPanel';
-import FinalDecision from './FinalDecision';
-import ActionBar from './ActionBar';
-import LineupCard from './LineupCard';
+import {useLocation, useNavigate} from 'react-router-dom';
+import type {TeamUser} from '../../types';
 import ErrorDisplay from '../ui/ErrorDisplay';
-import type { TeamUser } from '../../types';
+import ActionBar from './ActionBar';
+import CaseBoard from './CaseBoard';
+import FinalDecision from './FinalDecision';
+import LineupCard from './LineupCard';
+import OfferPanel from './OfferPanel';
+import PlayerList from './PlayerList';
+import {useGameState} from './useGameState';
 
 interface GameLocationState {
   leagueId: string;
@@ -61,8 +61,6 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
           sportConfig={sportConfig}
           onAccept={acceptOffer}
           onDecline={declineOffer}
-          onReset={resetGame}
-          resetDisabled={resetDisabled}
         />
       );
     }
@@ -73,8 +71,6 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
           remainingCase={remainingCase}
           onKeep={keep}
           onSwap={swap}
-          onReset={resetGame}
-          resetDisabled={resetDisabled}
         />
       );
     }
@@ -107,14 +103,13 @@ const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
           {!caseSelected ? (
             <>
               <div>To begin select a case.</div>
-              <PlayerList players={players} sportConfig={sportConfig} />
             </>
           ) : (
             <>
               <div className="case-selected-text">You have selected case #{caseSelected.boxNumber}</div>
-              <PlayerList players={players} sportConfig={sportConfig} />
             </>
           )}
+          <PlayerList players={players} sportConfig={sportConfig} />
           {renderActions()}
         </div>
       </div>

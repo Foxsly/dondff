@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { getCurrentUser } from '../../api/auth';
-import { getLeague } from '../../api/leagues';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {getCurrentUser} from '../../api/auth';
+import {getLeague, getLeagueTeams} from '../../api/leagues';
 import * as teamsApi from '../../api/teams';
-import { getSportConfig } from '../../sports/registry';
-import type { SportConfig } from '../../sports/types';
-import type { GameBox, GameOffer, GamePlayer, LineUpSlot, SportLeague, TeamUser } from '../../types';
+import {getSportConfig} from '../../sports/registry';
+import type {SportConfig} from '../../sports/types';
+import type {GameBox, GameOffer, GamePlayer, LineUpSlot, TeamUser} from '../../types';
 
 interface UseGameStateParams {
   leagueId: string;
@@ -72,18 +72,15 @@ export const useGameState = ({ leagueId, season, week, teamUser }: UseGameStateP
       let resolvedTeamId: string | null = null;
 
       try {
-        const teams = await teamsApi.getTeam(leagueId).catch(() => null);
-        // Use league teams endpoint
-        const { getLeagueTeams } = await import('../../api/leagues');
         const leagueTeams = await getLeagueTeams(leagueId);
         if (Array.isArray(leagueTeams)) {
-          const existing = leagueTeams.find((t: any) =>
-            String(t.leagueId) === String(leagueId) &&
-            String(t.userId) === String(userId) &&
-            Number(t.seasonYear) === Number(season) &&
-            Number(t.week) === Number(week)
+          const existing = leagueTeams.find((team: any) =>
+            String(team.leagueId) === String(leagueId) &&
+            String(team.userId) === String(userId) &&
+            Number(team.seasonYear) === Number(season) &&
+            Number(team.week) === Number(week)
           );
-          if (existing) resolvedTeamId = existing.teamId || existing.id;
+          if (existing) resolvedTeamId = existing.teamId;
         }
       } catch (err) {
         console.error("Error fetching league teams", err);
@@ -97,7 +94,7 @@ export const useGameState = ({ leagueId, season, week, teamUser }: UseGameStateP
             seasonYear: Number(season),
             week: Number(week),
           });
-          resolvedTeamId = createdTeam.teamId || createdTeam.id;
+          resolvedTeamId = createdTeam.teamId;
         } catch (err) {
           console.error("Failed to create team", err);
           return null;
@@ -198,9 +195,9 @@ export const useGameState = ({ leagueId, season, week, teamUser }: UseGameStateP
   const handleEliminatedCases = useCallback(
     (eliminatedCases: GameBox[]) => {
       if (players && eliminatedCases) {
-        for (const ec of eliminatedCases) {
-          const p = players.find((p) => p.playerId === ec.playerId);
-          if (p) p.boxStatus = ec.boxStatus;
+        for (const eliminatedCase of eliminatedCases) {
+          const player = players.find((player) => player.playerId === eliminatedCase.playerId);
+          if (player) player.boxStatus = eliminatedCase.boxStatus;
         }
       }
       setPlayers(players ? [...players] : null);

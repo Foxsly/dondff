@@ -1,5 +1,5 @@
 import React from 'react';
-import type { GameOffer, GameBox } from '../../types';
+import type {GameBox, GameOffer} from '../../types';
 
 interface ActionBarProps {
   offer: GameOffer | null;
@@ -19,7 +19,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
       <div className="action-box">
         <div className="offer-box">
           <p>You accepted the Banker's offer.</p>
-          <p>Congratulations!! Your player is {offer.playerName}. His projected points are {offer.projectedPoints}</p>
+          <p>Congratulations!! Your player is {offer.playerName}. Their projected points are {offer.projectedPoints}</p>
         </div>
         <div className="action-buttons">
           {allPositionsDone
@@ -35,8 +35,8 @@ const ActionBar: React.FC<ActionBarProps> = ({
     return (
       <div className="action-box">
         <div className="offer-box">
-          <p>Your Final case is case#{caseSelected.boxNumber}</p>
-          <p>Congratulations!! Your player is {caseSelected.playerName}. His projected points are {caseSelected.projectedPoints}</p>
+          <p>Your Final case is case #{caseSelected.boxNumber}</p>
+          <p>Congratulations!! Your player is {caseSelected.playerName}. Their projected points are {caseSelected.projectedPoints}</p>
         </div>
         <div className="action-buttons">
           {allPositionsDone

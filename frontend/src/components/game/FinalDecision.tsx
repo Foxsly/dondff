@@ -1,16 +1,14 @@
 import React from 'react';
-import type { GameBox } from '../../types';
+import type {GameBox} from '../../types';
 
 interface FinalDecisionProps {
   remainingCase: GameBox | undefined;
   onKeep: () => void;
   onSwap: () => void;
-  onReset: () => void;
-  resetDisabled: boolean;
 }
 
 const FinalDecision: React.FC<FinalDecisionProps> = ({
-  remainingCase, onKeep, onSwap, onReset, resetDisabled,
+  remainingCase, onKeep, onSwap
 }) => (
   <div className="action-box">
     <div className="offer-box">
@@ -20,7 +18,6 @@ const FinalDecision: React.FC<FinalDecisionProps> = ({
     <div className="action-buttons">
       <button className="btn" onClick={onKeep}>Keep</button>
       <button className="btn" onClick={onSwap}>Swap</button>
-      <button className="btn" onClick={onReset} disabled={resetDisabled}>Reset</button>
     </div>
   </div>
 );

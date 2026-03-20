@@ -1,5 +1,5 @@
 import React from 'react';
-import type { GameBox, GamePlayer } from '../../types';
+import type {GameBox, GamePlayer} from '../../types';
 
 interface CaseBoardProps {
   cases: GameBox[] | null;
