@@ -1,6 +1,6 @@
 import React from 'react';
-import type { GameOffer } from '../../types';
-import type { SportConfig } from '../../sports/types';
+import type {SportConfig} from '../../sports/types';
+import type {GameOffer} from '../../types';
 
 interface OfferPanelProps {
   offer: GameOffer;
@@ -8,11 +8,10 @@ interface OfferPanelProps {
   onAccept: () => void;
   onDecline: () => void;
   onReset: () => void;
-  resetDisabled: boolean;
 }
 
 const OfferPanel: React.FC<OfferPanelProps> = ({
-  offer, sportConfig, onAccept, onDecline, onReset, resetDisabled,
+  offer, sportConfig, onAccept, onDecline,
 }) => (
   <div className="action-box">
     <div className="offer-box">The Banker offers you:
@@ -24,7 +23,6 @@ const OfferPanel: React.FC<OfferPanelProps> = ({
     <div className="action-buttons">
       <button className="btn" onClick={onAccept}>Accept</button>
       <button className="btn" onClick={onDecline}>Decline</button>
-      <button className="btn" onClick={onReset} disabled={resetDisabled}>Reset</button>
     </div>
   </div>
 );
