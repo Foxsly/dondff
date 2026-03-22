@@ -113,6 +113,7 @@ async function seed() {
           .values({
             eventGroupId: eventGroupId,
             name: `NFL Week ${week}`,
+            sportLeague: 'NFL',
           })
           .execute();
       }

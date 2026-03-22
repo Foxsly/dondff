@@ -8,12 +8,14 @@ import {
   UpdateEventGroupDto,
 } from './entities/event-group.entity';
 import { CreateEventDto, Event, UpdateEventDto } from './entities/event.entity';
+import { SportLeague } from '@/leagues/entities/league.entity';
 
 export abstract class EventsRepository {
   abstract createEventGroup(dto: CreateEventGroupDto): Promise<EventGroup>;
   abstract findAllEventGroups(): Promise<EventGroup[]>;
   abstract findOneEventGroup(id: string): Promise<EventGroup | null>;
   abstract findEventGroupByName(name: string): Promise<EventGroup | null>;
+  abstract findEventGroupsBySportLeague(sportLeague: string): Promise<EventGroup[]>;
   abstract updateEventGroup(id: string, dto: UpdateEventGroupDto): Promise<EventGroup | null>;
   abstract deleteEventGroup(id: string): Promise<boolean>;
 
@@ -38,6 +40,7 @@ export class DatabaseEventsRepository extends EventsRepository {
       .values({
         eventGroupId: crypto.randomUUID(),
         name: dto.name,
+        sportLeague: dto.sportLeague,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -65,6 +68,15 @@ export class DatabaseEventsRepository extends EventsRepository {
       .where('name', '=', name)
       .executeTakeFirst();
     return row ? (row as EventGroup) : null;
+  }
+
+  async findEventGroupsBySportLeague(sportLeague: SportLeague): Promise<EventGroup[]> {
+    const rows = await this.db
+      .selectFrom('eventGroup')
+      .selectAll()
+      .where('sportLeague', '=', sportLeague)
+      .execute();
+    return rows as EventGroup[];
   }
 
   async updateEventGroup(

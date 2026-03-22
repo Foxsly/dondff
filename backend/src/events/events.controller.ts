@@ -1,5 +1,6 @@
-import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
-import { Body, Controller } from '@nestjs/common';
+import { SportLeague } from '@/leagues/entities/league.entity';
+import { TypedParam, TypedRoute } from '@nestia/core';
+import { Body, Controller, Query } from '@nestjs/common';
 import {
   CreateEventGroupDto,
   EventGroup,
@@ -22,16 +23,18 @@ export class EventGroupsController {
     return this.eventsService.findAllEventGroups();
   }
 
+  @TypedRoute.Get('by-sport')
+  findBySport(@Query('sportLeague') sportLeague: SportLeague): Promise<EventGroup[]> {
+    return this.eventsService.findEventGroupsBySportLeague(sportLeague);
+  }
+
   @TypedRoute.Get(':id')
   findOne(@TypedParam('id') id: string): Promise<EventGroup> {
     return this.eventsService.findOneEventGroup(id);
   }
 
   @TypedRoute.Put(':id')
-  update(
-    @TypedParam('id') id: string,
-    @Body() dto: UpdateEventGroupDto,
-  ): Promise<EventGroup> {
+  update(@TypedParam('id') id: string, @Body() dto: UpdateEventGroupDto): Promise<EventGroup> {
     return this.eventsService.updateEventGroup(id, dto);
   }
 

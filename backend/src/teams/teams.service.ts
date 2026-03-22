@@ -39,10 +39,13 @@ export class TeamsService {
   ) {}
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
+    const league = await this.leaguesService.findOne(createTeamDto.leagueId);
+
     let eventGroupId: string;
     if (createTeamDto.week) {
       const eventGroup = await this.eventsService.getOrCreateEventGroup(
-        `NFL Week ${createTeamDto.week}`,
+        `${league.sportLeague} Week ${createTeamDto.week}`,
+        league.sportLeague,
       );
       eventGroupId = eventGroup.eventGroupId;
     } else if (createTeamDto.eventGroupId) {
@@ -59,7 +62,6 @@ export class TeamsService {
     };
 
     let createdTeam: Team = await this.teamsRepository.create(teamData);
-    const league = await this.leaguesService.findOne(createdTeam.leagueId);
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       createdTeam.leagueId,
     );

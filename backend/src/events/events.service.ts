@@ -6,6 +6,7 @@ import {
 } from './entities/event-group.entity';
 import { CreateEventDto, Event, UpdateEventDto } from './entities/event.entity';
 import { EventsRepository } from './events.repository';
+import { SportLeague } from '@/leagues/entities/league.entity';
 
 @Injectable()
 export class EventsService {
@@ -27,12 +28,16 @@ export class EventsService {
     return eventGroup;
   }
 
-  async getOrCreateEventGroup(name: string): Promise<EventGroup> {
+  async getOrCreateEventGroup(name: string, sportLeague: SportLeague): Promise<EventGroup> {
     const existing = await this.eventsRepository.findEventGroupByName(name);
     if (existing) {
       return existing;
     }
-    return this.createEventGroup({ name });
+    return this.createEventGroup({ name, sportLeague });
+  }
+
+  async findEventGroupsBySportLeague(sportLeague: SportLeague): Promise<EventGroup[]> {
+    return this.eventsRepository.findEventGroupsBySportLeague(sportLeague);
   }
 
   async updateEventGroup(id: string, dto: UpdateEventGroupDto): Promise<EventGroup> {
