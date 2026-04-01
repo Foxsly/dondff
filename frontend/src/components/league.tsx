@@ -110,16 +110,16 @@ const League: React.FC = () => {
       <Seasons leagueId={leagueId!} />
       {member?.role === "player" &&
         league?.currentSeason &&
-        league?.currentWeek && (
+        league?.currentEventGroupId && (
           <Link
             to="/game/setting-lineups"
             state={{
               leagueId: leagueId,
               season: league.currentSeason,
-              week: league.currentWeek,
+              eventGroupId: league.currentEventGroupId,
             }}
           >
-            <button className="btn-primary">Go To Weekly Game</button>
+            <button className="btn-primary">Go To Current Game</button>
           </Link>
         )}
     </div>

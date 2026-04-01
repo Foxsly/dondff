@@ -2,11 +2,12 @@ import React from 'react';
 import type { SportConfig } from './types';
 import type { GamePlayer, GameOffer } from '../types';
 import { getSleeperState } from '../api/sleeper';
+import { getOrCreateEventGroup } from '../api/events';
 
 export const nflConfig: SportConfig = {
   key: 'NFL',
   displayName: 'NFL',
-  weekLabel: 'Week',
+  eventLabel: 'Week',
 
   fetchCurrentSeason: async () => {
     try {
@@ -17,18 +18,24 @@ export const nflConfig: SportConfig = {
     }
   },
 
-  fetchCurrentWeek: async () => {
+  fetchCurrentEventGroup: async () => {
     try {
       const state = await getSleeperState();
-      return state?.week != null ? Number(state.week) : null;
+      if (state?.week == null) return null;
+      const weekNumber = Number(state.week);
+      const eventGroup = await getOrCreateEventGroup(`NFL Week ${weekNumber}`);
+      return {
+        eventGroupId: eventGroup.eventGroupId,
+        label: String(weekNumber),
+      };
     } catch {
       return null;
     }
   },
 
-  fetchAvailableWeeks: async () => {
+  fetchAvailableEventGroups: async () => {
     // NFL weeks come from team data + Sleeper state; the component handles merging.
-    // This returns an empty array — the component adds the current week from fetchCurrentWeek.
+    // This returns an empty array — the component adds the current event group from fetchCurrentEventGroup.
     return [];
   },
 

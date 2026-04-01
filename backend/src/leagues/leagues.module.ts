@@ -4,7 +4,6 @@ import { LeaguesController } from './leagues.controller';
 import { db } from '@/infrastructure/database/database';
 import { DatabaseLeaguesRepository, LeaguesRepository } from './leagues.repository';
 import { DatabaseModule } from '@/infrastructure/database/database.module';
-import { EventsModule } from '@/events/events.module';
 
 @Module({
   controllers: [LeaguesController],
@@ -19,7 +18,7 @@ import { EventsModule } from '@/events/events.module';
       useClass: DatabaseLeaguesRepository,
     },
   ],
-  imports: [DatabaseModule, EventsModule],
+  imports: [DatabaseModule],
   exports: [LeaguesService],
 })
 export class LeaguesModule {}

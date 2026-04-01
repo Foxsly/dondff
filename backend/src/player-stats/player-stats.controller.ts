@@ -11,22 +11,22 @@ import type { SportLeague } from '@/leagues/entities/league.entity';
 export class PlayerStatsController {
   constructor(private readonly playerStatsService: PlayerStatsService) {}
 
-  @TypedRoute.Get('projections/:year/:week/:position')
+  @TypedRoute.Get('projections/:year/:eventGroupId/:position')
   getProjections(
     @TypedParam('year') year: number,
-    @TypedParam('week') week: number,
+    @TypedParam('eventGroupId') eventGroupId: string,
     @TypedParam('position') position: string,
     @Query('sportLeague') sportLeague?: SportLeague,
   ): Promise<PlayerProjectionResponse> {
-    return this.playerStatsService.getPlayerProjections(position, year, week, sportLeague);
+    return this.playerStatsService.getPlayerProjections(position, year, eventGroupId, sportLeague);
   }
 
-  @TypedRoute.Get('stats/:year/:week/:position')
+  @TypedRoute.Get('stats/:year/:eventGroupId/:position')
   getStats(
     @TypedParam('year') year: number,
-    @TypedParam('week') week: number,
+    @TypedParam('eventGroupId') eventGroupId: string,
     @TypedParam('position') position: string,
   ): Promise<PlayerStatResponse> {
-    return this.playerStatsService.getPlayerStatistics(position, year, week);
+    return this.playerStatsService.getPlayerStatistics(position, year, eventGroupId);
   }
 }

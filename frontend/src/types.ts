@@ -14,7 +14,7 @@ export interface League {
   name?: string;
   role?: string;
   currentSeason?: string | number;
-  currentWeek?: string | number;
+  currentEventGroupId?: string;
   sportLeague?: SportLeague;
 }
 
@@ -53,7 +53,7 @@ export interface Team {
   userId: string;
   leagueId: string;
   seasonYear?: number;
-  week?: number;
+  eventGroupId?: string;
   players: TeamPlayer[];
   finalScore?: number | null;
 }

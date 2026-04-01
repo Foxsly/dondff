@@ -1,3 +1,4 @@
+import { EventsService } from '@/events/events.service';
 import { FanduelService } from '@/fanduel/fanduel.service';
 import { SportLeague } from '@/leagues/entities/league.entity';
 import {
@@ -18,18 +19,34 @@ export class PlayerStatsService {
   constructor(
     private readonly sleeperService: SleeperService,
     private readonly fanduelService: FanduelService,
+    private readonly eventsService: EventsService,
   ) {
     this.playerTeams = new Map<string, PlayerTeams>()
+  }
+
+  /**
+   * Resolves the NFL week number from an event group name (e.g. "NFL Week 3" → 3).
+   * Returns null if the event group name doesn't match the NFL week pattern.
+   */
+  private getWeekNumberFromEventGroup(eventGroupName: string): number | null {
+    const match = eventGroupName.match(/Week\s+(\d+)/);
+    return match ? parseInt(match[1], 10) : null;
   }
 
   async getPlayerProjections(
     position: string,
     season: number,
-    week: number,
+    eventGroupId: string,
     sportLeague: SportLeague = 'NFL',
   ): Promise<PlayerProjectionResponse> {
     if (sportLeague === 'GOLF') {
       return this.getGolfProjections();
+    }
+
+    const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
+    const week = this.getWeekNumberFromEventGroup(eventGroup.name);
+    if (week === null) {
+      throw new Error(`Cannot resolve NFL week number from event group: ${eventGroup.name}`);
     }
 
     const isPostseason = week > 18;
@@ -94,8 +111,14 @@ export class PlayerStatsService {
   async getPlayerStatistics(
     position: string,
     season: number,
-    week: number,
+    eventGroupId: string,
   ): Promise<PlayerStatResponse> {
+    const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
+    const week = this.getWeekNumberFromEventGroup(eventGroup.name);
+    if (week === null) {
+      throw new Error(`Cannot resolve NFL week number from event group: ${eventGroup.name}`);
+    }
+
     const isPostseason = week > 18;
     const sleeperStats = await this.sleeperService.getPlayerStatistics(
       position,

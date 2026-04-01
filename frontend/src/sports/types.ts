@@ -1,8 +1,13 @@
 import type { ReactNode } from 'react';
 import type { SportLeague, GamePlayer, GameOffer } from '../types';
 
-export interface WeekOption {
+export interface EventOption {
   value: string;
+  label: string;
+}
+
+export interface CurrentEventGroup {
+  eventGroupId: string;
   label: string;
 }
 
@@ -11,16 +16,16 @@ export interface SportConfig {
   displayName: string;
 
   /** Label for the time-unit dimension — "Week" for NFL, "Event" for Golf */
-  weekLabel: string;
+  eventLabel: string;
 
   /** Fetch the current season identifier (e.g. Sleeper season or current year) */
   fetchCurrentSeason: () => Promise<string | null>;
 
-  /** Fetch the current week/event number */
-  fetchCurrentWeek: () => Promise<number | null>;
+  /** Fetch the current event group (e.g. current NFL week, current golf tournament) */
+  fetchCurrentEventGroup: () => Promise<CurrentEventGroup | null>;
 
-  /** Fetch available weeks/events for a given season */
-  fetchAvailableWeeks: (season: string | number) => Promise<WeekOption[]>;
+  /** Fetch available event groups for a given season */
+  fetchAvailableEventGroups: (season: string | number) => Promise<EventOption[]>;
 
   /**
    * If true, all positions share a single projection pool (fetch once).

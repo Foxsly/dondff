@@ -8,6 +8,7 @@ import {ITeamStatus} from '@/teams/entities/team-status.entity';
 import {TeamsEntryRepository} from '@/teams/teams-entry.repository';
 import {TeamsRepository} from '@/teams/teams.repository';
 import {EventsService} from '@/events/events.service';
+import {EventGroup} from '@/events/entities/event-group.entity';
 import {Injectable, NotFoundException} from '@nestjs/common';
 import {
     ITeamEntry,
@@ -39,26 +40,7 @@ export class TeamsService {
   ) {}
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
-    let eventGroupId: string;
-    if (createTeamDto.week) {
-      const eventGroup = await this.eventsService.getOrCreateEventGroup(
-        `NFL Week ${createTeamDto.week}`,
-      );
-      eventGroupId = eventGroup.eventGroupId;
-    } else if (createTeamDto.eventGroupId) {
-      eventGroupId = createTeamDto.eventGroupId;
-    } else {
-      throw new Error('Either week or eventGroupId must be provided');
-    }
-
-    const teamData = {
-      leagueId: createTeamDto.leagueId,
-      userId: createTeamDto.userId,
-      seasonYear: createTeamDto.seasonYear,
-      eventGroupId,
-    };
-
-    let createdTeam: Team = await this.teamsRepository.create(teamData);
+    let createdTeam: Team = await this.teamsRepository.create(createTeamDto);
     const league = await this.leaguesService.findOne(createdTeam.leagueId);
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       createdTeam.leagueId,
@@ -69,6 +51,8 @@ export class TeamsService {
       leagueSettings.leagueSettingsId,
     );
 
+    const eventGroup = await this.eventsService.findOneEventGroup(createTeamDto.eventGroupId);
+
     //TODO extract this into a 'generateCasesForTeam' that just takes the leagueId and the createdTeam, and does the position looping within it
     for (const position of positions) {
       await this.generateCasesForPosition(
@@ -76,7 +60,7 @@ export class TeamsService {
         position.position,
         leagueSettings,
         league.sportLeague,
-        this.getNumberOfCases(createTeamDto.week ?? await this.getWeekNumberFromEventGroup(eventGroupId)),
+        this.getNumberOfCases(eventGroup),
       );
     }
 
@@ -242,12 +226,13 @@ export class TeamsService {
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       team.leagueId,
     );
+    const eventGroup = await this.eventsService.findOneEventGroup(team.eventGroupId);
     await this.generateCasesForPosition(
       team,
       position,
       leagueSettings,
       league.sportLeague,
-      this.getNumberOfCases(await this.getWeekNumberFromEventGroup(team.eventGroupId)),
+      this.getNumberOfCases(eventGroup),
     );
   }
 
@@ -258,7 +243,7 @@ export class TeamsService {
     sportLeague: SportLeague,
     numberOfCases: number = 10,
   ) {
-    let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(position, team.seasonYear, await this.getWeekNumberFromEventGroup(team.eventGroupId), sportLeague,);
+    let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(position, team.seasonYear, team.eventGroupId, sportLeague,);
     let teamEntry: ITeamEntry = await this.getOrCreateTeamEntry(
       team.teamId,
       position,
@@ -327,7 +312,7 @@ export class TeamsService {
     const projections = await this.playerStatsService.getPlayerProjections(
       teamEntry.position,
       team.seasonYear,
-      await this.getWeekNumberFromEventGroup(team.eventGroupId),
+      team.eventGroupId,
       league.sportLeague,
     );
 
@@ -533,28 +518,16 @@ export class TeamsService {
   }
 
   /**
-   * As we get further into the playoffs, the number of available players drops.
-   * To account for this, we limit the number of cases as well
+   * Determines the number of cases for a given event group.
+   * For NFL playoff weeks with fewer available players, we reduce the case count.
    */
-  getNumberOfCases(week: number): number {
-    switch (week) {
-      case 20:
-        return 6;
-      default:
-        return 10;
+  getNumberOfCases(eventGroup: EventGroup): number {
+    // Check if this is an NFL event group with a week number
+    const weekMatch = eventGroup.name.match(/Week\s+(\d+)/);
+    if (weekMatch) {
+      const weekNumber = parseInt(weekMatch[1], 10);
+      if (weekNumber === 20) return 6;
     }
-  }
-
-  getWeekNumberFromString(week: string): number {
-    const match = week.match(/Week\s+(\d+)/);
-    if (!match) {
-      throw new Error(`Invalid week format: ${week}`);
-    }
-    return parseInt(match[1], 10);
-  }
-
-  async getWeekNumberFromEventGroup(eventGroupId: string): Promise<number> {
-    const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
-    return this.getWeekNumberFromString(eventGroup.name);
+    return 10;
   }
 }

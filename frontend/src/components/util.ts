@@ -2,7 +2,7 @@ import { request } from '../api/client';
 import type { PoolPlayer, GameCase } from '../types';
 
 export const getPlayers = async (
-  week: string | number,
+  eventGroupId: string,
   position: string,
   seasonYear: string | number,
   playerLimit: number,
@@ -10,7 +10,7 @@ export const getPlayers = async (
 ): Promise<void> => {
   const players: PoolPlayer[] = [];
   try {
-    const json = await request<any[]>(`/players/projections/${seasonYear}/${week}/${position}`);
+    const json = await request<any[]>(`/players/projections/${seasonYear}/${eventGroupId}/${position}`);
     if (Array.isArray(json)) {
       for (let i = 0; i < playerLimit; i++) {
         const playerJson = json[i];

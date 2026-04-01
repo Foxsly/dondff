@@ -1,27 +1,27 @@
 import React from 'react';
-import type { SportConfig, WeekOption } from './types';
+import type { SportConfig, EventOption } from './types';
 import type { GamePlayer, GameOffer } from '../types';
 import { getGolfEvents } from '../api/fanduel';
 
 export const golfConfig: SportConfig = {
   key: 'GOLF',
   displayName: 'Golf',
-  weekLabel: 'Event',
+  eventLabel: 'Event',
 
   fetchCurrentSeason: async () => {
     return String(new Date().getFullYear());
   },
 
-  fetchCurrentWeek: async () => {
-    // Golf doesn't have a fixed "current week" — events are created ad-hoc
+  fetchCurrentEventGroup: async () => {
+    // Golf doesn't have a fixed "current event group" — events are created ad-hoc
     return null;
   },
 
-  fetchAvailableWeeks: async () => {
+  fetchAvailableEventGroups: async () => {
     try {
       const events = await getGolfEvents();
       if (!Array.isArray(events)) return [];
-      return events.map((e): WeekOption => ({ value: e.id, label: e.name }));
+      return events.map((e): EventOption => ({ value: e.id, label: e.name }));
     } catch {
       return [];
     }

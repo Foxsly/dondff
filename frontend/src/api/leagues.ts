@@ -13,10 +13,10 @@ export const getLeagueUsers = (leagueId: string) =>
 export const addLeagueUser = (leagueId: string, body: { userId: string; role: string }) =>
   request<void>(`/leagues/${leagueId}/users`, { method: 'PUT', body });
 
-export const getLeagueTeams = (leagueId: string, params?: { season?: string | number; week?: string | number }) => {
+export const getLeagueTeams = (leagueId: string, params?: { season?: string | number; eventGroupId?: string }) => {
   const query = new URLSearchParams();
   if (params?.season != null) query.set('season', String(params.season));
-  if (params?.week != null) query.set('week', String(params.week));
+  if (params?.eventGroupId != null) query.set('eventGroupId', params.eventGroupId);
   const qs = query.toString();
   return request<any[]>(`/leagues/${leagueId}/teams${qs ? `?${qs}` : ''}`);
 };

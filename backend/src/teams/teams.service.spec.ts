@@ -47,7 +47,7 @@ describe('TeamsService', () => {
     leagueId: 'league-1',
     userId: 'user-1',
     seasonYear: 2025,
-    week: 1,
+    eventGroupId: 'event-group-1',
   };
 
   const mockITeam: ITeam = {
@@ -55,7 +55,7 @@ describe('TeamsService', () => {
     leagueId: 'league-1',
     userId: 'user-1',
     seasonYear: 2025,
-    week: 1,
+    eventGroupId: 'event-group-1',
     players: [],
   };
 
@@ -65,7 +65,7 @@ describe('TeamsService', () => {
         leagueId: 'league-1',
         userId: 'user-1',
         seasonYear: 2025,
-        week: 1,
+        eventGroupId: 'event-group-1',
       };
       repo.create.mockResolvedValue(mockTeam);
 
@@ -100,8 +100,8 @@ describe('TeamsService', () => {
 
   describe('update', () => {
     it('should update and return the team', async () => {
-      const updateDto: UpdateTeamDto = { week: 2 };
-      const updatedTeam = { ...mockTeam, week: 2 };
+      const updateDto: UpdateTeamDto = { eventGroupId: 'event-group-2' };
+      const updatedTeam = { ...mockTeam, eventGroupId: 'event-group-2' };
       repo.update.mockResolvedValue(updatedTeam);
 
       const result = await service.update('team-1', updateDto);
@@ -111,7 +111,7 @@ describe('TeamsService', () => {
 
     it('should throw NotFoundException if team not found', async () => {
       repo.update.mockResolvedValue(null);
-      const updateDto: UpdateTeamDto = { week: 2 };
+      const updateDto: UpdateTeamDto = { eventGroupId: 'event-group-2' };
       await expect(service.update('team-2', updateDto)).rejects.toThrow(NotFoundException);
     });
   });
