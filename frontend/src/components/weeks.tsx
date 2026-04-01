@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from "react";
 import {useNavigate, useParams} from "react-router-dom";
 import {getCurrentUser} from "../api/auth";
+import {getEventGroups, getOrCreateEventGroup} from "../api/events";
 import {getLeagueTeams} from "../api/leagues";
 import {useLeague} from "../contexts/LeagueContext";
 import type {EventOption} from "../sports/types";
@@ -12,6 +13,8 @@ import LoadingSpinner from "./ui/LoadingSpinner";
 interface EventGroupInfo {
   eventGroupId: string;
   label: string;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
 const Weeks: React.FC = () => {
@@ -47,9 +50,17 @@ const Weeks: React.FC = () => {
           return;
         }
 
-        const teams = await getLeagueTeams(leagueId!);
+        const [teams, allEventGroups] = await Promise.all([
+          getLeagueTeams(leagueId!),
+          getEventGroups(),
+        ]);
 
         if (cancelled) return;
+
+        // Build a lookup map from backend event groups (which include dates)
+        const eventGroupLookup = new Map(
+          allEventGroups.map((eg) => [eg.eventGroupId, eg]),
+        );
 
         const eventGroupMap = new Map<string, EventGroupInfo>();
 
@@ -60,9 +71,12 @@ const Weeks: React.FC = () => {
 
           leagueTeams.forEach((team: any) => {
             if (team.eventGroupId != null && !eventGroupMap.has(team.eventGroupId)) {
+              const eg = eventGroupLookup.get(team.eventGroupId);
               eventGroupMap.set(team.eventGroupId, {
                 eventGroupId: team.eventGroupId,
-                label: team.eventGroupName ?? team.eventGroupId,
+                label: eg?.name ?? team.eventGroupName ?? team.eventGroupId,
+                startDate: eg?.startDate ?? null,
+                endDate: eg?.endDate ?? null,
               });
             }
           });
@@ -73,9 +87,12 @@ const Weeks: React.FC = () => {
         if (currentEventGroup != null) {
           if (!cancelled) setCurrentEventGroupId(currentEventGroup.eventGroupId);
           if (!eventGroupMap.has(currentEventGroup.eventGroupId)) {
+            const eg = eventGroupLookup.get(currentEventGroup.eventGroupId);
             eventGroupMap.set(currentEventGroup.eventGroupId, {
               eventGroupId: currentEventGroup.eventGroupId,
               label: currentEventGroup.label,
+              startDate: eg?.startDate ?? null,
+              endDate: eg?.endDate ?? null,
             });
           }
         }
@@ -103,13 +120,24 @@ const Weeks: React.FC = () => {
     return () => { cancelled = true; };
   }, [leagueId, season, navigate, sportConfig, leagueLoading]);
 
-  const handleCreateEventGroup = (event: EventOption) => {
-    const newGroup: EventGroupInfo = {
-      eventGroupId: event.value,
-      label: event.label,
-    };
-    setEventGroups((prev) => [...prev, newGroup]);
-    setAvailableEvents((prev) => prev.filter((e) => e.value !== event.value));
+  const handleCreateEventGroup = async (event: EventOption) => {
+    try {
+      const eventGroup = await getOrCreateEventGroup(event.label, {
+        startDate: event.startDate,
+        endDate: event.endDate,
+      });
+      const newGroup: EventGroupInfo = {
+        eventGroupId: eventGroup.eventGroupId,
+        label: event.label,
+        startDate: eventGroup.startDate,
+        endDate: eventGroup.endDate,
+      };
+      setEventGroups((prev) => [...prev, newGroup]);
+      setAvailableEvents((prev) => prev.filter((e) => e.value !== event.value));
+    } catch (err: any) {
+      console.error("Failed to create event group", err);
+      setError(err?.message ?? "Failed to create event group");
+    }
   };
 
   const breadcrumbs = [

@@ -43,9 +43,11 @@ interface EntriesProps {
   season: string | number;
   eventGroupId: string;
   currentEventGroupId?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
-const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, currentEventGroupId }) => {
+const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, currentEventGroupId, startDate, endDate }) => {
   const { positions: leaguePositions, sportConfig } = useLeague();
 
   const [user, setUser] = useState<User | null>(null);
@@ -57,7 +59,29 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, curre
   const [error, setError] = useState("");
   const [currentSeason, setCurrentSeason] = useState<number | null>(null);
 
-  const isCurrentEventGroup = currentEventGroupId != null && eventGroupId === currentEventGroupId;
+  // Determine if this event group is current/playable:
+  // 1. If dates are available, use them: ended = endDate in the past
+  // 2. If no dates but sport provides currentEventGroupId, compare IDs
+  // 3. If neither (e.g. golf without dates), treat as current
+  const isEventGroupEnded = (() => {
+    if (endDate) {
+      return new Date(endDate) < new Date();
+    }
+    return false;
+  })();
+
+  const isCurrentEventGroup = (() => {
+    if (endDate) {
+      // Has dates — current if not ended
+      return !isEventGroupEnded;
+    }
+    if (currentEventGroupId != null) {
+      // Sport provides a current event group ID (e.g. NFL)
+      return eventGroupId === currentEventGroupId;
+    }
+    // No dates and no currentEventGroupId — treat as current
+    return true;
+  })();
 
   useEffect(() => {
     let cancelled = false;
@@ -226,8 +250,8 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, curre
   const seasonNum = Number(season);
   const isPastSeason = currentSeason != null && seasonNum < currentSeason;
   const isCurrentSeason = currentSeason != null && seasonNum === currentSeason;
-  // Show results when looking at a non-current event group in the current or past season
-  const isPastEventGroup = !isCurrentEventGroup && (isCurrentSeason || isPastSeason);
+  // Show results when event group has ended (by date or by season/eventGroup comparison)
+  const isPastEventGroup = isEventGroupEnded || (!isCurrentEventGroup && (isCurrentSeason || isPastSeason));
   const showResults = isPastEventGroup;
 
   const projectedTotal = (entry: Entry) => {

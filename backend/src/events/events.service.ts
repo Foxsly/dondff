@@ -27,12 +27,27 @@ export class EventsService {
     return eventGroup;
   }
 
-  async getOrCreateEventGroup(name: string): Promise<EventGroup> {
+  async getOrCreateEventGroup(
+    name: string,
+    dates?: { startDate?: string | null; endDate?: string | null },
+  ): Promise<EventGroup> {
     const existing = await this.eventsRepository.findEventGroupByName(name);
     if (existing) {
+      // Backfill dates if the existing group is missing them
+      if (dates && (dates.startDate || dates.endDate) && !existing.startDate && !existing.endDate) {
+        const updated = await this.eventsRepository.updateEventGroup(existing.eventGroupId, {
+          startDate: dates.startDate ?? null,
+          endDate: dates.endDate ?? null,
+        });
+        return updated ?? existing;
+      }
       return existing;
     }
-    return this.createEventGroup({ name });
+    return this.createEventGroup({
+      name,
+      startDate: dates?.startDate ?? null,
+      endDate: dates?.endDate ?? null,
+    });
   }
 
   async updateEventGroup(id: string, dto: UpdateEventGroupDto): Promise<EventGroup> {

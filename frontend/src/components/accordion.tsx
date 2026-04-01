@@ -5,6 +5,8 @@ import Entries from "./entries";
 interface EventGroupInfo {
   eventGroupId: string;
   label: string;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
 interface AccordionProps {
@@ -35,6 +37,8 @@ const Accordion: React.FC<AccordionProps> = ({ eventGroup, leagueId, season, cur
             season={season}
             eventGroupId={eventGroup.eventGroupId}
             currentEventGroupId={currentEventGroupId}
+            startDate={eventGroup.startDate}
+            endDate={eventGroup.endDate}
           />
         </div>
       )}

@@ -38,6 +38,8 @@ export class DatabaseEventsRepository extends EventsRepository {
       .values({
         eventGroupId: crypto.randomUUID(),
         name: dto.name,
+        startDate: dto.startDate ?? null,
+        endDate: dto.endDate ?? null,
       })
       .returningAll()
       .executeTakeFirstOrThrow();

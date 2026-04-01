@@ -17,6 +17,16 @@ export class EventGroupsController {
     return this.eventsService.createEventGroup(dto);
   }
 
+  @TypedRoute.Post('get-or-create')
+  getOrCreate(
+    @Body() dto: CreateEventGroupDto,
+  ): Promise<EventGroup> {
+    return this.eventsService.getOrCreateEventGroup(dto.name, {
+      startDate: dto.startDate,
+      endDate: dto.endDate,
+    });
+  }
+
   @TypedRoute.Get()
   findAll(): Promise<EventGroup[]> {
     return this.eventsService.findAllEventGroups();
