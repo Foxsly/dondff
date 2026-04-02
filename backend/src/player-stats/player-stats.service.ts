@@ -1,4 +1,5 @@
 import { EventsService } from '@/events/events.service';
+import { EspnService } from '@/fanduel/espn.service';
 import { FanduelService } from '@/fanduel/fanduel.service';
 import { SportLeague } from '@/leagues/entities/league.entity';
 import {
@@ -9,17 +10,20 @@ import {
   PlayerStatResponse,
   PlayerTeams,
 } from '@/player-stats/entities/player-stats.entity';
+import { calculateGolferScore } from '@/player-stats/golf-scoring.util';
 import { SleeperService } from '@/sleeper/sleeper.service';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
 export class PlayerStatsService {
+  private readonly logger = new Logger(PlayerStatsService.name);
   private playerTeams: Map<string, PlayerTeams> = new Map<string, PlayerTeams>();
 
   constructor(
     private readonly sleeperService: SleeperService,
     private readonly fanduelService: FanduelService,
     private readonly eventsService: EventsService,
+    private readonly espnService: EspnService,
   ) {
     this.playerTeams = new Map<string, PlayerTeams>()
   }
@@ -112,7 +116,12 @@ export class PlayerStatsService {
     position: string,
     season: number,
     eventGroupId: string,
+    sportLeague: SportLeague = 'NFL',
   ): Promise<PlayerStatResponse> {
+    if (sportLeague === 'GOLF') {
+      return this.getGolfStatistics(season, eventGroupId);
+    }
+
     const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
     const week = this.getWeekNumberFromEventGroup(eventGroup.name);
     if (week === null) {
@@ -135,6 +144,30 @@ export class PlayerStatsService {
       oppTeam: player.opponent,
       team: player.team,
     })) as IPlayerStats[];
+  }
+
+  private async getGolfStatistics(
+    season: number,
+    eventGroupId: string,
+  ): Promise<PlayerStatResponse> {
+    const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
+
+    const leaderboard = await this.espnService.getTournamentLeaderboard(season, eventGroup.name);
+
+    if (!leaderboard) {
+      this.logger.warn(`No ESPN leaderboard found for "${eventGroup.name}"`);
+      return [];
+    }
+
+    // Return all ESPN competitors with calculated scores.
+    // Use the athlete name as playerId — the frontend matches by name for golf.
+    return leaderboard.competitors.map((competitor) => ({
+      playerId: competitor.athleteName,
+      name: competitor.athleteName,
+      position: 'GOLF_PLAYER' as PlayerPosition,
+      points: calculateGolferScore(competitor),
+      team: '',
+    }));
   }
 
   async getGolfProjections(): Promise<PlayerProjectionResponse> {

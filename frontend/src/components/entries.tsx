@@ -268,10 +268,19 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, curre
     try {
       const allStats = await Promise.all(
         positions.map((pos) =>
-          getStats(season, eventGroupId, pos.position).catch(() => [])
+          getStats(season, eventGroupId, pos.position, sportConfig?.key).catch(() => [])
         )
       );
       const finalStats = allStats.flat();
+
+      // For golf, stats are keyed by athlete name (not FanDuel ID).
+      // Build a normalized name lookup for matching.
+      const normalizeName = (name: string) =>
+        name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+
+      const statsByName = new Map(
+        finalStats.map((s: any) => [normalizeName(s.name ?? ''), s]),
+      );
 
       const updatedEntries = entries.map((entry) => {
         let finalScore = 0;
@@ -280,7 +289,11 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, curre
         for (const pos of positions) {
           const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
           if (player?.playerId) {
-            const stat = finalStats.find((p: any) => p.playerId === player.playerId);
+            // Try matching by playerId first (NFL), then by name (golf)
+            let stat = finalStats.find((p: any) => p.playerId === player.playerId);
+            if (!stat && player.playerName) {
+              stat = statsByName.get(normalizeName(player.playerName));
+            }
             const score = stat?.points ?? 0;
             finalScore += score;
             updatedLineUp[pos.position] = { ...player, pprScore: score };
@@ -345,7 +358,7 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, curre
                   );
                 })}
                 <td className={tdClass}>{roundToTwo(projectedTotal(entry))}</td>
-                <td className={tdClass}>{entry.finalScore ? roundToTwo(entry.finalScore) : ""}</td>
+                <td className={tdClass}>{typeof entry.finalScore === "number" ? roundToTwo(entry.finalScore) : ""}</td>
               </tr>
             ))}
           </tbody>

@@ -26,7 +26,8 @@ export class PlayerStatsController {
     @TypedParam('year') year: number,
     @TypedParam('eventGroupId') eventGroupId: string,
     @TypedParam('position') position: string,
+    @Query('sportLeague') sportLeague?: SportLeague,
   ): Promise<PlayerStatResponse> {
-    return this.playerStatsService.getPlayerStatistics(position, year, eventGroupId);
+    return this.playerStatsService.getPlayerStatistics(position, year, eventGroupId, sportLeague);
   }
 }

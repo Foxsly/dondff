@@ -33,7 +33,7 @@ export const golfConfig: SportConfig = {
   },
 
   sharedProjectionPool: true,
-  supportsScoring: false,
+  supportsScoring: true,
 
   renderPlayerDetails: (player: GamePlayer) => (
     <span className="proj">Proj: {player.projectedPoints}</span>
