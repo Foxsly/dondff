@@ -2,7 +2,7 @@ import React, {useCallback, useEffect, useState} from "react";
 import {Link} from "react-router-dom";
 import {getCurrentUser} from "../api/auth";
 import {getLeagueTeams, getLeagueUsers} from "../api/leagues";
-import {getProjections, getStats} from "../api/players";
+import {getStats} from "../api/players";
 import * as teamsApi from "../api/teams";
 import {getUser} from "../api/users";
 import {useLeague} from "../contexts/LeagueContext";
@@ -112,42 +112,6 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, curre
           getLeagueUsers(leagueId),
         ]);
 
-        // Fetch projections
-        const projectionsByPosition = new Map<string, Map<string, number>>();
-        if (sportConfig?.sharedProjectionPool) {
-          // Shared pool — fetch once, reuse for all positions
-          try {
-            const data = await getProjections(season, eventGroupId, effectivePositions[0].position, sportConfig.key);
-            const map = new Map<string, number>();
-            if (Array.isArray(data)) {
-              data.forEach((entry: any) => {
-                if (entry.playerId) map.set(String(entry.playerId), entry.projectedPoints ?? 0);
-              });
-            }
-            for (const pos of effectivePositions) {
-              projectionsByPosition.set(pos.position, map);
-            }
-          } catch (e) {
-            console.error("Error processing shared projections", e);
-          }
-        } else {
-          // Per-position projections
-          const projectionPromises = effectivePositions.map((pos) =>
-            getProjections(season, eventGroupId, pos.position, sportConfig?.key)
-              .then((data) => {
-                const map = new Map<string, number>();
-                if (Array.isArray(data)) {
-                  data.forEach((entry: any) => {
-                    if (entry.playerId) map.set(String(entry.playerId), entry.projectedPoints ?? 0);
-                  });
-                }
-                projectionsByPosition.set(pos.position, map);
-              })
-              .catch((e) => console.error(`Error processing ${pos.position} projections`, e))
-          );
-          await Promise.all(projectionPromises);
-        }
-
         if (cancelled) return;
 
         // Fetch current season from sport config
@@ -182,9 +146,7 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, curre
             for (const leaguePosition of effectivePositions) {
               const player = team.players?.find((p: any) => p.position === leaguePosition.position) || null;
               if (player) {
-                const projMap = projectionsByPosition.get(leaguePosition.position);
-                const projection = projMap ? (projMap.get(String(player.playerId)) ?? 0) : 0;
-                lineUp[leaguePosition.position] = { ...player, points: projection };
+                lineUp[leaguePosition.position] = { ...player, points: player.projectedPoints ?? 0 };
               } else {
                 lineUp[leaguePosition.position] = null;
               }

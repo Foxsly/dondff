@@ -44,6 +44,7 @@ export interface TeamPlayer {
   playerId?: string;
   playerName?: string;
   position?: string;
+  projectedPoints?: number | null;
   points?: number;
   pprScore?: number;
 }

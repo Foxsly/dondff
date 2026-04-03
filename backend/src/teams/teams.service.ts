@@ -439,6 +439,7 @@ export class TeamsService {
     await this.upsertTeamPlayer(teamId, {
       playerId: updatedOffer.playerId,
       playerName: updatedOffer.playerName,
+      projectedPoints: updatedOffer.projectedPoints,
       position: position,
       teamId: teamId,
     });
@@ -497,6 +498,7 @@ export class TeamsService {
     await this.upsertTeamPlayer(teamId, {
       playerId: finalPlayer.playerId,
       playerName: finalPlayer.playerName,
+      projectedPoints: finalPlayer.projectedPoints,
       position: position,
       teamId: teamId,
     });

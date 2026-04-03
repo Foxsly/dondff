@@ -16,8 +16,8 @@ describe('TeamsController', () => {
   };
 
   const mockPlayers: ITeamPlayer[] = [
-    { teamId: 'uuid-team-1', position: 'QB', playerId: '1', playerName: 'Patrick Mahomes' },
-    { teamId: 'uuid-team-1', position: 'RB', playerId: '2', playerName: 'Derrick Henry' },
+    { teamId: 'uuid-team-1', position: 'QB', playerId: '1', playerName: 'Patrick Mahomes', projectedPoints: null },
+    { teamId: 'uuid-team-1', position: 'RB', playerId: '2', playerName: 'Derrick Henry', projectedPoints: null },
   ];
 
   const mockTeam: ITeam = {

@@ -46,6 +46,7 @@ export const teamPlayerFactory = (overrides: Partial<ITeamPlayer> = {}): ITeamPl
   position: overrides.position ?? 'QB',
   playerId: overrides.playerId ?? String(Math.floor(Math.random() * 10000)),
   playerName: overrides.playerName ?? `Player ${Math.random().toString(36).slice(2, 6)}`,
+  projectedPoints: overrides.projectedPoints ?? null,
 });
 
 export function buildTeamCreateDto(overrides: Partial<CreateTeamDto> = {}): CreateTeamDto {
