@@ -3,9 +3,10 @@ import { Selectable } from 'kysely';
 
 export interface ITeamPlayer {
   teamId: string & tags.Format<'uuid'>;
-  position: string & tags.Pattern<'^(QB|RB|WR|TE)$'>;
+  position: string & tags.MinLength<1>;
   playerId: string & tags.MinLength<1>;
   playerName: string & tags.MinLength<1>;
+  projectedPoints: number | null;
 }
 
 export type TeamPlayer = Selectable<ITeamPlayer>;

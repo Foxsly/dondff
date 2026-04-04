@@ -331,7 +331,7 @@ const DisplayGame: React.FC<DisplayGameProps> = ({ pool }) => {
               ? <p>Your Final case is case#{caseSelected.number}</p>
               : <p>You accepted the Banker's offer.</p>
             }
-            <p>Congratulations!! Your player is {caseSelected?.name}. His projected points are {caseSelected?.points}</p>
+            <p>Congratulations!! Your player is {caseSelected?.name}. Their projected points are {caseSelected?.points}</p>
           </div>
           <div className="action-buttons">
             <button className="btn" onClick={resetGame}>Reset</button>

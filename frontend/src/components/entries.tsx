@@ -1,20 +1,26 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { getCurrentUser } from "../api/auth";
-import type { User, LeagueMember, TeamPlayer } from "../types";
-
-const API_BASE =
-  (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
-  "http://localhost:3001"; // fallback only for local dev
+import React, {useCallback, useEffect, useState} from "react";
+import {Link} from "react-router-dom";
+import {getCurrentUser} from "../api/auth";
+import {getLeagueTeams, getLeagueUsers} from "../api/leagues";
+import {getStats} from "../api/players";
+import * as teamsApi from "../api/teams";
+import {getUser} from "../api/users";
+import {useLeague} from "../contexts/LeagueContext";
+import type {LeagueMember, LeaguePosition, TeamPlayer, User} from "../types";
+import LoadingSpinner from "./ui/LoadingSpinner";
 
 function roundToTwo(number: number | undefined | null): number {
   return number ? Math.round(number * 100) / 100 : 0;
 }
 
+interface EntryPlayer extends TeamPlayer {
+  points?: number;
+  pprScore?: number;
+}
+
 interface EntryLineUp {
-  RB: (TeamPlayer & { points?: number; pprScore?: number }) | null;
-  WR: (TeamPlayer & { points?: number; pprScore?: number }) | null;
-  finalScore?: number | null;
+  [position: string]: EntryPlayer | null;
+  finalScore?: any;
 }
 
 interface Entry {
@@ -35,19 +41,47 @@ interface FullMember extends LeagueMember {
 interface EntriesProps {
   leagueId: string;
   season: string | number;
-  week: string | number;
-  actualWeek?: number | null;
+  eventGroupId: string;
+  currentEventGroupId?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
-const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
+const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, currentEventGroupId, startDate, endDate }) => {
+  const { positions: leaguePositions, sportConfig } = useLeague();
+
   const [user, setUser] = useState<User | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [members, setMembers] = useState<FullMember[]>([]);
+  const [positions, setPositions] = useState<LeaguePosition[]>([]);
   const [selectedMembers, setSelectedMembers] = useState<FullMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [currentNflWeek, setCurrentNflWeek] = useState<number | null>(null);
-  const [currentNflSeason, setCurrentNflSeason] = useState<number | null>(null);
+  const [currentSeason, setCurrentSeason] = useState<number | null>(null);
+
+  // Determine if this event group is current/playable:
+  // 1. If dates are available, use them: ended = endDate in the past
+  // 2. If no dates but sport provides currentEventGroupId, compare IDs
+  // 3. If neither (e.g. golf without dates), treat as current
+  const isEventGroupEnded = (() => {
+    if (endDate) {
+      return new Date(endDate) < new Date();
+    }
+    return false;
+  })();
+
+  const isCurrentEventGroup = (() => {
+    if (endDate) {
+      // Has dates — current if not ended
+      return !isEventGroupEnded;
+    }
+    if (currentEventGroupId != null) {
+      // Sport provides a current event group ID (e.g. NFL)
+      return eventGroupId === currentEventGroupId;
+    }
+    // No dates and no currentEventGroupId — treat as current
+    return true;
+  })();
 
   useEffect(() => {
     let cancelled = false;
@@ -65,86 +99,36 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
           if (!cancelled) setUser(null);
         }
 
-        if (!leagueId || !season || !week) return;
+        if (!leagueId || !season || !eventGroupId) return;
 
-        const [teamsRes, membersRes, rbProjRes, wrProjRes, stateRes] = await Promise.all([
-          fetch(`${API_BASE}/leagues/${leagueId}/teams?season=${season}&week=${week}`, { credentials: "include" }),
-          fetch(`${API_BASE}/leagues/${leagueId}/users`, { credentials: "include" }),
-          fetch(`${API_BASE}/players/projections/${season}/${week}/RB`, { credentials: "include" }),
-          fetch(`${API_BASE}/players/projections/${season}/${week}/WR`, { credentials: "include" }),
-          fetch(`${API_BASE}/sleeper/state`, { credentials: "include" }),
+        const effectivePositions = leaguePositions.length > 0 ? leaguePositions : [];
+        if (effectivePositions.length === 0) {
+          throw new Error('No positions configured for this league');
+        }
+        setPositions(effectivePositions);
+
+        const [teamsData, membersData] = await Promise.all([
+          getLeagueTeams(leagueId, { season, eventGroupId }),
+          getLeagueUsers(leagueId),
         ]);
-
-        if (!teamsRes.ok) throw new Error(`Failed to load league teams (status ${teamsRes.status})`);
-        if (!membersRes.ok) throw new Error(`Failed to load league members (status ${membersRes.status})`);
-
-        const teamsData = await teamsRes.json();
-        const membersData: LeagueMember[] = await membersRes.json();
-
-        const rbProjections = new Map<string, number>();
-        const wrProjections = new Map<string, number>();
-
-        try {
-          if (rbProjRes.ok) {
-            const rbData = await rbProjRes.json();
-            if (Array.isArray(rbData)) {
-              rbData.forEach((entry: any) => {
-                const id = entry.playerId;
-                const pts = entry.projectedPoints ?? 0;
-                if (id) rbProjections.set(String(id), pts);
-              });
-            }
-          } else {
-            console.warn(`Failed to load RB projections (status ${rbProjRes.status})`);
-          }
-        } catch (e) {
-          console.error("Error processing RB projections", e);
-        }
-
-        try {
-          if (wrProjRes.ok) {
-            const wrData = await wrProjRes.json();
-            if (Array.isArray(wrData)) {
-              wrData.forEach((entry: any) => {
-                const id = entry.playerId;
-                const pts = entry.projectedPoints ?? 0;
-                if (id) wrProjections.set(String(id), pts);
-              });
-            }
-          } else {
-            console.warn(`Failed to load WR projections (status ${wrProjRes.status})`);
-          }
-        } catch (e) {
-          console.error("Error processing WR projections", e);
-        }
 
         if (cancelled) return;
 
-        let stateWeekNumber: number | null = null;
-        let seasonNumber: number | null = null;
-        try {
-          if (stateRes.ok) {
-            const sleeperState = await stateRes.json();
-            if (sleeperState) {
-              const currentWeek = sleeperState.week ?? null;
-              const currentSeason = sleeperState.season ?? null;
-              if (currentWeek != null) stateWeekNumber = Number(currentWeek);
-              if (currentSeason != null) seasonNumber = Number(currentSeason);
-            }
-          } else {
-            console.warn(`Failed to load Sleeper state (status ${stateRes.status})`);
+        // Fetch current season from sport config
+        if (sportConfig?.supportsScoring) {
+          try {
+            const fetchedSeason = await sportConfig.fetchCurrentSeason();
+            if (fetchedSeason != null && !cancelled) setCurrentSeason(Number(fetchedSeason));
+          } catch (e) {
+            console.error("Error fetching current season", e);
           }
-        } catch (e) {
-          console.error("Error processing Sleeper state", e);
+        } else {
+          if (!cancelled) setCurrentSeason(Number(season));
         }
-
-        if (!cancelled && stateWeekNumber != null) setCurrentNflWeek(stateWeekNumber);
-        if (!cancelled && seasonNumber != null) setCurrentNflSeason(seasonNumber);
 
         const fullMembers: FullMember[] = await Promise.all(
           membersData.map(async (leagueMember) => {
-            const memberRes = await fetch(`${API_BASE}/users/${leagueMember.userId}`, { credentials: "include" });
-            const member = await memberRes.json();
+            const member = await getUser(leagueMember.userId);
             return { ...leagueMember, user: member } as FullMember;
           })
         );
@@ -156,20 +140,17 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
         const derivedEntries: Entry[] = await Promise.all(
           teams.map(async (team: any) => {
             const member = fullMembers.find((u) => u.userId === team.userId);
-            const teamStatusResponse = await fetch(`${API_BASE}/teams/${team.teamId}/status`, { credentials: "include" });
-            const teamStatus = await teamStatusResponse.json();
+            const teamStatus = await teamsApi.getTeamStatus(team.teamId);
 
-            const rb = team.players?.find((p: any) => p.position === 'RB') || null;
-            const wr = team.players?.find((p: any) => p.position === 'WR') || null;
-
-            const rbId = rb?.playerId ?? null;
-            const wrId = wr?.playerId ?? null;
-
-            const rbProjection = rbId ? rbProjections.get(String(rbId)) ?? 0 : 0;
-            const wrProjection = wrId ? wrProjections.get(String(wrId)) ?? 0 : 0;
-
-            const rbWithProjection = rb ? { ...rb, points: rbProjection } : null;
-            const wrWithProjection = wr ? { ...wr, points: wrProjection } : null;
+            const lineUp: EntryLineUp = {};
+            for (const leaguePosition of effectivePositions) {
+              const player = team.players?.find((p: any) => p.position === leaguePosition.position) || null;
+              if (player) {
+                lineUp[leaguePosition.position] = { ...player, points: player.projectedPoints ?? 0 };
+              } else {
+                lineUp[leaguePosition.position] = null;
+              }
+            }
 
             const finalScore = team.finalScore ?? team.result?.finalScore ?? null;
 
@@ -177,7 +158,7 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
               ...team,
               name: member?.user?.name,
               email: member?.user?.email,
-              lineUp: { RB: rbWithProjection, WR: wrWithProjection, finalScore },
+              lineUp: { ...lineUp, finalScore },
               finalScore,
               playable: teamStatus.playable,
             };
@@ -195,7 +176,7 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
 
     load();
     return () => { cancelled = true; };
-  }, [leagueId, season, week]);
+  }, [leagueId, season, eventGroupId, leaguePositions, sportConfig]);
 
   const memberLabel = (email: string | undefined) => {
     const member = members?.find(
@@ -224,66 +205,73 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
         ? currentlySelectedMembers.filter((s) => s.userId !== member.userId)
         : [...currentlySelectedMembers, member]
     );
-    console.log('Selected', selectedMembers);
   };
 
   const sortedEntries = entries ? [...entries].sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0)) : [];
 
-  const weekNum = Number(week);
   const seasonNum = Number(season);
-  const isPastWeek = currentNflWeek != null && weekNum < currentNflWeek;
-  const isCurrentWeek = currentNflWeek != null && weekNum === currentNflWeek;
-  const isPastSeason = currentNflSeason != null && seasonNum < currentNflSeason;
-  const isCurrentSeason = currentNflSeason != null && seasonNum === currentNflSeason;
-  const showResults = isPastWeek && (isCurrentSeason || isPastSeason);
+  const isPastSeason = currentSeason != null && seasonNum < currentSeason;
+  const isCurrentSeason = currentSeason != null && seasonNum === currentSeason;
+  // Show results when event group has ended (by date or by season/eventGroup comparison)
+  const isPastEventGroup = isEventGroupEnded || (!isCurrentEventGroup && (isCurrentSeason || isPastSeason));
+  const showResults = isPastEventGroup;
 
-  const projectedTotal = (entry: Entry) =>
-    (entry.lineUp?.RB?.points ?? 0) + (entry.lineUp?.WR?.points ?? 0);
+  const projectedTotal = (entry: Entry) => {
+    let total = 0;
+    for (const pos of positions) {
+      const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
+      total += player?.points ?? 0;
+    }
+    return total;
+  };
 
   const calculateScores = useCallback(async () => {
-    if (!entries || entries.length === 0) return;
+    if (!entries || entries.length === 0 || !sportConfig?.supportsScoring) return;
     try {
-      const rbUrl = `${API_BASE}/players/stats/${season}/${week}/RB`;
-      const wrUrl = `${API_BASE}/players/stats/${season}/${week}/WR`;
-      const [rbResponse, wrResponse] = await Promise.all([
-        fetch(rbUrl, { credentials: "include" }),
-        fetch(wrUrl, { credentials: "include" }),
-      ]);
+      const allStats = await Promise.all(
+        positions.map((pos) =>
+          getStats(season, eventGroupId, pos.position, sportConfig?.key).catch(() => [])
+        )
+      );
+      const finalStats = allStats.flat();
 
-      if (!rbResponse.ok || !wrResponse.ok) throw new Error("Failed to load Sleeper stats");
+      // For golf, stats are keyed by athlete name (not FanDuel ID).
+      // Build a normalized name lookup for matching.
+      const normalizeName = (name: string) =>
+        name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
 
-      const rbJson = await rbResponse.json();
-      const wrJson = await wrResponse.json();
-      const finalStats = [...rbJson, ...wrJson];
+      const statsByName = new Map(
+        finalStats.map((s: any) => [normalizeName(s.name ?? ''), s]),
+      );
 
       const updatedEntries = entries.map((entry) => {
-        const rbId = entry.lineUp?.RB?.playerId;
-        const wrId = entry.lineUp?.WR?.playerId;
-        const rb = finalStats.find((p: any) => p.playerId === rbId);
-        const wr = finalStats.find((p: any) => p.playerId === wrId);
-        const rbScore = rb?.points ? rb.points : 0.0;
-        const wrScore = wr?.points ? wr.points : 0.0;
-        const finalScore = rbScore + wrScore;
+        let finalScore = 0;
+        const updatedLineUp: EntryLineUp = { ...entry.lineUp };
 
-        return {
-          ...entry,
-          lineUp: {
-            ...entry.lineUp,
-            RB: { ...(entry.lineUp?.RB ?? {}), pprScore: rbScore },
-            WR: { ...(entry.lineUp?.WR ?? {}), pprScore: wrScore },
-            finalScore,
-          },
-          finalScore,
-        };
+        for (const pos of positions) {
+          const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
+          if (player?.playerId) {
+            // Try matching by playerId first (NFL), then by name (golf)
+            let stat = finalStats.find((p: any) => p.playerId === player.playerId);
+            if (!stat && player.playerName) {
+              stat = statsByName.get(normalizeName(player.playerName));
+            }
+            const score = stat?.points ?? 0;
+            finalScore += score;
+            updatedLineUp[pos.position] = { ...player, pprScore: score };
+          }
+        }
+
+        updatedLineUp.finalScore = finalScore;
+        return { ...entry, lineUp: updatedLineUp, finalScore };
       });
 
       setEntries(updatedEntries);
-      console.warn("Score calculation updated entries locally; backend persistence for entries has not been implemented yet.");
     } catch (err: any) {
       console.error("Failed to calculate scores", err);
       setError(err?.message ?? "Failed to calculate scores");
     }
-  }, [entries, season, week]);
+  }, [entries, season, eventGroupId, positions, sportConfig]);
 
   useEffect(() => {
     if (!showResults) return;
@@ -293,35 +281,46 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
     void calculateScores();
   }, [showResults, entries, calculateScores]);
 
+  const getDisplayName = (position: string) =>
+    sportConfig?.getPositionDisplayName(position) ?? position;
+
+  const thClass = "p-2 border-b border-[#3a465b]";
+  const tdClass = "p-2 border-b border-[#3a465b]";
+
   function ResultsTable({ entries }: { entries: Entry[] }) {
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full text-left border border-[#3a465b]">
           <thead className="bg-[#3a465b]">
             <tr>
-              <th className="p-2 border-b border-[#3a465b]">Member</th>
-              <th className="p-2 border-b border-[#3a465b]">RB</th>
-              <th className="p-2 border-b border-[#3a465b]">RB Projection</th>
-              <th className="p-2 border-b border-[#3a465b]">RB Final</th>
-              <th className="p-2 border-b border-[#3a465b]">WR</th>
-              <th className="p-2 border-b border-[#3a465b]">WR Projection</th>
-              <th className="p-2 border-b border-[#3a465b]">WR Final</th>
-              <th className="p-2 border-b border-[#3a465b]">Projected Total</th>
-              <th className="p-2 border-b border-[#3a465b]">Final Score</th>
+              <th className={thClass}>Member</th>
+              {positions.map((pos) => (
+                <React.Fragment key={pos.position}>
+                  <th className={thClass}>{getDisplayName(pos.position)}</th>
+                  <th className={thClass}>{getDisplayName(pos.position)} Proj</th>
+                  <th className={thClass}>{getDisplayName(pos.position)} Final</th>
+                </React.Fragment>
+              ))}
+              <th className={thClass}>Projected Total</th>
+              <th className={thClass}>Final Score</th>
             </tr>
           </thead>
           <tbody>
             {entries.map((entry) => (
               <tr key={entry.teamId || entry.name || entry.email} className="odd:bg-[#3a465b]/20">
-                <td className="p-2 border-b border-[#3a465b]">{memberLabel(entry.name || entry.email)}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.RB?.playerName ?? ""}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.RB?.points) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.RB?.pprScore) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.WR?.playerName ?? ""}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.WR?.points) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.WR?.pprScore) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(projectedTotal(entry))}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.finalScore ? roundToTwo(entry.finalScore) : ""}</td>
+                <td className={tdClass}>{memberLabel(entry.name || entry.email)}</td>
+                {positions.map((pos) => {
+                  const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
+                  return (
+                    <React.Fragment key={pos.position}>
+                      <td className={tdClass}>{player?.playerName ?? ""}</td>
+                      <td className={tdClass}>{roundToTwo(player?.points)}</td>
+                      <td className={tdClass}>{roundToTwo(player?.pprScore)}</td>
+                    </React.Fragment>
+                  );
+                })}
+                <td className={tdClass}>{roundToTwo(projectedTotal(entry))}</td>
+                <td className={tdClass}>{typeof entry.finalScore === "number" ? roundToTwo(entry.finalScore) : ""}</td>
               </tr>
             ))}
           </tbody>
@@ -336,23 +335,30 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
         <table className="min-w-full text-left border border-[#3a465b]">
           <thead className="bg-[#3a465b]">
             <tr>
-              <th className="p-2 border-b border-[#3a465b]">Member</th>
-              <th className="p-2 border-b border-[#3a465b]">RB</th>
-              <th className="p-2 border-b border-[#3a465b]">RB Projection</th>
-              <th className="p-2 border-b border-[#3a465b]">WR</th>
-              <th className="p-2 border-b border-[#3a465b]">WR Projection</th>
-              <th className="p-2 border-b border-[#3a465b]">Projected Total</th>
+              <th className={thClass}>Member</th>
+              {positions.map((pos) => (
+                <React.Fragment key={pos.position}>
+                  <th className={thClass}>{getDisplayName(pos.position)}</th>
+                  <th className={thClass}>{getDisplayName(pos.position)} Proj</th>
+                </React.Fragment>
+              ))}
+              <th className={thClass}>Projected Total</th>
             </tr>
           </thead>
           <tbody>
             {entries.map((entry) => (
               <tr key={entry.teamId || entry.name || entry.email} className="odd:bg-[#3a465b]/20">
-                <td className="p-2 border-b border-[#3a465b]">{memberLabel(entry.name || entry.email)}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.RB?.playerName ?? ""}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.RB?.points) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.WR?.playerName ?? ""}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.WR?.points) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(projectedTotal(entry))}</td>
+                <td className={tdClass}>{memberLabel(entry.name || entry.email)}</td>
+                {positions.map((pos) => {
+                  const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
+                  return (
+                    <React.Fragment key={pos.position}>
+                      <td className={tdClass}>{player?.playerName ?? ""}</td>
+                      <td className={tdClass}>{roundToTwo(player?.points)}</td>
+                    </React.Fragment>
+                  );
+                })}
+                <td className={tdClass}>{roundToTwo(projectedTotal(entry))}</td>
               </tr>
             ))}
           </tbody>
@@ -361,7 +367,7 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
     );
   }
 
-  if (loading) return <div className="space-y-4"><p>Loading entries...</p></div>;
+  if (loading) return <div className="space-y-4"><LoadingSpinner message="Loading entries..." /></div>;
   if (error) return <div className="space-y-4"><p className="text-red-500">{error}</p></div>;
 
   return (
@@ -371,12 +377,12 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
       ) : (
         <ProjectionsTable entries={sortedEntries} />
       )}
-      {isCurrentSeason && isCurrentWeek && entries && isEntryPlayable && user && (
-        <Link to="/game/setting-lineups" state={{ leagueId, season, week }}>
+      {isCurrentSeason && isCurrentEventGroup && entries && isEntryPlayable && user && (
+        <Link to="/game/setting-lineups" state={{ leagueId, season, eventGroupId }}>
           <button className="btn-primary">Play Game</button>
         </Link>
       )}
-      {isAdmin && isCurrentSeason && isCurrentWeek && playersWithPlayableEntries.length > 0 && (
+      {isAdmin && isCurrentSeason && isCurrentEventGroup && playersWithPlayableEntries.length > 0 && (
         <>
           <div className="space-y-4">
             {playersWithPlayableEntries.map((member) => (
@@ -389,7 +395,7 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
                 {member.user.name}
               </div>
             ))}
-            <Link to="/game/group" state={{ leagueId, season, week, participants: selectedMembers }}>
+            <Link to="/game/group" state={{ leagueId, season, eventGroupId, participants: selectedMembers }}>
               <button className="btn-primary" disabled={selectedMembers.length === 0}>
                 Start Group Game
               </button>

@@ -38,7 +38,7 @@ export const teamFactory = (overrides: Partial<CreateTeamDto> = {}): CreateTeamD
   leagueId: overrides.leagueId ?? crypto.randomUUID(),
   userId: overrides.userId ?? crypto.randomUUID(),
   seasonYear: overrides.seasonYear ?? 2025,
-  week: overrides.week ?? 1,
+  eventGroupId: overrides.eventGroupId ?? crypto.randomUUID(),
 });
 
 export const teamPlayerFactory = (overrides: Partial<ITeamPlayer> = {}): ITeamPlayer => ({
@@ -46,6 +46,7 @@ export const teamPlayerFactory = (overrides: Partial<ITeamPlayer> = {}): ITeamPl
   position: overrides.position ?? 'QB',
   playerId: overrides.playerId ?? String(Math.floor(Math.random() * 10000)),
   playerName: overrides.playerName ?? `Player ${Math.random().toString(36).slice(2, 6)}`,
+  projectedPoints: overrides.projectedPoints ?? null,
 });
 
 export function buildTeamCreateDto(overrides: Partial<CreateTeamDto> = {}): CreateTeamDto {
@@ -55,7 +56,6 @@ export function buildTeamCreateDto(overrides: Partial<CreateTeamDto> = {}): Crea
 export function buildTeamUpdateDto(overrides: Partial<CreateTeamDto> = {}): Partial<CreateTeamDto> {
   const now = new Date();
   return {
-    week: overrides.week ?? 2,
     seasonYear: overrides.seasonYear ?? now.getFullYear(),
     ...overrides,
   };

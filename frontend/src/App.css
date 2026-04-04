@@ -57,6 +57,7 @@
   width: 25%;
   text-align: left;
   background-color: rgba(58, 70, 91, 0.5);
+  overflow: hidden;
 }
 
 .box {
@@ -123,6 +124,15 @@
   display: flex;
   flex-direction: row;
   justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.action-buttons .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 10px 8px;
+  font-size: 0.9rem;
 }
 
 .btn {

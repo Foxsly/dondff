@@ -1,24 +1,33 @@
-import React, { useState } from "react";
+import React, {useState} from "react";
+import {useLeague} from "../contexts/LeagueContext";
 import Entries from "./entries";
 
-interface WeekDoc {
-  week: string | number;
+interface EventGroupInfo {
+  eventGroupId: string;
+  label: string;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
 interface AccordionProps {
-  weekDoc: WeekDoc;
+  eventGroup: EventGroupInfo;
   leagueId: string;
   season: string;
-  actualWeek: number | null;
+  currentEventGroupId: string | null;
 }
 
-const Accordion: React.FC<AccordionProps> = ({ weekDoc, leagueId, season, actualWeek }) => {
+const Accordion: React.FC<AccordionProps> = ({ eventGroup, leagueId, season, currentEventGroupId }) => {
   const [isActive, setIsActive] = useState(false);
+  const { sportConfig } = useLeague();
+
+  const title = sportConfig?.eventLabel === 'Event' && eventGroup.label
+    ? `Event: ${eventGroup.label}`
+    : `${sportConfig?.eventLabel ?? 'Week'} ${eventGroup.label}`;
 
   return (
     <div className="accordion-item">
       <div className="accordion-title" onClick={() => setIsActive(!isActive)}>
-        <div>Week {weekDoc.week}</div>
+        <div>{title}</div>
         <div>{isActive ? '-' : '+'}</div>
       </div>
       {isActive && (
@@ -26,8 +35,10 @@ const Accordion: React.FC<AccordionProps> = ({ weekDoc, leagueId, season, actual
           <Entries
             leagueId={leagueId}
             season={season}
-            week={weekDoc.week}
-            actualWeek={actualWeek}
+            eventGroupId={eventGroup.eventGroupId}
+            currentEventGroupId={currentEventGroupId}
+            startDate={eventGroup.startDate}
+            endDate={eventGroup.endDate}
           />
         </div>
       )}

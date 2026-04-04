@@ -10,7 +10,7 @@ jest.mock('../../firebase-config', () => ({
 }));
 
 jest.mock('react-router-dom', () => ({
-  useLocation: () => ({ state: { leagueId: 'league1', season: '2023', week: '1' } }),
+  useLocation: () => ({ state: { leagueId: 'league1', season: '2023', eventGroupId: 'event-group-1' } }),
   useNavigate: () => jest.fn(),
 }));
 

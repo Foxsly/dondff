@@ -47,7 +47,11 @@ async function seed() {
     // League
     await db
       .insertInto('league')
-      .values({ leagueId: LEAGUE_ID, name: 'Dev League 2025' })
+      .values({
+        leagueId: LEAGUE_ID,
+        name: 'Dev League 2025',
+        sportLeague: 'NFL',
+      })
       .onConflict((oc) => oc.column('leagueId').doNothing())
       .execute();
     console.log('  league ok');
@@ -59,7 +63,6 @@ async function seed() {
         leagueSettingsId: LEAGUE_SETTINGS_ID,
         leagueId: LEAGUE_ID,
         scoringType: 'PPR',
-        sportLeague: 'NFL',
       })
       .onConflict((oc) => oc.column('leagueSettingsId').doNothing())
       .execute();
@@ -100,13 +103,27 @@ async function seed() {
     if (existing) {
       console.log('  teams already seeded — skipping');
     } else {
+      // Create event groups for each week first
+      const eventGroupIds: Record<number, string> = {};
+      for (const week of WEEKS) {
+        const eventGroupId = crypto.randomUUID() as string;
+        eventGroupIds[week] = eventGroupId;
+        await db
+          .insertInto('eventGroup')
+          .values({
+            eventGroupId: eventGroupId,
+            name: `NFL Week ${week}`,
+          })
+          .execute();
+      }
+
       const teamRows = USERS.flatMap(({ userId }) =>
         WEEKS.map((week) => ({
-          teamId:     crypto.randomUUID() as string,
-          leagueId:   LEAGUE_ID,
+          teamId: crypto.randomUUID() as string,
+          leagueId: LEAGUE_ID,
           userId,
           seasonYear: SEASON_YEAR,
-          week,
+          eventGroupId: eventGroupIds[week],
         })),
       );
       await db.insertInto('team').values(teamRows).execute();

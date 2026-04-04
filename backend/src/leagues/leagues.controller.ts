@@ -1,18 +1,18 @@
-import { Controller, Body, Query } from '@nestjs/common';
-import { LeaguesService } from './leagues.service';
-import { TypedBody, TypedParam, TypedRoute, TypedQuery } from '@nestia/core';
-import type {
-  AddLeagueUserDto,
-  ILeagueUser,
-  UpdateLeagueUserDto,
-} from './entities/league-user.entity';
-import type { CreateLeagueDto, League, UpdateLeagueDto } from '@/leagues/entities/league.entity';
-import { ITeam } from '@/teams/entities/team.entity';
 import type {
   CreateLeagueSettingsDto,
   ILeagueSettings,
   ILeagueSettingsPosition,
 } from '@/leagues/entities/league-settings.entity';
+import type { CreateLeagueDto, League, UpdateLeagueDto } from '@/leagues/entities/league.entity';
+import { ITeam } from '@/teams/entities/team.entity';
+import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
+import { Body, Controller, Query } from '@nestjs/common';
+import type {
+  AddLeagueUserDto,
+  ILeagueUser,
+  UpdateLeagueUserDto,
+} from './entities/league-user.entity';
+import { LeaguesService } from './leagues.service';
 
 @Controller('leagues')
 export class LeaguesController {
@@ -80,9 +80,9 @@ export class LeaguesController {
    */
   @TypedRoute.Get(':id/teams')
   getLeagueTeams(@TypedParam('id') leagueId: string,
-                 @Query('season') season: number,
-                 @Query('week') week: number): Promise<ITeam[]> {
-    return this.leaguesService.getLeagueTeams(leagueId, season, week);
+                 @Query('season') season?: number,
+                 @Query('eventGroupId') eventGroupId?: string): Promise<ITeam[]> {
+    return this.leaguesService.getLeagueTeams(leagueId, season, eventGroupId);
   }
 
   /**

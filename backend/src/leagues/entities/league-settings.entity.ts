@@ -12,13 +12,11 @@ import { tags } from 'typia';
  *   Repositories should JSON.stringify/parse when crossing the DB boundary.
  */
 export type ScoringType = 'PPR' | 'HALF_PPR' | 'STANDARD';
-export type SportLeague = 'NFL' | 'GOLF' | 'NBA' | 'NHL' | 'MLB';
 
 export interface ILeagueSettings {
   leagueSettingsId: string & tags.Format<'uuid'>;
   leagueId: string & tags.Format<'uuid'>;
   scoringType: ScoringType;
-  sportLeague: SportLeague;
 }
 
 export type LeagueSettings = Selectable<ILeagueSettings>;

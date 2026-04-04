@@ -1,11 +1,7 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  getCurrentUser,
-  register as registerUser,
-  login as loginUser,
-} from '../api/auth';
-import { AuthContext } from "./AuthContext";
+import React, {useContext, useEffect, useState} from 'react';
+import {useNavigate} from 'react-router-dom';
+import {getCurrentUser, login as loginUser, register as registerUser} from '../api/auth';
+import {AuthContext} from "../contexts/AuthContext";
 
 const SignUp: React.FC = () => {
   const { setUser } = useContext(AuthContext);

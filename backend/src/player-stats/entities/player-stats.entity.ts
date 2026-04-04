@@ -1,9 +1,10 @@
+// We won't always have an opponent; GOLF uses 'team' as the Event Name and leaves OppTeam empty
 export interface IPlayer {
   playerId: string;
   name: string;
   position: PlayerPosition;
   team: string;
-  oppTeam: string;
+  oppTeam?: string;
 }
 
 export interface IPlayerProjection extends IPlayer {
@@ -18,7 +19,7 @@ export interface IPlayerStats extends IPlayer {
 }
 
 export type PlayerStatResponse = IPlayerStats[];
-export type PlayerPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DST';
+export type PlayerPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DST' | 'GOLF_PLAYER';
 
 export type PlayerTeams = {
   team: string;
