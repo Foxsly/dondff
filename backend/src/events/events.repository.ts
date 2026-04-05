@@ -43,8 +43,6 @@ export class DatabaseEventsRepository extends EventsRepository {
         eventGroupId: crypto.randomUUID(),
         name: dto.name,
         sportLeague: dto.sportLeague,
-        startDate: dto.startDate ?? null,
-        endDate: dto.endDate ?? null,
       })
       .returningAll()
       .executeTakeFirstOrThrow();

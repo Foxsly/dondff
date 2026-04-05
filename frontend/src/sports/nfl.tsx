@@ -23,7 +23,7 @@ export const nflConfig: SportConfig = {
       const state = await getSleeperState();
       if (state?.week == null) return null;
       const weekNumber = Number(state.week);
-      const eventGroup = await getOrCreateEventGroup(`NFL Week ${weekNumber}`);
+      const eventGroup = await getOrCreateEventGroup(`NFL Week ${weekNumber}`, 'NFL');
       return {
         eventGroupId: eventGroup.eventGroupId,
         label: String(weekNumber),

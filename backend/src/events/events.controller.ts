@@ -4,6 +4,7 @@ import { Body, Controller, Query } from '@nestjs/common';
 import {
   CreateEventGroupDto,
   EventGroup,
+  EventGroupWithDatesDto,
   UpdateEventGroupDto,
 } from './entities/event-group.entity';
 import { CreateEventDto, Event, UpdateEventDto } from './entities/event.entity';
@@ -21,11 +22,8 @@ export class EventGroupsController {
   @TypedRoute.Post('get-or-create')
   getOrCreate(
     @Body() dto: CreateEventGroupDto,
-  ): Promise<EventGroup> {
-    return this.eventsService.getOrCreateEventGroup(dto.name, dto.sportLeague, {
-      startDate: dto.startDate,
-      endDate: dto.endDate,
-    });
+  ): Promise<EventGroupWithDatesDto> {
+    return this.eventsService.getOrCreateEventGroup(dto.name, dto.sportLeague);
   }
 
   @TypedRoute.Get()

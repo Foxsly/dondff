@@ -3,26 +3,26 @@ import { request } from './client';
 export interface EventGroup {
   eventGroupId: string;
   name: string;
-  startDate: string | null;
-  endDate: string | null;
+  sportLeague: string;
+  startDate: string | Date | null;
+  endDate: string | Date | null;
 }
 
 export const getEventGroups = () =>
   request<EventGroup[]>('/event-groups');
 
-export const createEventGroup = (body: { name: string; startDate?: string | null; endDate?: string | null }) =>
+export const createEventGroup = (body: { name: string; sportLeague: string }) =>
   request<EventGroup>('/event-groups', { method: 'POST', body });
 
 export const getOrCreateEventGroup = async (
   name: string,
-  dates?: { startDate?: string | null; endDate?: string | null },
+  sportLeague: string,
 ): Promise<EventGroup> => {
   return request<EventGroup>('/event-groups/get-or-create', {
     method: 'POST',
     body: {
       name,
-      startDate: dates?.startDate ?? null,
-      endDate: dates?.endDate ?? null,
+      sportLeague,
     },
   });
 };

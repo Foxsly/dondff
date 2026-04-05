@@ -6,10 +6,13 @@ export interface IEventGroup {
   eventGroupId: string & tags.Format<'uuid'>;
   name: string;
   sportLeague: SportLeague;
-  startDate: string | null;
-  endDate: string | null;
 }
 
 export type EventGroup = Selectable<IEventGroup>;
 export type CreateEventGroupDto = Omit<IEventGroup, 'eventGroupId'>;
 export type UpdateEventGroupDto = Partial<CreateEventGroupDto>;
+
+export interface EventGroupWithDatesDto extends IEventGroup {
+  startDate: Date | null;
+  endDate: Date | null;
+}

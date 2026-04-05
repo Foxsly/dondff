@@ -20,7 +20,7 @@ const Home: React.FC = () => {
     event.preventDefault();
     if (!week || !type) return;
     const limit = type === 'WR' ? 95 : 65;
-    const eventGroup = await getOrCreateEventGroup(`NFL Week ${week}`);
+    const eventGroup = await getOrCreateEventGroup(`NFL Week ${week}`, 'NFL');
     getPlayers(eventGroup.eventGroupId, type, '2025', limit, setPool);
   };
 

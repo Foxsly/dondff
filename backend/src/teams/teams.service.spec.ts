@@ -296,7 +296,7 @@ describe('TeamsService — golf shared pool exclusion', () => {
       leaguesService.findOne.mockResolvedValue({ leagueId: 'golf-league-1', name: 'Golf League', sportLeague: 'GOLF' } as any);
       leaguesService.getLatestLeagueSettingsByLeague.mockResolvedValue({ leagueSettingsId: 'ls-1', leagueId: 'golf-league-1', scoringType: 'PPR' } as any);
       leaguesService.getPositionsForLeagueSettings.mockResolvedValue(GOLF_POSITIONS);
-      eventsService.findOneEventGroup.mockResolvedValue({ eventGroupId: 'eg-1', name: 'The Masters', sportLeague: 'GOLF', startDate: '2025-04-10', endDate: '2025-04-13' } as any);
+      eventsService.findOneEventGroup.mockResolvedValue({ eventGroupId: 'eg-1', name: 'The Masters', sportLeague: 'GOLF' } as any);
       playerStatsService.getPlayerProjections.mockResolvedValue(projections);
       entryRepo.insertAuditSnapshots.mockResolvedValue(undefined as any);
 
@@ -342,7 +342,7 @@ describe('TeamsService — golf shared pool exclusion', () => {
       leaguesService.findOne.mockResolvedValue({ leagueId: 'golf-league-1', name: 'Golf League', sportLeague: 'GOLF' } as any);
       leaguesService.getLatestLeagueSettingsByLeague.mockResolvedValue({ leagueSettingsId: 'ls-1', leagueId: 'golf-league-1', scoringType: 'PPR' } as any);
       leaguesService.getPositionsForLeagueSettings.mockResolvedValue(GOLF_POSITIONS);
-      eventsService.findOneEventGroup.mockResolvedValue({ eventGroupId: 'eg-1', name: 'The Masters', sportLeague: 'GOLF', startDate: '2025-04-10', endDate: '2025-04-13' } as any);
+      eventsService.findOneEventGroup.mockResolvedValue({ eventGroupId: 'eg-1', name: 'The Masters', sportLeague: 'GOLF' } as any);
       playerStatsService.getPlayerProjections.mockResolvedValue(projections);
       playerStatsService.getTeamAndOpponentForPlayer = jest.fn().mockReturnValue({ team: 'GOLF', opponent: '' });
       entryRepo.insertAuditSnapshots.mockResolvedValue(undefined as any);
@@ -392,7 +392,7 @@ describe('TeamsService — golf shared pool exclusion', () => {
       leaguesService.findOne.mockResolvedValue({ leagueId: 'golf-league-1', name: 'Golf League', sportLeague: 'GOLF' } as any);
       leaguesService.getLatestLeagueSettingsByLeague.mockResolvedValue({ leagueSettingsId: 'ls-1', leagueId: 'golf-league-1', scoringType: 'PPR' } as any);
       leaguesService.getPositionsForLeagueSettings.mockResolvedValue(GOLF_POSITIONS);
-      eventsService.findOneEventGroup.mockResolvedValue({ eventGroupId: 'eg-1', name: 'The Masters', sportLeague: 'GOLF', startDate: '2025-04-10', endDate: '2025-04-13' } as any);
+      eventsService.findOneEventGroup.mockResolvedValue({ eventGroupId: 'eg-1', name: 'The Masters', sportLeague: 'GOLF' } as any);
       playerStatsService.getPlayerProjections.mockResolvedValue(projections);
       entryRepo.insertAuditSnapshots.mockResolvedValue(undefined as any);
       entryRepo.createEntry.mockResolvedValue({ ...mockTeamEntry('GOLF_PLAYER_2'), resetCount: 1 });

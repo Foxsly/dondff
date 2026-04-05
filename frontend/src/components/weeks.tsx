@@ -13,8 +13,8 @@ import LoadingSpinner from "./ui/LoadingSpinner";
 interface EventGroupInfo {
   eventGroupId: string;
   label: string;
-  startDate?: string | null;
-  endDate?: string | null;
+  startDate?: string | Date | null;
+  endDate?: string | Date | null;
 }
 
 const Weeks: React.FC = () => {
@@ -122,10 +122,7 @@ const Weeks: React.FC = () => {
 
   const handleCreateEventGroup = async (event: EventOption) => {
     try {
-      const eventGroup = await getOrCreateEventGroup(event.label, {
-        startDate: event.startDate,
-        endDate: event.endDate,
-      });
+      const eventGroup = await getOrCreateEventGroup(event.label, sportConfig?.key);
       const newGroup: EventGroupInfo = {
         eventGroupId: eventGroup.eventGroupId,
         label: event.label,

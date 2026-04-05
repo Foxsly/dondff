@@ -5,8 +5,8 @@ import Entries from "./entries";
 interface EventGroupInfo {
   eventGroupId: string;
   label: string;
-  startDate?: string | null;
-  endDate?: string | null;
+  startDate?: string | Date | null;
+  endDate?: string | Date | null;
 }
 
 interface AccordionProps {

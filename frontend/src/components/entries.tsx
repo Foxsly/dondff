@@ -43,8 +43,8 @@ interface EntriesProps {
   season: string | number;
   eventGroupId: string;
   currentEventGroupId?: string | null;
-  startDate?: string | null;
-  endDate?: string | null;
+  startDate?: string | Date | null;
+  endDate?: string | Date | null;
 }
 
 const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, currentEventGroupId, startDate, endDate }) => {

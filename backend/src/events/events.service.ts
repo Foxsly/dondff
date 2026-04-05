@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   CreateEventGroupDto,
   EventGroup,
+  EventGroupWithDatesDto,
   UpdateEventGroupDto,
 } from './entities/event-group.entity';
 import { CreateEventDto, Event, UpdateEventDto } from './entities/event.entity';
@@ -37,27 +38,26 @@ export class EventsService {
   async getOrCreateEventGroup(
     name: string,
     sportLeague: SportLeague,
-    dates?: { startDate?: string | null; endDate?: string | null },
-  ): Promise<EventGroup> {
+  ): Promise<EventGroupWithDatesDto> {
     const existing = await this.eventsRepository.findEventGroupByName(name);
     if (existing) {
-      // Backfill dates if the existing group is missing them
-      if (dates && (dates.startDate || dates.endDate) && !existing.startDate && !existing.endDate) {
-        const updated = await this.eventsRepository.updateEventGroup(existing.eventGroupId, {
-          startDate: dates.startDate ?? null,
-          endDate: dates.endDate ?? null,
-        });
-        return updated ?? existing;
-      }
-      return existing;
+      return this.getEventGroupWithDates(existing.eventGroupId);
     }
-    return this.createEventGroup({ 
+    const created = await this.createEventGroup({ 
       name, 
       sportLeague,
-      //TODO make these dates correct (or remove them like I originally intended and save them on the `EVENT` row)
-      startDate: dates?.startDate ?? null,
-      endDate: dates?.endDate ?? null,
     });
+    return this.getEventGroupWithDates(created.eventGroupId);
+  }
+
+  async getEventGroupWithDates(eventGroupId: string): Promise<EventGroupWithDatesDto> {
+    const eventGroup = await this.findOneEventGroup(eventGroupId);
+    const dateRange = await this.getDateRangeForEventGroup(eventGroupId);
+    return {
+      ...eventGroup,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+    };
   }
 
   async findEventGroupsBySportLeague(sportLeague: SportLeague): Promise<EventGroup[]> {
@@ -82,8 +82,6 @@ export class EventsService {
         const eventGroup = await this.createEventGroup({
           name: fanduelEvent.name,
           sportLeague: 'GOLF',
-          startDate: null,
-          endDate: null,
         });
         await this.createEvent({
           eventGroupId: eventGroup.eventGroupId,
@@ -113,12 +111,11 @@ export class EventsService {
       const eventGroup = await this.createEventGroup({
         name: `NFL Week ${weekNumber}`,
         sportLeague: 'NFL',
-        startDate: null,
-        endDate: null,
       });
       await this.createEvent({
         eventGroupId: eventGroup.eventGroupId,
         name: `NFL Week ${weekNumber}`,
+        //TODO make these dates right
         startDate: new Date().toISOString(),
         endDate: new Date().toISOString(),
         externalEventId,
@@ -175,5 +172,25 @@ export class EventsService {
 
   async findEventsByEventGroup(eventGroupId: string): Promise<Event[]> {
     return this.eventsRepository.findEventsByEventGroup(eventGroupId);
+  }
+
+  async getDateRangeForEventGroup(eventGroupId: string): Promise<{ startDate: Date | null; endDate: Date | null }> {
+    const events = await this.eventsRepository.findEventsByEventGroup(eventGroupId);
+    
+    if (events.length === 0) {
+      return { startDate: null, endDate: null };
+    }
+
+    const startDates = events.map(e => e.startDate).filter(Boolean);
+    const endDates = events.map(e => e.endDate).filter(Boolean);
+
+    return {
+      startDate: startDates.length > 0 
+        ? new Date(Math.min(...startDates.map(d => new Date(d).getTime()))) 
+        : null,
+      endDate: endDates.length > 0 
+        ? new Date(Math.max(...endDates.map(d => new Date(d).getTime()))) 
+        : null,
+    };
   }
 }
