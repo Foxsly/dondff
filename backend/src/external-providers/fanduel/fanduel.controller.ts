@@ -1,9 +1,9 @@
-import { FanduelNflProjectionsResponse } from '@/fanduel/entities/fanduel-nfl.entity';
-import { FanduelSport } from '@/fanduel/entities/fanduel.entity';
+import { FanduelNflProjectionsResponse } from '@/external-providers/fanduel/entities/fanduel-nfl.entity';
+import { FanduelSport } from '@/external-providers/fanduel/entities/fanduel.entity';
 import { PlayerPosition } from '@/player-stats/entities/player-stats.entity';
 import { TypedParam, TypedRoute } from '@nestia/core';
 import { Controller, Query } from '@nestjs/common';
-import { EspnService } from '@/espn/espn.service';
+import { EspnService } from '@/external-providers/espn/espn.service';
 import { FanduelService } from './fanduel.service';
 
 const shuffle = (v, r = [...v]) => v.map(() => r.splice(~~(Math.random() * r.length), 1)[0]);

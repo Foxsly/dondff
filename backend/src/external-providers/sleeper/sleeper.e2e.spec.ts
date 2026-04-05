@@ -2,7 +2,7 @@ import request from 'supertest';
 import nock from 'nock';
 import type { INestApplication } from '@nestjs/common';
 import { closeTestApp, createTestApp } from '@/infrastructure/test/app.factory';
-import { SleeperModule } from '@/sleeper/sleeper.module';
+import { SleeperModule } from '@/external-providers/sleeper/sleeper.module';
 import { resetDatabase } from '@/infrastructure/test/factories';
 import stateResponse from './__fixtures__/sleeper-state.test.json';
 import statsRaw from './__fixtures__/sleeper-stats.raw.test.json';

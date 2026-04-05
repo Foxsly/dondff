@@ -1,6 +1,6 @@
 import { EventsService } from '@/events/events.service';
-import { EspnService } from '@/espn/espn.service';
-import { FanduelService } from '@/fanduel/fanduel.service';
+import { EspnService } from '@/external-providers/espn/espn.service';
+import { FanduelService } from '@/external-providers/fanduel/fanduel.service';
 import { SportLeague } from '@/leagues/entities/league.entity';
 import {
   IPlayerProjection,
@@ -11,7 +11,7 @@ import {
   PlayerTeams,
 } from '@/player-stats/entities/player-stats.entity';
 import { calculateGolferScore } from '@/player-stats/golf-scoring.util';
-import { SleeperService } from '@/sleeper/sleeper.service';
+import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
 import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()

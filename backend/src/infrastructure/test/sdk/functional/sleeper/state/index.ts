@@ -8,7 +8,7 @@ import type { IConnection } from "@nestia/fetcher";
 import { PlainFetcher } from "@nestia/fetcher/lib/PlainFetcher";
 import type { Primitive } from "typia";
 
-import type { ISleeperState } from "../../../../../../sleeper/entities/sleeper.entity";
+import type { ISleeperState } from "@/external-providers/sleeper/entities/sleeper.entity";
 
 /**
  * @controller SleeperController.getState

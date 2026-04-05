@@ -7,8 +7,8 @@ import {
 import { CreateEventDto, Event, UpdateEventDto } from './entities/event.entity';
 import { EventsRepository } from './events.repository';
 import { SportLeague } from '@/leagues/entities/league.entity';
-import { FanduelService } from '@/fanduel/fanduel.service';
-import { SleeperService } from '@/sleeper/sleeper.service';
+import { FanduelService } from '@/external-providers/fanduel/fanduel.service';
+import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
 
 @Injectable()
 export class EventsService {

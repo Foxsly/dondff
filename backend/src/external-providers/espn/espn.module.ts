@@ -1,7 +1,7 @@
-import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
-import { EspnService } from './espn.service';
+import { Module } from '@nestjs/common';
 import { EspnController } from './espn.controller';
+import { EspnService } from './espn.service';
 
 @Module({
   imports: [HttpModule],

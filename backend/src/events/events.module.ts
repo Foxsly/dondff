@@ -1,10 +1,10 @@
-import { Module } from '@nestjs/common';
+import { FanduelModule } from '@/external-providers/fanduel/fanduel.module';
+import { SleeperModule } from '@/external-providers/sleeper/sleeper.module';
 import { DatabaseModule } from '@/infrastructure/database/database.module';
-import { EventsService } from './events.service';
+import { Module } from '@nestjs/common';
 import { EventGroupsController, EventsController } from './events.controller';
 import { DatabaseEventsRepository, EventsRepository } from './events.repository';
-import { FanduelModule } from '@/fanduel/fanduel.module';
-import { SleeperModule } from '@/sleeper/sleeper.module';
+import { EventsService } from './events.service';
 
 @Module({
   controllers: [EventGroupsController, EventsController],

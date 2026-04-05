@@ -7,7 +7,7 @@ import { ensureTeamWithFKs, resetDatabase, buildTeamUpdateDto } from '@/infrastr
 import { HttpError } from '../infrastructure/test/sdk/HttpError';
 import { randomUUID } from 'crypto';
 import nock from 'nock';
-import projectionsRaw from '@/sleeper/__fixtures__/sleeper-projections.raw.test.json';
+import projectionsRaw from '@/external-providers/sleeper/__fixtures__/sleeper-projections.raw.test.json';
 
 function expectHttp404(err: any, method: string) {
   expect(err instanceof HttpError).toBe(true);

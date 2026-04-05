@@ -1,9 +1,9 @@
-import { Module } from '@nestjs/common';
-import { LeaguesService } from './leagues.service';
-import { LeaguesController } from './leagues.controller';
 import { db } from '@/infrastructure/database/database';
-import { DatabaseLeaguesRepository, LeaguesRepository } from './leagues.repository';
 import { DatabaseModule } from '@/infrastructure/database/database.module';
+import { Module } from '@nestjs/common';
+import { LeaguesController } from './leagues.controller';
+import { DatabaseLeaguesRepository, LeaguesRepository } from './leagues.repository';
+import { LeaguesService } from './leagues.service';
 
 @Module({
   controllers: [LeaguesController],

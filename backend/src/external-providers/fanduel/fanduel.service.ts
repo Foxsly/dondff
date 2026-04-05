@@ -2,8 +2,8 @@ import {
   FanduelGolfEventsResponse,
   FanduelGolfProjectionsResponse,
   FanduelGolfSlatesResponse,
-} from '@/fanduel/entities/fanduel-golf.entity';
-import { FanduelNflProjectionsResponse } from '@/fanduel/entities/fanduel-nfl.entity';
+} from '@/external-providers/fanduel/entities/fanduel-golf.entity';
+import { FanduelNflProjectionsResponse } from '@/external-providers/fanduel/entities/fanduel-nfl.entity';
 import { HttpService } from '@nestjs/axios';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';

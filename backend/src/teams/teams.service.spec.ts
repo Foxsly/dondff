@@ -1,5 +1,5 @@
 import { LeaguesModule } from '@/leagues/leagues.module';
-import { SleeperModule } from '@/sleeper/sleeper.module';
+import { SleeperModule } from '@/external-providers/sleeper/sleeper.module';
 import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeamsService } from './teams.service';
