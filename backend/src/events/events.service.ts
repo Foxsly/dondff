@@ -7,10 +7,16 @@ import {
 import { CreateEventDto, Event, UpdateEventDto } from './entities/event.entity';
 import { EventsRepository } from './events.repository';
 import { SportLeague } from '@/leagues/entities/league.entity';
+import { FanduelService } from '@/fanduel/fanduel.service';
+import { SleeperService } from '@/sleeper/sleeper.service';
 
 @Injectable()
 export class EventsService {
-  constructor(private readonly eventsRepository: EventsRepository) {}
+  constructor(
+    private readonly eventsRepository: EventsRepository,
+    private readonly fanduelService: FanduelService,
+    private readonly sleeperService: SleeperService,
+  ) {}
 
   async createEventGroup(dto: CreateEventGroupDto): Promise<EventGroup> {
     return this.eventsRepository.createEventGroup(dto);
@@ -45,12 +51,80 @@ export class EventsService {
       }
       return existing;
     }
-    return this.createEventGroup({ name, sportLeague,       startDate: dates?.startDate ?? null,
-      endDate: dates?.endDate ?? null,});
+    return this.createEventGroup({ 
+      name, 
+      sportLeague,
+      //TODO make these dates correct (or remove them like I originally intended and save them on the `EVENT` row)
+      startDate: dates?.startDate ?? null,
+      endDate: dates?.endDate ?? null,
+    });
   }
 
   async findEventGroupsBySportLeague(sportLeague: SportLeague): Promise<EventGroup[]> {
+    if (sportLeague === 'GOLF') {
+      await this.syncGolfEvents();
+    } else if (sportLeague === 'NFL') {
+      await this.syncNflEvents();
+    }
     return this.eventsRepository.findEventGroupsBySportLeague(sportLeague);
+  }
+
+  private async syncGolfEvents(): Promise<void> {
+    const fanduelEvents = await this.fanduelService.getGolfEvents();
+
+    for (const fanduelEvent of fanduelEvents) {
+      const existingEvent = await this.eventsRepository.findEventByExternalEvent(
+        fanduelEvent.id,
+        'FANDUEL',
+      );
+
+      if (!existingEvent) {
+        const eventGroup = await this.createEventGroup({
+          name: fanduelEvent.name,
+          sportLeague: 'GOLF',
+          startDate: null,
+          endDate: null,
+        });
+        await this.createEvent({
+          eventGroupId: eventGroup.eventGroupId,
+          name: fanduelEvent.name,
+          //TODO make these dates right
+          startDate: new Date().toISOString(),
+          endDate: new Date().toISOString(),
+          externalEventId: fanduelEvent.id,
+          externalEventSource: 'FANDUEL',
+        });
+      }
+    }
+  }
+
+  private async syncNflEvents(): Promise<void> {
+    const nflState = await this.sleeperService.getNflState();
+    const weekNumber = nflState.week;
+    const seasonYear = Number(nflState.season);
+    const externalEventId = `${seasonYear}-${weekNumber}`;
+
+    const existingEvent = await this.eventsRepository.findEventByExternalEvent(
+      externalEventId,
+      'SLEEPER',
+    );
+
+    if (!existingEvent) {
+      const eventGroup = await this.createEventGroup({
+        name: `NFL Week ${weekNumber}`,
+        sportLeague: 'NFL',
+        startDate: null,
+        endDate: null,
+      });
+      await this.createEvent({
+        eventGroupId: eventGroup.eventGroupId,
+        name: `NFL Week ${weekNumber}`,
+        startDate: new Date().toISOString(),
+        endDate: new Date().toISOString(),
+        externalEventId,
+        externalEventSource: 'SLEEPER',
+      });
+    }
   }
 
   async updateEventGroup(id: string, dto: UpdateEventGroupDto): Promise<EventGroup> {

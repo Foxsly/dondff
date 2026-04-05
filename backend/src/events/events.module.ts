@@ -3,6 +3,8 @@ import { DatabaseModule } from '@/infrastructure/database/database.module';
 import { EventsService } from './events.service';
 import { EventGroupsController, EventsController } from './events.controller';
 import { DatabaseEventsRepository, EventsRepository } from './events.repository';
+import { FanduelModule } from '@/fanduel/fanduel.module';
+import { SleeperModule } from '@/sleeper/sleeper.module';
 
 @Module({
   controllers: [EventGroupsController, EventsController],
@@ -13,7 +15,7 @@ import { DatabaseEventsRepository, EventsRepository } from './events.repository'
       useClass: DatabaseEventsRepository,
     },
   ],
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, FanduelModule, SleeperModule],
   exports: [EventsService],
 })
 export class EventsModule {}

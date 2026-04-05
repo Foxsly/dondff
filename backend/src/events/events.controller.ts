@@ -22,7 +22,7 @@ export class EventGroupsController {
   getOrCreate(
     @Body() dto: CreateEventGroupDto,
   ): Promise<EventGroup> {
-    return this.eventsService.getOrCreateEventGroup(dto.name, {
+    return this.eventsService.getOrCreateEventGroup(dto.name, dto.sportLeague, {
       startDate: dto.startDate,
       endDate: dto.endDate,
     });

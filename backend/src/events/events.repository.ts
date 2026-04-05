@@ -15,13 +15,15 @@ export abstract class EventsRepository {
   abstract findAllEventGroups(): Promise<EventGroup[]>;
   abstract findOneEventGroup(id: string): Promise<EventGroup | null>;
   abstract findEventGroupByName(name: string): Promise<EventGroup | null>;
-  abstract findEventGroupsBySportLeague(sportLeague: string): Promise<EventGroup[]>;
+  abstract findEventGroupsBySportLeague(sportLeague: SportLeague): Promise<EventGroup[]>;
   abstract updateEventGroup(id: string, dto: UpdateEventGroupDto): Promise<EventGroup | null>;
   abstract deleteEventGroup(id: string): Promise<boolean>;
 
   abstract createEvent(dto: CreateEventDto): Promise<Event>;
   abstract findAllEvents(): Promise<Event[]>;
   abstract findOneEvent(id: string): Promise<Event | null>;
+  abstract findEventsByExternalSource(source: string): Promise<Event[]>;
+  abstract findEventByExternalEvent(externalEventId: string, source: string): Promise<Event | null>;
   abstract updateEvent(id: string, dto: UpdateEventDto): Promise<Event | null>;
   abstract deleteEvent(id: string): Promise<boolean>;
 
@@ -129,6 +131,25 @@ export class DatabaseEventsRepository extends EventsRepository {
       .selectFrom('event')
       .selectAll()
       .where('eventId', '=', id)
+      .executeTakeFirst();
+    return row ? (row as Event) : null;
+  }
+
+  async findEventsByExternalSource(source: string): Promise<Event[]> {
+    const rows = await this.db
+      .selectFrom('event')
+      .selectAll()
+      .where('externalEventSource', '=', source)
+      .execute();
+    return rows as Event[];
+  }
+
+  async findEventByExternalEvent(externalEventId: string, source: string): Promise<Event | null> {
+    const row = await this.db
+      .selectFrom('event')
+      .selectAll()
+      .where('externalEventId', '=', externalEventId)
+      .where('externalEventSource', '=', source)
       .executeTakeFirst();
     return row ? (row as Event) : null;
   }
