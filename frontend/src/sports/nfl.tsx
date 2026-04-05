@@ -1,5 +1,5 @@
 import React from 'react';
-import type { SportConfig } from './types';
+import type { SportConfig, EventOption } from './types';
 import type { GamePlayer, GameOffer } from '../types';
 import { getSleeperState } from '../api/sleeper';
 import { getEventGroupsBySportLeague } from '../api/events';
@@ -38,9 +38,18 @@ export const nflConfig: SportConfig = {
   },
 
   fetchAvailableEventGroups: async () => {
-    // NFL weeks come from team data + Sleeper state; the component handles merging.
-    // This returns an empty array — the component adds the current event group from fetchCurrentEventGroup.
-    return [];
+      // PREVIOUSLY - NFL weeks come from team data + Sleeper state; the component handles merging.
+      // PREVIOUSLY - This returns an empty array — the component adds the current event group from fetchCurrentEventGroup.
+
+      try {
+      const eventGroups = await getEventGroupsBySportLeague('NFL');
+      return eventGroups.map((eg): EventOption => ({
+        value: eg.eventGroupId,
+        label: eg.name.replace('NFL Week ', ''),
+      }));
+    } catch {
+      return [];
+    }
   },
 
   sharedProjectionPool: false,

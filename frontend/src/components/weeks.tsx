@@ -98,9 +98,14 @@ const Weeks: React.FC = () => {
           }
         }
 
-        // Fetch available events (golf tournaments, etc.)
-        const events = await sportConfig.fetchAvailableEventGroups(season!);
-        if (!cancelled) setAvailableEvents(events);
+        // Compute available events (event groups not yet used by teams)
+        const available = allEventGroups.filter((eg) => !eventGroupMap.has(eg.eventGroupId));
+        if (!cancelled) setAvailableEvents(available.map((eg) => ({
+          value: eg.eventGroupId,
+          label: eg.name,
+          startDate: eg.startDate,
+          endDate: eg.endDate,
+        })));
 
         const derivedEventGroups = Array.from(eventGroupMap.values());
         if (!cancelled) setEventGroups(derivedEventGroups);
@@ -121,28 +126,15 @@ const Weeks: React.FC = () => {
     return () => { cancelled = true; };
   }, [leagueId, season, navigate, sportConfig, leagueLoading]);
 
-  const handleCreateEventGroup = async (event: EventOption) => {
-    try {
-      const sport = sportConfig?.key ?? 'NFL';
-      const allEventGroups = await getEventGroupsBySportLeagueWithDates(sport);
-      const matchingGroup = allEventGroups.find(eg => eg.name === event.label);
-      
-      if (matchingGroup) {
-        const newGroup: EventGroupInfo = {
-          eventGroupId: matchingGroup.eventGroupId,
-          label: event.label,
-          startDate: matchingGroup.startDate,
-          endDate: matchingGroup.endDate,
-        };
-        setEventGroups((prev) => [...prev, newGroup]);
-        setAvailableEvents((prev) => prev.filter((e) => e.value !== event.value));
-      } else {
-        setError(`Event group "${event.label}" not found after sync`);
-      }
-    } catch (err: any) {
-      console.error("Failed to sync event groups", err);
-      setError(err?.message ?? "Failed to sync event groups");
-    }
+  const handleAddEventGroup = (event: EventOption) => {
+    const newGroup: EventGroupInfo = {
+      eventGroupId: event.value,
+      label: event.label,
+      startDate: event.startDate,
+      endDate: event.endDate,
+    };
+    setEventGroups((prev) => [...prev, newGroup]);
+    setAvailableEvents((prev) => prev.filter((e) => e.value !== event.value));
   };
 
   const breadcrumbs = [
@@ -194,11 +186,11 @@ const Weeks: React.FC = () => {
           {availableEvents.map((event) => (
             <button
               key={event.value}
-              onClick={() => handleCreateEventGroup(event)}
+              onClick={() => handleAddEventGroup(event)}
               className="w-full text-left px-4 py-3 rounded bg-[#2a3447] hover:bg-[#344054] border border-[#3a465b] transition-colors"
             >
               <span className="text-white font-medium">{event.label}</span>
-              <span className="text-gray-400 text-sm ml-2">— Create {sportConfig?.eventLabel?.toLowerCase()}</span>
+              <span className="text-gray-400 text-sm ml-2">— Add {sportConfig?.eventLabel?.toLowerCase()}</span>
             </button>
           ))}
         </div>

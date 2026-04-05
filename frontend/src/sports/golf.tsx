@@ -1,7 +1,7 @@
 import React from 'react';
 import type { SportConfig, EventOption } from './types';
 import type { GamePlayer, GameOffer } from '../types';
-import { getGolfEventsEnriched } from '../api/fanduel';
+import { getEventGroupsBySportLeagueWithDates } from '../api/events';
 
 export const golfConfig: SportConfig = {
   key: 'GOLF',
@@ -19,13 +19,12 @@ export const golfConfig: SportConfig = {
 
   fetchAvailableEventGroups: async (season) => {
     try {
-      const events = await getGolfEventsEnriched(season);
-      if (!Array.isArray(events)) return [];
-      return events.map((e): EventOption => ({
-        value: e.id,
-        label: e.name,
-        startDate: e.startDate,
-        endDate: e.endDate,
+      const eventGroups = await getEventGroupsBySportLeagueWithDates('GOLF');
+      return eventGroups.map((eg): EventOption => ({
+        value: eg.eventGroupId,
+        label: eg.name,
+        startDate: eg.startDate,
+        endDate: eg.endDate,
       }));
     } catch {
       return [];

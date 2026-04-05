@@ -4,8 +4,8 @@ import type { SportLeague, GamePlayer, GameOffer } from '../types';
 export interface EventOption {
   value: string;
   label: string;
-  startDate?: string | null;
-  endDate?: string | null;
+  startDate?: string | Date | null;
+  endDate?: string | Date | null;
 }
 
 export interface CurrentEventGroup {
