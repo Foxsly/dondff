@@ -1,11 +1,12 @@
 import { FanduelModule } from '@/fanduel/fanduel.module';
 import { SleeperModule } from '@/sleeper/sleeper.module';
+import { EventsModule } from '@/events/events.module';
 import { Module } from '@nestjs/common';
 import { PlayerStatsService } from './player-stats.service';
 import { PlayerStatsController } from './player-stats.controller';
 
 @Module({
-  imports: [SleeperModule, FanduelModule],
+  imports: [SleeperModule, FanduelModule, EventsModule],
   controllers: [PlayerStatsController],
   providers: [PlayerStatsService],
   exports: [PlayerStatsService],

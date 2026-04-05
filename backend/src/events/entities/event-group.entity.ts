@@ -6,6 +6,8 @@ export interface IEventGroup {
   eventGroupId: string & tags.Format<'uuid'>;
   name: string;
   sportLeague: SportLeague;
+  startDate: string | null;
+  endDate: string | null;
 }
 
 export type EventGroup = Selectable<IEventGroup>;

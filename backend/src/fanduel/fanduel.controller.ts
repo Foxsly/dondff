@@ -3,17 +3,46 @@ import { FanduelSport } from '@/fanduel/entities/fanduel.entity';
 import { PlayerPosition } from '@/player-stats/entities/player-stats.entity';
 import { TypedParam, TypedRoute } from '@nestia/core';
 import { Controller, Query } from '@nestjs/common';
+import { EspnService } from './espn.service';
 import { FanduelService } from './fanduel.service';
 
 const shuffle = (v, r = [...v]) => v.map(() => r.splice(~~(Math.random() * r.length), 1)[0]);
 
 @Controller('fanduel')
 export class FanduelController {
-  constructor(private readonly fanduelService: FanduelService) {}
+  constructor(
+    private readonly fanduelService: FanduelService,
+    private readonly espnService: EspnService,
+  ) {}
 
   @TypedRoute.Get('GOLF/events')
   async getGolfEvents() {
     return this.fanduelService.getGolfEvents();
+  }
+
+  @TypedRoute.Get('GOLF/events/enriched')
+  async getGolfEventsEnriched(@Query('year') year?: string) {
+    const [fanduelEvents, espnSchedule] = await Promise.all([
+      this.fanduelService.getGolfEvents(),
+      this.espnService.getPgaSchedule(year ?? new Date().getFullYear()),
+    ]);
+
+    return fanduelEvents.map((fdEvent) => {
+      const espnMatch = espnSchedule.find((espn) =>
+        this.normalizeEventName(espn.name).includes(this.normalizeEventName(fdEvent.name)),
+      );
+      return {
+        id: fdEvent.id,
+        name: fdEvent.name,
+        startDate: espnMatch?.startDate ?? null,
+        endDate: espnMatch?.endDate ?? null,
+        state: espnMatch?.state ?? null,
+      };
+    });
+  }
+
+  private normalizeEventName(name: string): string {
+    return name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
   }
 
   @TypedRoute.Get('GOLF/slates')

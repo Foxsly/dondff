@@ -12,5 +12,5 @@ export interface ITeam {
 }
 
 export type Team = Selectable<Omit<ITeam, 'players'>>;
-export type CreateTeamDto = Omit<ITeam, 'teamId' | 'players'> & { week?: number };
+export type CreateTeamDto = Omit<ITeam, 'teamId' | 'players'>;
 export type UpdateTeamDto = Partial<Omit<ITeam, 'players'>>;

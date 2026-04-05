@@ -86,11 +86,13 @@ export class DatabaseTeamsRepository extends TeamsRepository {
         position: dto.position,
         playerId: dto.playerId,
         playerName: dto.playerName,
+        projectedPoints: dto.projectedPoints ?? null,
       })
       .onConflict((oc) =>
         oc.columns(['teamId', 'position']).doUpdateSet({
           playerId: dto.playerId,
           playerName: dto.playerName,
+          projectedPoints: dto.projectedPoints ?? null,
         }),
       )
       .execute();
@@ -128,6 +130,7 @@ export function withPlayers(eb: ExpressionBuilder<DB, 'team'>) {
         'teamPlayer.playerId',
         'teamPlayer.position',
         'teamPlayer.playerName',
+        'teamPlayer.projectedPoints',
       ])
       .whereRef('teamPlayer.teamId', '=', 'team.teamId'),
   ).as('players');

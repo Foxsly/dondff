@@ -80,9 +80,9 @@ export class LeaguesController {
    */
   @TypedRoute.Get(':id/teams')
   getLeagueTeams(@TypedParam('id') leagueId: string,
-                 @Query('season') season: number,
-                 @Query('week') week: number): Promise<ITeam[]> {
-    return this.leaguesService.getLeagueTeams(leagueId, season, week);
+                 @Query('season') season?: number,
+                 @Query('eventGroupId') eventGroupId?: string): Promise<ITeam[]> {
+    return this.leaguesService.getLeagueTeams(leagueId, season, eventGroupId);
   }
 
   /**

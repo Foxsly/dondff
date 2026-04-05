@@ -20,7 +20,7 @@ interface FinalDecisionResponse {
   boxes: GameBox[];
 }
 
-export const createTeam = (body: { leagueId: string; userId: string; seasonYear: number; week: number }) =>
+export const createTeam = (body: { leagueId: string; userId: string; seasonYear: number; eventGroupId: string }) =>
   request<any>('/teams', { method: 'POST', body });
 
 export const getTeam = (teamId: string) =>

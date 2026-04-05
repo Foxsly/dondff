@@ -16,8 +16,8 @@ describe('TeamsController', () => {
   };
 
   const mockPlayers: ITeamPlayer[] = [
-    { teamId: 'uuid-team-1', position: 'QB', playerId: '1', playerName: 'Patrick Mahomes' },
-    { teamId: 'uuid-team-1', position: 'RB', playerId: '2', playerName: 'Derrick Henry' },
+    { teamId: 'uuid-team-1', position: 'QB', playerId: '1', playerName: 'Patrick Mahomes', projectedPoints: null },
+    { teamId: 'uuid-team-1', position: 'RB', playerId: '2', playerName: 'Derrick Henry', projectedPoints: null },
   ];
 
   const mockTeam: ITeam = {
@@ -25,7 +25,7 @@ describe('TeamsController', () => {
     leagueId: 'uuid-league-1',
     userId: 'uuid-user-1',
     seasonYear: 2025,
-    week: 2,
+    eventGroupId: 'uuid-event-group-1',
     players: mockPlayers,
   };
 
@@ -55,7 +55,7 @@ describe('TeamsController', () => {
         leagueId: mockTeam.leagueId,
         userId: mockTeam.userId,
         seasonYear: mockTeam.seasonYear,
-        week: mockTeam.week,
+        eventGroupId: mockTeam.eventGroupId,
       };
       service.create.mockResolvedValue(mockTeam as Team);
 
@@ -95,16 +95,17 @@ describe('TeamsController', () => {
 
   describe('update', () => {
     it('updates a team and returns it', async () => {
-      const dto: UpdateTeamDto = { week: 3 };
+      const newEventGroupId = 'uuid-event-group-2';
+      const dto: UpdateTeamDto = { eventGroupId: newEventGroupId };
       service.update.mockResolvedValue({ ...mockTeam, ...dto });
 
       const result = await controller.update(mockTeam.teamId, dto);
       expect(service.update).toHaveBeenCalledWith(mockTeam.teamId, dto);
-      expect(result.week).toBe(3);
+      expect(result.eventGroupId).toBe(newEventGroupId);
     });
 
     it('throws NotFoundException if team not found', async () => {
-      const dto: UpdateTeamDto = { week: 3 };
+      const dto: UpdateTeamDto = { eventGroupId: 'uuid-event-group-2' };
       service.update.mockImplementation(() => {
         throw new NotFoundException();
       });

@@ -13,7 +13,7 @@ import {useGameState} from './useGameState';
 interface GameLocationState {
   leagueId: string;
   season: string | number;
-  week: string | number;
+  eventGroupId: string;
 }
 
 interface GameProps {
@@ -22,14 +22,14 @@ interface GameProps {
 }
 
 const Game: React.FC<GameProps> = ({ teamUser, onComplete }) => {
-  const { leagueId, season, week } = useLocation().state as GameLocationState;
+  const { leagueId, season, eventGroupId } = useLocation().state as GameLocationState;
   const navigate = useNavigate();
 
   const {
     currentName, cases, players, offer, caseSelected, position,
     lineUp, resetUsed, sportConfig, error, allPositionsDone, isKeepOrSwap,
     selectCase, acceptOffer, declineOffer, keep, swap, resetGame, advanceToNextPosition,
-  } = useGameState({ leagueId, season, week, teamUser });
+  } = useGameState({ leagueId, season, eventGroupId, teamUser });
 
   const handleSubmit = () => {
     if (onComplete) {

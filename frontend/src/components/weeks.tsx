@@ -1,23 +1,30 @@
 import React, {useEffect, useState} from "react";
 import {useNavigate, useParams} from "react-router-dom";
 import {getCurrentUser} from "../api/auth";
+import {getEventGroups, getOrCreateEventGroup} from "../api/events";
 import {getLeagueTeams} from "../api/leagues";
 import {useLeague} from "../contexts/LeagueContext";
-import type {WeekOption} from "../sports/types";
+import type {EventOption} from "../sports/types";
 import Accordion from "./accordion";
 import Breadcrumbs from "./breadcrumbs";
 import ErrorDisplay from "./ui/ErrorDisplay";
 import LoadingSpinner from "./ui/LoadingSpinner";
+
+interface EventGroupInfo {
+  eventGroupId: string;
+  label: string;
+  startDate?: string | null;
+  endDate?: string | null;
+}
 
 const Weeks: React.FC = () => {
   const { leagueId, season } = useParams<{ leagueId: string; season: string }>();
   const navigate = useNavigate();
   const { league, sportConfig, loading: leagueLoading, error: leagueError } = useLeague();
 
-  const [weeks, setWeeks] = useState<string[]>([]);
-  const [weekLabels, setWeekLabels] = useState<Record<string, string>>({});
-  const [currentWeek, setCurrentWeek] = useState<number | null>(null);
-  const [availableEvents, setAvailableEvents] = useState<WeekOption[]>([]);
+  const [eventGroups, setEventGroups] = useState<EventGroupInfo[]>([]);
+  const [currentEventGroupId, setCurrentEventGroupId] = useState<string | null>(null);
+  const [availableEvents, setAvailableEvents] = useState<EventOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -43,11 +50,19 @@ const Weeks: React.FC = () => {
           return;
         }
 
-        const teams = await getLeagueTeams(leagueId!);
+        const [teams, allEventGroups] = await Promise.all([
+          getLeagueTeams(leagueId!),
+          getEventGroups(),
+        ]);
 
         if (cancelled) return;
 
-        const weekSet = new Set<string>();
+        // Build a lookup map from backend event groups (which include dates)
+        const eventGroupLookup = new Map(
+          allEventGroups.map((eg) => [eg.eventGroupId, eg]),
+        );
+
+        const eventGroupMap = new Map<string, EventGroupInfo>();
 
         if (Array.isArray(teams)) {
           const leagueTeams = teams.filter((team: any) => {
@@ -55,28 +70,42 @@ const Weeks: React.FC = () => {
           });
 
           leagueTeams.forEach((team: any) => {
-            if (team.week != null) weekSet.add(String(team.week));
+            if (team.eventGroupId != null && !eventGroupMap.has(team.eventGroupId)) {
+              const eg = eventGroupLookup.get(team.eventGroupId);
+              eventGroupMap.set(team.eventGroupId, {
+                eventGroupId: team.eventGroupId,
+                label: eg?.name ?? team.eventGroupName ?? team.eventGroupId,
+                startDate: eg?.startDate ?? null,
+                endDate: eg?.endDate ?? null,
+              });
+            }
           });
         }
 
-        // Fetch current week from sport config
-        const currentWeek = await sportConfig.fetchCurrentWeek();
-        if (currentWeek != null) {
-          if (!cancelled) setCurrentWeek(currentWeek);
-          weekSet.add(String(currentWeek));
+        // Fetch current event group from sport config
+        const currentEventGroup = await sportConfig.fetchCurrentEventGroup();
+        if (currentEventGroup != null) {
+          if (!cancelled) setCurrentEventGroupId(currentEventGroup.eventGroupId);
+          if (!eventGroupMap.has(currentEventGroup.eventGroupId)) {
+            const eg = eventGroupLookup.get(currentEventGroup.eventGroupId);
+            eventGroupMap.set(currentEventGroup.eventGroupId, {
+              eventGroupId: currentEventGroup.eventGroupId,
+              label: currentEventGroup.label,
+              startDate: eg?.startDate ?? null,
+              endDate: eg?.endDate ?? null,
+            });
+          }
         }
 
         // Fetch available events (golf tournaments, etc.)
-        // TODO this will become EventGroups in the near future
-        const events = await sportConfig.fetchAvailableWeeks(season!);
+        const events = await sportConfig.fetchAvailableEventGroups(season!);
         if (!cancelled) setAvailableEvents(events);
 
-        const derivedWeeks = Array.from(weekSet);
-        derivedWeeks.sort((a, b) => Number(a) - Number(b));
-        if (!cancelled) setWeeks(derivedWeeks);
+        const derivedEventGroups = Array.from(eventGroupMap.values());
+        if (!cancelled) setEventGroups(derivedEventGroups);
       } catch (err: any) {
-        console.error("Failed to load weeks", err);
-        if (!cancelled) setError(err?.message ?? "Failed to load weeks");
+        console.error("Failed to load event groups", err);
+        if (!cancelled) setError(err?.message ?? "Failed to load event groups");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -91,14 +120,24 @@ const Weeks: React.FC = () => {
     return () => { cancelled = true; };
   }, [leagueId, season, navigate, sportConfig, leagueLoading]);
 
-  const handleCreateEventWeek = (event: WeekOption) => {
-    const existingWeeks = weeks.map(Number);
-    const nextWeek = existingWeeks.length > 0 ? Math.max(...existingWeeks) + 1 : 1;
-    const weekStr = String(nextWeek);
-
-    setWeeks((prev) => [...prev, weekStr].sort((a, b) => Number(a) - Number(b)));
-    setWeekLabels((prev) => ({ ...prev, [weekStr]: event.label }));
-    setAvailableEvents((prev) => prev.filter((e) => e.value !== event.value));
+  const handleCreateEventGroup = async (event: EventOption) => {
+    try {
+      const eventGroup = await getOrCreateEventGroup(event.label, {
+        startDate: event.startDate,
+        endDate: event.endDate,
+      });
+      const newGroup: EventGroupInfo = {
+        eventGroupId: eventGroup.eventGroupId,
+        label: event.label,
+        startDate: eventGroup.startDate,
+        endDate: eventGroup.endDate,
+      };
+      setEventGroups((prev) => [...prev, newGroup]);
+      setAvailableEvents((prev) => prev.filter((e) => e.value !== event.value));
+    } catch (err: any) {
+      console.error("Failed to create event group", err);
+      setError(err?.message ?? "Failed to create event group");
+    }
   };
 
   const breadcrumbs = [
@@ -114,7 +153,7 @@ const Weeks: React.FC = () => {
     return (
       <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
         <Breadcrumbs items={breadcrumbs} />
-        <LoadingSpinner message="Loading weeks..." />
+        <LoadingSpinner message="Loading event groups..." />
       </div>
     );
   }
@@ -132,35 +171,32 @@ const Weeks: React.FC = () => {
     <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
       <Breadcrumbs items={breadcrumbs} />
       <div className="space-y-4 max-w-[90%] mx-auto">
-        {weeks.map((week) => (
+        {eventGroups.map((group) => (
           <Accordion
-            key={week}
-            weekDoc={{ week: week, label: weekLabels[week] }}
+            key={group.eventGroupId}
+            eventGroup={group}
             leagueId={leagueId!}
             season={season!}
-            actualWeek={currentWeek}
+            currentEventGroupId={currentEventGroupId}
           />
         ))}
       </div>
       {availableEvents.length > 0 && (
         <div className="space-y-2 mt-4">
           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
-            Available {sportConfig?.weekLabel}s
+            Available {sportConfig?.eventLabel}s
           </h3>
           {availableEvents.map((event) => (
             <button
               key={event.value}
-              onClick={() => handleCreateEventWeek(event)}
+              onClick={() => handleCreateEventGroup(event)}
               className="w-full text-left px-4 py-3 rounded bg-[#2a3447] hover:bg-[#344054] border border-[#3a465b] transition-colors"
             >
               <span className="text-white font-medium">{event.label}</span>
-              <span className="text-gray-400 text-sm ml-2">— Create {sportConfig?.weekLabel?.toLowerCase()}</span>
+              <span className="text-gray-400 text-sm ml-2">— Create {sportConfig?.eventLabel?.toLowerCase()}</span>
             </button>
           ))}
         </div>
-      )}
-      {sportConfig?.key === 'NFL' && (
-        <div>Current NFL Week: {currentWeek ?? "Unknown"}</div>
       )}
     </div>
   );

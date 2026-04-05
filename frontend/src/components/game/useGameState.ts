@@ -9,11 +9,11 @@ import type {GameBox, GameOffer, GamePlayer, LineUpSlot, TeamUser} from '../../t
 interface UseGameStateParams {
   leagueId: string;
   season: string | number;
-  week: string | number;
+  eventGroupId: string;
   teamUser?: TeamUser;
 }
 
-export const useGameState = ({ leagueId, season, week, teamUser }: UseGameStateParams) => {
+export const useGameState = ({ leagueId, season, eventGroupId, teamUser }: UseGameStateParams) => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [currentName, setCurrentName] = useState<string | null>(null);
   const [cases, setCases] = useState<GameBox[] | null>(null);
@@ -64,7 +64,7 @@ export const useGameState = ({ leagueId, season, week, teamUser }: UseGameStateP
   // Ensure team exists
   const ensureTeamForContext = useCallback(
     async (user: any) => {
-      if (!user || !leagueId || !season || !week) return null;
+      if (!user || !leagueId || !season || !eventGroupId) return null;
 
       const userId = user.id || user.userId;
       if (!userId) return null;
@@ -78,7 +78,7 @@ export const useGameState = ({ leagueId, season, week, teamUser }: UseGameStateP
             String(team.leagueId) === String(leagueId) &&
             String(team.userId) === String(userId) &&
             Number(team.seasonYear) === Number(season) &&
-            Number(team.week) === Number(week)
+            team.eventGroupId === eventGroupId
           );
           if (existing) resolvedTeamId = existing.teamId;
         }
@@ -92,7 +92,7 @@ export const useGameState = ({ leagueId, season, week, teamUser }: UseGameStateP
             leagueId,
             userId,
             seasonYear: Number(season),
-            week: Number(week),
+            eventGroupId,
           });
           resolvedTeamId = createdTeam.teamId;
         } catch (err) {
@@ -103,19 +103,19 @@ export const useGameState = ({ leagueId, season, week, teamUser }: UseGameStateP
 
       return resolvedTeamId;
     },
-    [leagueId, season, week]
+    [leagueId, season, eventGroupId]
   );
 
   useEffect(() => {
     if (hasEnsuredTeamRef.current) return;
-    if (!currentUser || !leagueId || !season || !week) return;
+    if (!currentUser || !leagueId || !season || !eventGroupId) return;
     hasEnsuredTeamRef.current = true;
 
     (async () => {
       const id = await ensureTeamForContext(currentUser);
       if (id) setTeamId(id);
     })();
-  }, [currentUser, leagueId, season, week, ensureTeamForContext]);
+  }, [currentUser, leagueId, season, eventGroupId, ensureTeamForContext]);
 
   // Fetch team entries
   const fetchTeamEntries = useCallback(async () => {

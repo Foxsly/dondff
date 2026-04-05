@@ -68,7 +68,7 @@ test.skip('calculateScores sums player scores and persists finalScore', async ()
 
   render(
     <MemoryRouter>
-      <Entries leagueId="league1" season="2023" week="1" actualWeek={2} />
+      <Entries leagueId="league1" season="2023" eventGroupId="event-group-1" currentEventGroupId={2} />
     </MemoryRouter>
   );
 
@@ -102,7 +102,7 @@ test.skip('memberLabel prioritizes displayName then email then id', () => {
 
   render(
     <MemoryRouter>
-      <Entries leagueId="league1" season="2023" week="1" actualWeek={1} />
+      <Entries leagueId="league1" season="2023" eventGroupId="event-group-1" currentEventGroupId={1} />
     </MemoryRouter>
   );
 
@@ -132,7 +132,7 @@ test.skip('renders projection columns and values', () => {
 
   render(
     <MemoryRouter>
-      <Entries leagueId="league1" season="2023" week="1" actualWeek={1} />
+      <Entries leagueId="league1" season="2023" eventGroupId="event-group-1" currentEventGroupId={1} />
     </MemoryRouter>
   );
 

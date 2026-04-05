@@ -8,6 +8,7 @@ import {ITeamStatus} from '@/teams/entities/team-status.entity';
 import {TeamsEntryRepository} from '@/teams/teams-entry.repository';
 import {TeamsRepository} from '@/teams/teams.repository';
 import {EventsService} from '@/events/events.service';
+import {EventGroup} from '@/events/entities/event-group.entity';
 import {Injectable, NotFoundException} from '@nestjs/common';
 import {
     ITeamEntry,
@@ -39,29 +40,8 @@ export class TeamsService {
   ) {}
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
-    const league = await this.leaguesService.findOne(createTeamDto.leagueId);
-
-    let eventGroupId: string;
-    if (createTeamDto.week) {
-      const eventGroup = await this.eventsService.getOrCreateEventGroup(
-        `${league.sportLeague} Week ${createTeamDto.week}`,
-        league.sportLeague,
-      );
-      eventGroupId = eventGroup.eventGroupId;
-    } else if (createTeamDto.eventGroupId) {
-      eventGroupId = createTeamDto.eventGroupId;
-    } else {
-      throw new Error('Either week or eventGroupId must be provided');
-    }
-
-    const teamData = {
-      leagueId: createTeamDto.leagueId,
-      userId: createTeamDto.userId,
-      seasonYear: createTeamDto.seasonYear,
-      eventGroupId,
-    };
-
-    let createdTeam: Team = await this.teamsRepository.create(teamData);
+    let createdTeam: Team = await this.teamsRepository.create(createTeamDto);
+    const league = await this.leaguesService.findOne(createdTeam.leagueId);
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       createdTeam.leagueId,
     );
@@ -71,14 +51,24 @@ export class TeamsService {
       leagueSettings.leagueSettingsId,
     );
 
+    const eventGroup = await this.eventsService.findOneEventGroup(createTeamDto.eventGroupId);
+
     //TODO extract this into a 'generateCasesForTeam' that just takes the leagueId and the createdTeam, and does the position looping within it
-    for (const position of positions) {
+    // For sports with a shared player pool (e.g. GOLF), only generate cases for
+    // the first position at creation time. Subsequent positions are generated
+    // lazily once the prior position finishes, so the selected player can be
+    // excluded from the pool.
+    const positionsToGenerate = this.sportUsesSharedPlayerPool(league.sportLeague)
+      ? positions.slice(0, 1)
+      : positions;
+
+    for (const position of positionsToGenerate) {
       await this.generateCasesForPosition(
         createdTeam,
         position.position,
         leagueSettings,
         league.sportLeague,
-        this.getNumberOfCases(createTeamDto.week ?? await this.getWeekNumberFromEventGroup(eventGroupId)),
+        this.getNumberOfCases(eventGroup),
       );
     }
 
@@ -168,7 +158,19 @@ export class TeamsService {
     teamId: string,
     position: string,
   ): Promise<TeamEntryCasesResponseDto> {
-    const entry = await this.getTeamEntry(teamId, position);
+    let entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
+
+    // Lazy generation: for shared-pool sports (e.g. GOLF), cases for positions
+    // beyond the first are not created at team-creation time. Generate them now,
+    // excluding any players already selected for other positions.
+    if (!entry) {
+      entry = await this.lazyGenerateCasesIfSharedPool(teamId, position);
+    }
+    if (!entry) {
+      throw new NotFoundException(
+        `TeamEntry for team with id ${teamId} and position ${position} not found`,
+      );
+    }
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(entry.teamEntryId);
 
     const playerListAudits = audits.map((audit) => ({
@@ -244,12 +246,15 @@ export class TeamsService {
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       team.leagueId,
     );
+    const eventGroup = await this.eventsService.findOneEventGroup(team.eventGroupId);
+    const excludePlayerIds = await this.getExcludedPlayerIdsForPosition(team, position, league.sportLeague);
     await this.generateCasesForPosition(
       team,
       position,
       leagueSettings,
       league.sportLeague,
-      this.getNumberOfCases(await this.getWeekNumberFromEventGroup(team.eventGroupId)),
+      this.getNumberOfCases(eventGroup),
+      excludePlayerIds,
     );
   }
 
@@ -259,8 +264,9 @@ export class TeamsService {
     leagueSettings: ILeagueSettings,
     sportLeague: SportLeague,
     numberOfCases: number = 10,
-  ) {
-    let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(position, team.seasonYear, await this.getWeekNumberFromEventGroup(team.eventGroupId), sportLeague,);
+    excludePlayerIds: string[] = [],
+  ): Promise<string[]> {
+    let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(position, team.seasonYear, team.eventGroupId, sportLeague,);
     let teamEntry: ITeamEntry = await this.getOrCreateTeamEntry(
       team.teamId,
       position,
@@ -272,6 +278,12 @@ export class TeamsService {
     const poolSize = (await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId))
       .find((positionSettings) => positionSettings.position === position)?.poolSize;
     let trimmedPlayers: IPlayerProjection[] = playerProjections.slice(0, poolSize);
+
+    if (excludePlayerIds.length > 0) {
+      const excludeSet = new Set(excludePlayerIds);
+      trimmedPlayers = trimmedPlayers.filter((p) => !excludeSet.has(p.playerId));
+    }
+
     let cases: Array<Omit<ITeamEntryAudit, 'auditId'>> = shuffle(trimmedPlayers)
       .slice(0, numberOfCases)
       .map((player: IPlayerProjection) => ({
@@ -285,6 +297,62 @@ export class TeamsService {
         boxStatus: 'available',
       }));
     await this.teamsEntryRepository.insertAuditSnapshots(cases);
+    return cases.map((c) => c.playerId);
+  }
+
+  /**
+   * For shared-pool sports, lazily generates cases for a position that was
+   * deferred at team-creation time. Returns the newly created TeamEntry,
+   * or null if the sport does not use a shared pool.
+   */
+  private async lazyGenerateCasesIfSharedPool(
+    teamId: string,
+    position: string,
+  ): Promise<ITeamEntry | null> {
+    const team = await this.findOne(teamId);
+    const league = await this.leaguesService.findOne(team.leagueId);
+    if (!this.sportUsesSharedPlayerPool(league.sportLeague)) {
+      return null;
+    }
+    const leagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(team.leagueId);
+    const eventGroup = await this.eventsService.findOneEventGroup(team.eventGroupId);
+    const excludePlayerIds = await this.getExcludedPlayerIdsForPosition(team, position, league.sportLeague);
+    await this.generateCasesForPosition(
+      team,
+      position,
+      leagueSettings,
+      league.sportLeague,
+      this.getNumberOfCases(eventGroup),
+      excludePlayerIds,
+    );
+    return this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
+  }
+
+  /**
+   * For sports where all positions draw from the same player pool (e.g. GOLF),
+   * returns the player IDs that should be excluded when generating cases for the
+   * given position — i.e. players already selected for other positions.
+   */
+  private async getExcludedPlayerIdsForPosition(
+    team: Team,
+    position: string,
+    sportLeague: SportLeague,
+  ): Promise<string[]> {
+    if (!this.sportUsesSharedPlayerPool(sportLeague)) {
+      return [];
+    }
+    const fullTeam = await this.teamsRepository.findOne(team.teamId);
+    if (!fullTeam) {
+      return [];
+    }
+    // Exclude players already locked in via teamPlayer for other positions
+    return fullTeam.players
+      .filter((p) => p.position !== position)
+      .map((p) => p.playerId);
+  }
+
+  private sportUsesSharedPlayerPool(sportLeague: SportLeague): boolean {
+    return sportLeague === 'GOLF';
   }
 
   async getOrCreateTeamEntry(
@@ -329,7 +397,7 @@ export class TeamsService {
     const projections = await this.playerStatsService.getPlayerProjections(
       teamEntry.position,
       team.seasonYear,
-      await this.getWeekNumberFromEventGroup(team.eventGroupId),
+      team.eventGroupId,
       league.sportLeague,
     );
 
@@ -456,6 +524,7 @@ export class TeamsService {
     await this.upsertTeamPlayer(teamId, {
       playerId: updatedOffer.playerId,
       playerName: updatedOffer.playerName,
+      projectedPoints: updatedOffer.projectedPoints,
       position: position,
       teamId: teamId,
     });
@@ -514,6 +583,7 @@ export class TeamsService {
     await this.upsertTeamPlayer(teamId, {
       playerId: finalPlayer.playerId,
       playerName: finalPlayer.playerName,
+      projectedPoints: finalPlayer.projectedPoints,
       position: position,
       teamId: teamId,
     });
@@ -535,28 +605,16 @@ export class TeamsService {
   }
 
   /**
-   * As we get further into the playoffs, the number of available players drops.
-   * To account for this, we limit the number of cases as well
+   * Determines the number of cases for a given event group.
+   * For NFL playoff weeks with fewer available players, we reduce the case count.
    */
-  getNumberOfCases(week: number): number {
-    switch (week) {
-      case 20:
-        return 6;
-      default:
-        return 10;
+  getNumberOfCases(eventGroup: EventGroup): number {
+    // Check if this is an NFL event group with a week number
+    const weekMatch = eventGroup.name.match(/Week\s+(\d+)/);
+    if (weekMatch) {
+      const weekNumber = parseInt(weekMatch[1], 10);
+      if (weekNumber === 20) return 6;
     }
-  }
-
-  getWeekNumberFromString(week: string): number {
-    const match = week.match(/Week\s+(\d+)/);
-    if (!match) {
-      throw new Error(`Invalid week format: ${week}`);
-    }
-    return parseInt(match[1], 10);
-  }
-
-  async getWeekNumberFromEventGroup(eventGroupId: string): Promise<number> {
-    const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
-    return this.getWeekNumberFromString(eventGroup.name);
+    return 10;
   }
 }

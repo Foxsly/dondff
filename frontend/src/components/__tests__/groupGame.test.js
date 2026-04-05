@@ -7,7 +7,7 @@ const mockNavigate = jest.fn();
 
 jest.mock('react-router-dom', () => ({
   useLocation: () => ({
-    state: { leagueId: 'league1', season: '2023', week: '1', participants },
+    state: { leagueId: 'league1', season: '2023', eventGroupId: 'event-group-1', participants },
   }),
   useNavigate: () => mockNavigate,
 }));

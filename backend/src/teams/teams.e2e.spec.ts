@@ -56,7 +56,7 @@ describe('Teams E2E', () => {
         leagueId: league.leagueId,
         userId: user.userId,
         seasonYear: dto.seasonYear,
-        week: dto.week,
+        eventGroupId: expect.any(String),
       }),
     );
   });
@@ -79,12 +79,12 @@ describe('Teams E2E', () => {
 
   it('UPDATE: should update team fields and reflect on subsequent reads', async () => {
     const { created } = await createTeamWithFKs();
-    const nextWeek = (created.week ?? 1) + 1;
-    const updated = await Teams.update(conn, created.teamId, buildTeamUpdateDto({ week: nextWeek }) as any);
+    const newSeasonYear = created.seasonYear + 1;
+    const updated = await Teams.update(conn, created.teamId, buildTeamUpdateDto({ seasonYear: newSeasonYear }) as any);
     expect(updated.teamId).toBe(created.teamId);
-    expect(updated.week).toBe(nextWeek);
+    expect(updated.seasonYear).toBe(newSeasonYear);
     const refetched = await Teams.findOne(conn, created.teamId);
-    expect(refetched.week).toBe(nextWeek);
+    expect(refetched.seasonYear).toBe(newSeasonYear);
   });
 
   it('DELETE: should remove team and exclude it from subsequent listings', async () => {
@@ -98,7 +98,7 @@ describe('Teams E2E', () => {
     it('UPDATE (404): should return NotFound for non-existent team id', async () => {
       const missingId = randomUUID();
       try {
-        await Teams.update(conn, missingId, buildTeamUpdateDto({ week: 99 }) as any);
+        await Teams.update(conn, missingId, buildTeamUpdateDto({ seasonYear: 2099 }) as any);
         // If we reached here, no error was thrown, which is a failure.
         throw new Error('Expected 404 HttpError but update resolved');
       } catch (err: any) {
