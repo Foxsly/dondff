@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DisplayGame from './cases';
 import { getPlayers } from './util';
-import { getOrCreateEventGroup } from '../api/events';
+import { getEventGroupsBySportLeague } from '../api/events';
 import { nflConfig } from '../sports/nfl';
 import type { PoolPlayer } from '../types';
 import hero from './images/DOND.jpg';
@@ -20,8 +20,11 @@ const Home: React.FC = () => {
     event.preventDefault();
     if (!week || !type) return;
     const limit = type === 'WR' ? 95 : 65;
-    const eventGroup = await getOrCreateEventGroup(`NFL Week ${week}`, 'NFL');
-    getPlayers(eventGroup.eventGroupId, type, '2025', limit, setPool);
+    const eventGroups = await getEventGroupsBySportLeague('NFL');
+    const eventGroup = eventGroups.find(eg => eg.name === `NFL Week ${week}`);
+    if (eventGroup) {
+      getPlayers(eventGroup.eventGroupId, type, '2025', limit, setPool);
+    }
   };
 
   const renderOptions = () => (

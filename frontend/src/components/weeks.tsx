@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from "react";
 import {useNavigate, useParams} from "react-router-dom";
 import {getCurrentUser} from "../api/auth";
-import {getEventGroups, getOrCreateEventGroup} from "../api/events";
+import {getEventGroupsBySportLeagueWithDates} from "../api/events";
 import {getLeagueTeams} from "../api/leagues";
 import {useLeague} from "../contexts/LeagueContext";
 import type {EventOption} from "../sports/types";
@@ -50,9 +50,10 @@ const Weeks: React.FC = () => {
           return;
         }
 
+        const sport = sportConfig?.key;
         const [teams, allEventGroups] = await Promise.all([
           getLeagueTeams(leagueId!),
-          getEventGroups(),
+          getEventGroupsBySportLeagueWithDates(sport),
         ]);
 
         if (cancelled) return;
@@ -122,18 +123,25 @@ const Weeks: React.FC = () => {
 
   const handleCreateEventGroup = async (event: EventOption) => {
     try {
-      const eventGroup = await getOrCreateEventGroup(event.label, sportConfig?.key);
-      const newGroup: EventGroupInfo = {
-        eventGroupId: eventGroup.eventGroupId,
-        label: event.label,
-        startDate: eventGroup.startDate,
-        endDate: eventGroup.endDate,
-      };
-      setEventGroups((prev) => [...prev, newGroup]);
-      setAvailableEvents((prev) => prev.filter((e) => e.value !== event.value));
+      const sport = sportConfig?.key ?? 'NFL';
+      const allEventGroups = await getEventGroupsBySportLeagueWithDates(sport);
+      const matchingGroup = allEventGroups.find(eg => eg.name === event.label);
+      
+      if (matchingGroup) {
+        const newGroup: EventGroupInfo = {
+          eventGroupId: matchingGroup.eventGroupId,
+          label: event.label,
+          startDate: matchingGroup.startDate,
+          endDate: matchingGroup.endDate,
+        };
+        setEventGroups((prev) => [...prev, newGroup]);
+        setAvailableEvents((prev) => prev.filter((e) => e.value !== event.value));
+      } else {
+        setError(`Event group "${event.label}" not found after sync`);
+      }
     } catch (err: any) {
-      console.error("Failed to create event group", err);
-      setError(err?.message ?? "Failed to create event group");
+      console.error("Failed to sync event groups", err);
+      setError(err?.message ?? "Failed to sync event groups");
     }
   };
 

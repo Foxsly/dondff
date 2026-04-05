@@ -2,7 +2,7 @@ import React from 'react';
 import type { SportConfig } from './types';
 import type { GamePlayer, GameOffer } from '../types';
 import { getSleeperState } from '../api/sleeper';
-import { getOrCreateEventGroup } from '../api/events';
+import { getEventGroupsBySportLeague } from '../api/events';
 
 export const nflConfig: SportConfig = {
   key: 'NFL',
@@ -23,11 +23,15 @@ export const nflConfig: SportConfig = {
       const state = await getSleeperState();
       if (state?.week == null) return null;
       const weekNumber = Number(state.week);
-      const eventGroup = await getOrCreateEventGroup(`NFL Week ${weekNumber}`, 'NFL');
-      return {
-        eventGroupId: eventGroup.eventGroupId,
-        label: String(weekNumber),
-      };
+      const eventGroups = await getEventGroupsBySportLeague('NFL');
+      const eventGroup = eventGroups.find(eg => eg.name === `NFL Week ${weekNumber}`);
+      if (eventGroup) {
+        return {
+          eventGroupId: eventGroup.eventGroupId,
+          label: String(weekNumber),
+        };
+      }
+      return null;
     } catch {
       return null;
     }

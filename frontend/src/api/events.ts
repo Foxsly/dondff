@@ -8,21 +8,17 @@ export interface EventGroup {
   endDate: string | Date | null;
 }
 
-export const getEventGroups = () =>
-  request<EventGroup[]>('/event-groups');
+export const getEventGroupsBySportLeague = (sportLeague: string) =>
+  request<EventGroup[]>(`/event-groups/${sportLeague}`);
+
+export const getEventGroupsBySportLeagueWithDates = (sportLeague: string) =>
+  request<EventGroup[]>(`/event-groups/${sportLeague}/with-dates`);
+
+export const getEventGroupById = (id: string) =>
+  request<EventGroup>(`/event-groups/group/${id}`);
+
+export const getEventGroupByIdWithDates = (id: string) =>
+  request<EventGroup>(`/event-groups/group/${id}/with-dates`);
 
 export const createEventGroup = (body: { name: string; sportLeague: string }) =>
   request<EventGroup>('/event-groups', { method: 'POST', body });
-
-export const getOrCreateEventGroup = async (
-  name: string,
-  sportLeague: string,
-): Promise<EventGroup> => {
-  return request<EventGroup>('/event-groups/get-or-create', {
-    method: 'POST',
-    body: {
-      name,
-      sportLeague,
-    },
-  });
-};

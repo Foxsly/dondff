@@ -69,6 +69,16 @@ export class EventsService {
     return this.eventsRepository.findEventGroupsBySportLeague(sportLeague);
   }
 
+  async findEventGroupsBySportLeagueWithDates(sportLeague: SportLeague): Promise<EventGroupWithDatesDto[]> {
+    const eventGroups = await this.findEventGroupsBySportLeague(sportLeague);
+    const result: EventGroupWithDatesDto[] = [];
+    for (const eg of eventGroups) {
+      const withDates = await this.getEventGroupWithDates(eg.eventGroupId);
+      result.push(withDates);
+    }
+    return result;
+  }
+
   private async syncGolfEvents(): Promise<void> {
     const fanduelEvents = await this.fanduelService.getGolfEvents();
 

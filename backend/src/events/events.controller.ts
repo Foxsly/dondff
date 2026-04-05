@@ -19,26 +19,29 @@ export class EventGroupsController {
     return this.eventsService.createEventGroup(dto);
   }
 
-  @TypedRoute.Post('get-or-create')
-  getOrCreate(
-    @Body() dto: CreateEventGroupDto,
-  ): Promise<EventGroupWithDatesDto> {
-    return this.eventsService.getOrCreateEventGroup(dto.name, dto.sportLeague);
-  }
-
   @TypedRoute.Get()
   findAll(): Promise<EventGroup[]> {
     return this.eventsService.findAllEventGroups();
   }
 
-  @TypedRoute.Get('by-sport')
-  findBySport(@Query('sportLeague') sportLeague: SportLeague): Promise<EventGroup[]> {
-    return this.eventsService.findEventGroupsBySportLeague(sportLeague);
+  @TypedRoute.Get(':sportLeague')
+  findBySport(@TypedParam('sportLeague') sportLeague: string): Promise<EventGroup[]> {
+    return this.eventsService.findEventGroupsBySportLeague(sportLeague as SportLeague);
   }
 
-  @TypedRoute.Get(':id')
+  @TypedRoute.Get(':sportLeague/with-dates')
+  findBySportWithDates(@TypedParam('sportLeague') sportLeague: string): Promise<EventGroupWithDatesDto[]> {
+    return this.eventsService.findEventGroupsBySportLeagueWithDates(sportLeague as SportLeague);
+  }
+
+  @TypedRoute.Get('group/:id')
   findOne(@TypedParam('id') id: string): Promise<EventGroup> {
     return this.eventsService.findOneEventGroup(id);
+  }
+
+  @TypedRoute.Get('group/:id/with-dates')
+  findOneWithDates(@TypedParam('id') id: string): Promise<EventGroupWithDatesDto> {
+    return this.eventsService.getEventGroupWithDates(id);
   }
 
   @TypedRoute.Put(':id')
