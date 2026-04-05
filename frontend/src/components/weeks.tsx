@@ -133,9 +133,7 @@ const Weeks: React.FC = () => {
   const handleAddEventGroup = (event: EventOption) => {
     const newGroup: EventGroupInfo = {
       eventGroupId: event.value,
-      label: event.label,
-      startDate: event.startDate,
-      endDate: event.endDate,
+      ...event
     };
     setEventGroups((prev) => [...prev, newGroup]);
     setAvailableEvents((prev) => prev.filter((e) => e.value !== event.value));

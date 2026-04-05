@@ -1,3 +1,4 @@
+import { EspnModule } from '@/external-providers/espn/espn.module';
 import { FanduelModule } from '@/external-providers/fanduel/fanduel.module';
 import { SleeperModule } from '@/external-providers/sleeper/sleeper.module';
 import { DatabaseModule } from '@/infrastructure/database/database.module';
@@ -15,7 +16,7 @@ import { EventsService } from './events.service';
       useClass: DatabaseEventsRepository,
     },
   ],
-  imports: [DatabaseModule, FanduelModule, SleeperModule],
+  imports: [DatabaseModule, FanduelModule, SleeperModule, EspnModule],
   exports: [EventsService],
 })
 export class EventsModule {}

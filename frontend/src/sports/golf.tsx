@@ -21,10 +21,9 @@ export const golfConfig: SportConfig = {
     try {
       const eventGroups = await getEventGroupsBySportLeagueWithDates('GOLF');
       return eventGroups.map((eg): EventOption => ({
+        ...eg,
         value: eg.eventGroupId,
         label: eg.name,
-        startDate: eg.startDate,
-        endDate: eg.endDate,
       }));
     } catch {
       return [];

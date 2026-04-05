@@ -11,6 +11,7 @@ import { EventsRepository } from './events.repository';
 import { SportLeague } from '@/leagues/entities/league.entity';
 import { FanduelService } from '@/external-providers/fanduel/fanduel.service';
 import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
+import { EspnService } from '@/external-providers/espn/espn.service';
 
 @Injectable()
 export class EventsService {
@@ -18,6 +19,7 @@ export class EventsService {
     private readonly eventsRepository: EventsRepository,
     private readonly fanduelService: FanduelService,
     private readonly sleeperService: SleeperService,
+    private readonly espnService: EspnService,
   ) {}
 
   async createEventGroup(dto: CreateEventGroupDto): Promise<EventGroup> {
@@ -56,11 +58,12 @@ export class EventsService {
     const dateRange = await this.getDateRangeForEventGroup(eventGroupId);
 
     const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     let status: EventGroupStatus = 'PLAYING';
 
-    if (dateRange.startDate && now < dateRange.startDate) {
+    if (dateRange.startDate && today < dateRange.startDate) {
       status = 'PENDING';
-    } else if (dateRange.endDate && now > dateRange.endDate) {
+    } else if (dateRange.endDate && today > dateRange.endDate) {
       status = 'FINISHED';
     }
 
@@ -92,7 +95,11 @@ export class EventsService {
   }
 
   private async syncGolfEvents(): Promise<void> {
-    const fanduelEvents = await this.fanduelService.getGolfEvents();
+    const currentYear = new Date().getFullYear();
+    const [fanduelEvents, espnSchedule] = await Promise.all([
+      this.fanduelService.getGolfEvents(),
+      this.espnService.getPgaSchedule(currentYear),
+    ]);
 
     for (const fanduelEvent of fanduelEvents) {
       const existingEvent = await this.eventsRepository.findEventByExternalEvent(
@@ -105,17 +112,25 @@ export class EventsService {
           name: fanduelEvent.name,
           sportLeague: 'GOLF',
         });
+
+        const espnMatch = espnSchedule.find((espn) =>
+          this.normalizeEventName(espn.name).includes(this.normalizeEventName(fanduelEvent.name)),
+        );
+
         await this.createEvent({
           eventGroupId: eventGroup.eventGroupId,
           name: fanduelEvent.name,
-          //TODO make these dates right
-          startDate: new Date().toISOString(),
-          endDate: new Date().toISOString(),
+          startDate: espnMatch?.startDate ?? null,
+          endDate: espnMatch?.endDate ?? null,
           externalEventId: fanduelEvent.id,
           externalEventSource: 'FANDUEL',
         });
       }
     }
+  }
+
+  private normalizeEventName(name: string): string {
+    return name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
   }
 
   private async syncNflEvents(): Promise<void> {
@@ -203,8 +218,8 @@ export class EventsService {
       return { startDate: null, endDate: null };
     }
 
-    const startDates = events.map(e => e.startDate).filter(Boolean);
-    const endDates = events.map(e => e.endDate).filter(Boolean);
+    const startDates = events.map(e => e.startDate).filter((d): d is string | Date => d != null);
+    const endDates = events.map(e => e.endDate).filter((d): d is string | Date => d != null);
 
     return {
       startDate: startDates.length > 0 

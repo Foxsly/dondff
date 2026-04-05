@@ -6,6 +6,7 @@ export interface EventOption {
   label: string;
   startDate?: string | Date | null;
   endDate?: string | Date | null;
+  status?: 'PENDING' | 'PLAYING' | 'FINISHED';
 }
 
 export interface CurrentEventGroup {
