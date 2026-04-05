@@ -7,6 +7,7 @@ interface EventGroupInfo {
   label: string;
   startDate?: string | Date | null;
   endDate?: string | Date | null;
+  status?: 'PENDING' | 'PLAYING' | 'FINISHED';
 }
 
 interface AccordionProps {
@@ -39,6 +40,7 @@ const Accordion: React.FC<AccordionProps> = ({ eventGroup, leagueId, season, cur
             currentEventGroupId={currentEventGroupId}
             startDate={eventGroup.startDate}
             endDate={eventGroup.endDate}
+            status={eventGroup.status}
           />
         </div>
       )}

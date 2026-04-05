@@ -3,7 +3,7 @@ import {
   CreateEventGroupDto,
   EventGroup,
   EventGroupStatus,
-  EventGroupWithDatesDto,
+  EventGroupWithDatesAndStatusDto,
   UpdateEventGroupDto,
 } from './entities/event-group.entity';
 import { CreateEventDto, Event, UpdateEventDto } from './entities/event.entity';
@@ -39,7 +39,7 @@ export class EventsService {
   async getOrCreateEventGroup(
     name: string,
     sportLeague: SportLeague,
-  ): Promise<EventGroupWithDatesDto> {
+  ): Promise<EventGroupWithDatesAndStatusDto> {
     const existing = await this.eventsRepository.findEventGroupByName(name);
     if (existing) {
       return this.getEventGroupWithDates(existing.eventGroupId);
@@ -51,7 +51,7 @@ export class EventsService {
     return this.getEventGroupWithDates(created.eventGroupId);
   }
 
-  async getEventGroupWithDates(eventGroupId: string): Promise<EventGroupWithDatesDto> {
+  async getEventGroupWithDates(eventGroupId: string): Promise<EventGroupWithDatesAndStatusDto> {
     const eventGroup = await this.findOneEventGroup(eventGroupId);
     const dateRange = await this.getDateRangeForEventGroup(eventGroupId);
 
@@ -81,9 +81,9 @@ export class EventsService {
     return this.eventsRepository.findEventGroupsBySportLeague(sportLeague);
   }
 
-  async findEventGroupsBySportLeagueWithDates(sportLeague: SportLeague): Promise<EventGroupWithDatesDto[]> {
+  async findEventGroupsBySportLeagueWithDates(sportLeague: SportLeague): Promise<EventGroupWithDatesAndStatusDto[]> {
     const eventGroups = await this.findEventGroupsBySportLeague(sportLeague);
-    const result: EventGroupWithDatesDto[] = [];
+    const result: EventGroupWithDatesAndStatusDto[] = [];
     for (const eg of eventGroups) {
       const withDates = await this.getEventGroupWithDates(eg.eventGroupId);
       result.push(withDates);

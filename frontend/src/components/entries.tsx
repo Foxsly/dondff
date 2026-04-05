@@ -45,9 +45,10 @@ interface EntriesProps {
   currentEventGroupId?: string | null;
   startDate?: string | Date | null;
   endDate?: string | Date | null;
+  status?: 'PENDING' | 'PLAYING' | 'FINISHED';
 }
 
-const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, currentEventGroupId, startDate, endDate }) => {
+const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, currentEventGroupId, startDate, endDate, status }) => {
   const { positions: leaguePositions, sportConfig } = useLeague();
 
   const [user, setUser] = useState<User | null>(null);
@@ -59,29 +60,11 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, curre
   const [error, setError] = useState("");
   const [currentSeason, setCurrentSeason] = useState<number | null>(null);
 
-  // Determine if this event group is current/playable:
-  // 1. If dates are available, use them: ended = endDate in the past
-  // 2. If no dates but sport provides currentEventGroupId, compare IDs
-  // 3. If neither (e.g. golf without dates), treat as current
-  const isEventGroupEnded = (() => {
-    if (endDate) {
-      return new Date(endDate) < new Date();
-    }
-    return false;
-  })();
+  // TODO: Make this smarter - allow playing if status is PENDING or PLAYING
+  // Remove reliance on currentEventGroup concept entirely
+  const isEventGroupEnded = status === 'FINISHED';
 
-  const isCurrentEventGroup = (() => {
-    if (endDate) {
-      // Has dates — current if not ended
-      return !isEventGroupEnded;
-    }
-    if (currentEventGroupId != null) {
-      // Sport provides a current event group ID (e.g. NFL)
-      return eventGroupId === currentEventGroupId;
-    }
-    // No dates and no currentEventGroupId — treat as current
-    return true;
-  })();
+  const isCurrentEventGroup = status === 'PENDING' || status === 'PLAYING';
 
   useEffect(() => {
     let cancelled = false;
@@ -369,6 +352,7 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, curre
 
   if (loading) return <div className="space-y-4"><LoadingSpinner message="Loading entries..." /></div>;
   if (error) return <div className="space-y-4"><p className="text-red-500">{error}</p></div>;
+    console.log('[DEBUG] Link conditions:', { isCurrentSeason, isCurrentEventGroup, entriesLength: entries?.length, isEntryPlayable, user: user?.name, userId: user?.userId })
 
   return (
     <div className="space-y-4">

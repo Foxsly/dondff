@@ -14,7 +14,7 @@ export type UpdateEventGroupDto = Partial<CreateEventGroupDto>;
 
 export type EventGroupStatus = 'PENDING' | 'PLAYING' | 'FINISHED';
 
-export interface EventGroupWithDatesDto extends IEventGroup {
+export interface EventGroupWithDatesAndStatusDto extends IEventGroup {
   startDate: Date | null;
   endDate: Date | null;
   status: EventGroupStatus;

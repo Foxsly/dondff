@@ -4,7 +4,7 @@ import { Body, Controller, Query } from '@nestjs/common';
 import {
   CreateEventGroupDto,
   EventGroup,
-  EventGroupWithDatesDto,
+  EventGroupWithDatesAndStatusDto,
   UpdateEventGroupDto,
 } from './entities/event-group.entity';
 import { CreateEventDto, Event, UpdateEventDto } from './entities/event.entity';
@@ -30,7 +30,7 @@ export class EventGroupsController {
   }
 
   @TypedRoute.Get(':sportLeague/with-dates')
-  findBySportWithDates(@TypedParam('sportLeague') sportLeague: string): Promise<EventGroupWithDatesDto[]> {
+  findBySportWithDates(@TypedParam('sportLeague') sportLeague: string): Promise<EventGroupWithDatesAndStatusDto[]> {
     return this.eventsService.findEventGroupsBySportLeagueWithDates(sportLeague as SportLeague);
   }
 
@@ -40,7 +40,7 @@ export class EventGroupsController {
   }
 
   @TypedRoute.Get('group/:id/with-dates')
-  findOneWithDates(@TypedParam('id') id: string): Promise<EventGroupWithDatesDto> {
+  findOneWithDates(@TypedParam('id') id: string): Promise<EventGroupWithDatesAndStatusDto> {
     return this.eventsService.getEventGroupWithDates(id);
   }
 

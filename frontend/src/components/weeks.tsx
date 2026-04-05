@@ -15,6 +15,7 @@ interface EventGroupInfo {
   label: string;
   startDate?: string | Date | null;
   endDate?: string | Date | null;
+  status?: 'PENDING' | 'PLAYING' | 'FINISHED';
 }
 
 const Weeks: React.FC = () => {
@@ -78,6 +79,7 @@ const Weeks: React.FC = () => {
                 label: eg?.name ?? team.eventGroupName ?? team.eventGroupId,
                 startDate: eg?.startDate ?? null,
                 endDate: eg?.endDate ?? null,
+                status: eg?.status,
               });
             }
           });
@@ -94,6 +96,7 @@ const Weeks: React.FC = () => {
               label: currentEventGroup.label,
               startDate: eg?.startDate ?? null,
               endDate: eg?.endDate ?? null,
+              status: eg?.status,
             });
           }
         }
@@ -105,6 +108,7 @@ const Weeks: React.FC = () => {
           label: eg.name,
           startDate: eg.startDate,
           endDate: eg.endDate,
+          status: eg.status,
         })));
 
         const derivedEventGroups = Array.from(eventGroupMap.values());
