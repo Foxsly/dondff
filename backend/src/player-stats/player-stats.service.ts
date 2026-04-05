@@ -1,5 +1,5 @@
 import { EventsService } from '@/events/events.service';
-import { EspnService } from '@/fanduel/espn.service';
+import { EspnService } from '@/espn/espn.service';
 import { FanduelService } from '@/fanduel/fanduel.service';
 import { SportLeague } from '@/leagues/entities/league.entity';
 import {

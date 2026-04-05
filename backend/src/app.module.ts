@@ -11,6 +11,7 @@ import { Module } from '@nestjs/common';
 import { HealthController } from '@/health/health.controller';
 import { ConfigModule } from '@nestjs/config';
 import { FanduelModule } from './fanduel/fanduel.module';
+import { EspnModule } from './espn/espn.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { FanduelModule } from './fanduel/fanduel.module';
     SleeperModule,
     FanduelModule,
     PlayerStatsModule,
+    EspnModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
