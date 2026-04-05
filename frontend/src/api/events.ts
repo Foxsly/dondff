@@ -1,11 +1,14 @@
 import { request } from './client';
 
+export type EventGroupStatus = 'PENDING' | 'PLAYING' | 'FINISHED';
+
 export interface EventGroup {
   eventGroupId: string;
   name: string;
   sportLeague: string;
   startDate: string | Date | null;
   endDate: string | Date | null;
+  status?: EventGroupStatus;
 }
 
 export const getEventGroupsBySportLeague = (sportLeague: string) =>

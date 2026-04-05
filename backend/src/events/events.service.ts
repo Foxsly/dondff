@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   CreateEventGroupDto,
   EventGroup,
+  EventGroupStatus,
   EventGroupWithDatesDto,
   UpdateEventGroupDto,
 } from './entities/event-group.entity';
@@ -53,10 +54,21 @@ export class EventsService {
   async getEventGroupWithDates(eventGroupId: string): Promise<EventGroupWithDatesDto> {
     const eventGroup = await this.findOneEventGroup(eventGroupId);
     const dateRange = await this.getDateRangeForEventGroup(eventGroupId);
+
+    const now = new Date();
+    let status: EventGroupStatus = 'PLAYING';
+
+    if (dateRange.startDate && now < dateRange.startDate) {
+      status = 'PENDING';
+    } else if (dateRange.endDate && now > dateRange.endDate) {
+      status = 'FINISHED';
+    }
+
     return {
       ...eventGroup,
       startDate: dateRange.startDate,
       endDate: dateRange.endDate,
+      status,
     };
   }
 

@@ -12,7 +12,10 @@ export type EventGroup = Selectable<IEventGroup>;
 export type CreateEventGroupDto = Omit<IEventGroup, 'eventGroupId'>;
 export type UpdateEventGroupDto = Partial<CreateEventGroupDto>;
 
+export type EventGroupStatus = 'PENDING' | 'PLAYING' | 'FINISHED';
+
 export interface EventGroupWithDatesDto extends IEventGroup {
   startDate: Date | null;
   endDate: Date | null;
+  status: EventGroupStatus;
 }
