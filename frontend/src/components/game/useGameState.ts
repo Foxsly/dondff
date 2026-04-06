@@ -121,7 +121,7 @@ export const useGameState = ({ leagueId, season, eventGroupId, teamUser }: UseGa
   const fetchTeamEntries = useCallback(async () => {
     const entries = await teamsApi.getTeamEntries(teamId!);
     if (!Array.isArray(entries)) throw new Error("Invalid team entries data");
-    if (entries.length === 0) throw new Error("No team entries found");
+    // if (entries.length === 0) throw new Error("No team entries found");
     return entries;
   }, [teamId]);
 
@@ -308,26 +308,22 @@ export const useGameState = ({ leagueId, season, eventGroupId, teamUser }: UseGa
   };
 
   const advanceToNextPosition = async () => {
-    const entries = await fetchTeamEntries();
-
+    // Use lineUp state instead of fetching entries (entries are now created lazily)
+    const currentIndex = lineUp.findIndex(slot => slot.position === position);
+    
+    if (currentIndex === -1) {
+      throw new Error(`Current position ${position} not found in lineup`);
+    }
+    
+    // Find next position that's not complete
     let nextPosition: string | null = null;
-    let foundCurrent = false;
-
-    for (const entry of entries) {
-      if (entry.position === position) {
-        foundCurrent = true;
-        continue;
-      }
-      if (entry.status !== 'finished') {
-        nextPosition = entry.position;
+    for (let i = currentIndex + 1; i < lineUp.length; i++) {
+      if (!lineUp[i].complete) {
+        nextPosition = lineUp[i].position;
         break;
       }
     }
-
-    if (!foundCurrent) {
-      throw new Error(`Current position ${position} not found in team entries`);
-    }
-
+    
     if (nextPosition) {
       setPosition(nextPosition);
       setOffer(null);

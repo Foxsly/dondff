@@ -41,37 +41,7 @@ export class TeamsService {
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
     let createdTeam: Team = await this.teamsRepository.create(createTeamDto);
-    const league = await this.leaguesService.findOne(createdTeam.leagueId);
-    let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
-      createdTeam.leagueId,
-    );
-
-    // Get positions from the new league_settings_position table
-    const positions = await this.leaguesService.getPositionsForLeagueSettings(
-      leagueSettings.leagueSettingsId,
-    );
-
-    const eventGroup = await this.eventsService.findOneEventGroup(createTeamDto.eventGroupId);
-
-    //TODO extract this into a 'generateCasesForTeam' that just takes the leagueId and the createdTeam, and does the position looping within it
-    // For sports with a shared player pool (e.g. GOLF), only generate cases for
-    // the first position at creation time. Subsequent positions are generated
-    // lazily once the prior position finishes, so the selected player can be
-    // excluded from the pool.
-    const positionsToGenerate = this.sportUsesSharedPlayerPool(league.sportLeague)
-      ? positions.slice(0, 1)
-      : positions;
-
-    for (const position of positionsToGenerate) {
-      await this.generateCasesForPosition(
-        createdTeam,
-        position.position,
-        leagueSettings,
-        league.sportLeague,
-        this.getNumberOfCases(eventGroup),
-      );
-    }
-
+    // Entries and cases are now created lazily on first access via getDisassociatedTeamCases
     return createdTeam;
   }
 
@@ -80,11 +50,11 @@ export class TeamsService {
   }
 
   async findOne(id: string): Promise<ITeam> {
-    const league = await this.teamsRepository.findOne(id);
-    if (!league) {
+    const team = await this.teamsRepository.findOne(id);
+    if (!team) {
       throw new NotFoundException(`Team with id ${id} not found`);
     }
-    return league;
+    return team;
   }
 
   async update(id: string, updateTeamDto: UpdateTeamDto): Promise<Team> {
@@ -119,14 +89,31 @@ export class TeamsService {
     return teamEntry;
   }
 
+  // Check if all positions configured for the league have finished
+  // If all positions are finished, the team is no longer playable
   async getTeamStatus(teamId: string): Promise<ITeamStatus> {
-    const teamEntries = await this.getAllTeamEntriesForTeam(teamId);
+    const team: ITeam = await this.findOne(teamId);
+    const leagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(team.leagueId);
+    const positions = await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId);
+
+    // Get existing entries for this team
+    const existingEntries = await this.getAllTeamEntriesForTeam(teamId);
+    const entryMap = new Map(existingEntries.map(e => [e.position, e]));
+    
+    // Check if ALL positions are finished
+    const allFinished = positions.every(pos => {
+      const entry = entryMap.get(pos.position);
+      return entry?.status === 'finished';
+    });
+    
     return {
-      // No entries means the game hasn't started yet — always playable
-      playable: teamEntries.length === 0 || !teamEntries.every((e) => e.status === 'finished'),
+      // No positions configured or no entries means game hasn't started — always playable
+      playable: positions.length === 0 || existingEntries.length === 0 || !allFinished,
     } as ITeamStatus;
   }
 
+  // Returns only existing entries - does not include pending positions without entries
+  // TODO: Consider returning all positions including pending ones that don't have entries yet
   async getAllTeamEntriesForTeam(teamId: string): Promise<ITeamEntry[]> {
     let team: ITeam = await this.findOne(teamId);
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
@@ -158,19 +145,8 @@ export class TeamsService {
     teamId: string,
     position: string,
   ): Promise<TeamEntryCasesResponseDto> {
-    let entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
-
-    // Lazy generation: for shared-pool sports (e.g. GOLF), cases for positions
-    // beyond the first are not created at team-creation time. Generate them now,
-    // excluding any players already selected for other positions.
-    if (!entry) {
-      entry = await this.lazyGenerateCasesIfSharedPool(teamId, position);
-    }
-    if (!entry) {
-      throw new NotFoundException(
-        `TeamEntry for team with id ${teamId} and position ${position} not found`,
-      );
-    }
+    // Get or create entry, generate cases if they don't exist
+    const entry = await this.getOrCreateTeamEntryWithCases(teamId, position);
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(entry.teamEntryId);
 
     const playerListAudits = audits.map((audit) => ({
@@ -230,8 +206,6 @@ export class TeamsService {
 
   async resetCases(teamId: string, position: string) {
     let teamEntry = await this.getTeamEntry(teamId, position);
-    //TODO This should not update the reset count; we should be creating a new team entry with an updated resetCount?
-    //Or am I overthinking this - do we need a new entry per reset count, or just new team_entry_audits?
     //We do not need a new entry per reset count. We should be updating, and there should generally only be one entry per team/position
     //The only thing that doesn't have a reset_number is team_entry_offer, but you shouldn't be able to reset after getting an offer anyways
     let updatedTeamEntry = await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, {
@@ -247,14 +221,12 @@ export class TeamsService {
       team.leagueId,
     );
     const eventGroup = await this.eventsService.findOneEventGroup(team.eventGroupId);
-    const excludePlayerIds = await this.getExcludedPlayerIdsForPosition(team, position, league.sportLeague);
     await this.generateCasesForPosition(
       team,
       position,
       leagueSettings,
       league.sportLeague,
       this.getNumberOfCases(eventGroup),
-      excludePlayerIds,
     );
   }
 
@@ -264,8 +236,7 @@ export class TeamsService {
     leagueSettings: ILeagueSettings,
     sportLeague: SportLeague,
     numberOfCases: number = 10,
-    excludePlayerIds: string[] = [],
-  ): Promise<string[]> {
+  ) {
     let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(position, team.seasonYear, team.eventGroupId, sportLeague,);
     let teamEntry: ITeamEntry = await this.getOrCreateTeamEntry(
       team.teamId,
@@ -277,12 +248,12 @@ export class TeamsService {
     //TODO this seems like we could probably extract this logic to a "getPositionForLeagueSettings" method on LeaguesService
     const poolSize = (await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId))
       .find((positionSettings) => positionSettings.position === position)?.poolSize;
-    let trimmedPlayers: IPlayerProjection[] = playerProjections.slice(0, poolSize);
 
-    if (excludePlayerIds.length > 0) {
-      const excludeSet = new Set(excludePlayerIds);
-      trimmedPlayers = trimmedPlayers.filter((p) => !excludeSet.has(p.playerId));
-    }
+    // For sports with shared player pools (e.g., GOLF), exclude players already selected for other positions
+    const excludedPlayerIds = await this.getExcludedPlayerIdsForPosition(team, position, sportLeague);
+    let trimmedPlayers: IPlayerProjection[] = playerProjections
+      .filter(p => !excludedPlayerIds.includes(p.playerId))
+      .slice(0, poolSize);
 
     let cases: Array<Omit<ITeamEntryAudit, 'auditId'>> = shuffle(trimmedPlayers)
       .slice(0, numberOfCases)
@@ -297,62 +268,6 @@ export class TeamsService {
         boxStatus: 'available',
       }));
     await this.teamsEntryRepository.insertAuditSnapshots(cases);
-    return cases.map((c) => c.playerId);
-  }
-
-  /**
-   * For shared-pool sports, lazily generates cases for a position that was
-   * deferred at team-creation time. Returns the newly created TeamEntry,
-   * or null if the sport does not use a shared pool.
-   */
-  private async lazyGenerateCasesIfSharedPool(
-    teamId: string,
-    position: string,
-  ): Promise<ITeamEntry | null> {
-    const team = await this.findOne(teamId);
-    const league = await this.leaguesService.findOne(team.leagueId);
-    if (!this.sportUsesSharedPlayerPool(league.sportLeague)) {
-      return null;
-    }
-    const leagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(team.leagueId);
-    const eventGroup = await this.eventsService.findOneEventGroup(team.eventGroupId);
-    const excludePlayerIds = await this.getExcludedPlayerIdsForPosition(team, position, league.sportLeague);
-    await this.generateCasesForPosition(
-      team,
-      position,
-      leagueSettings,
-      league.sportLeague,
-      this.getNumberOfCases(eventGroup),
-      excludePlayerIds,
-    );
-    return this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
-  }
-
-  /**
-   * For sports where all positions draw from the same player pool (e.g. GOLF),
-   * returns the player IDs that should be excluded when generating cases for the
-   * given position — i.e. players already selected for other positions.
-   */
-  private async getExcludedPlayerIdsForPosition(
-    team: Team,
-    position: string,
-    sportLeague: SportLeague,
-  ): Promise<string[]> {
-    if (!this.sportUsesSharedPlayerPool(sportLeague)) {
-      return [];
-    }
-    const fullTeam = await this.teamsRepository.findOne(team.teamId);
-    if (!fullTeam) {
-      return [];
-    }
-    // Exclude players already locked in via teamPlayer for other positions
-    return fullTeam.players
-      .filter((p) => p.position !== position)
-      .map((p) => p.playerId);
-  }
-
-  private sportUsesSharedPlayerPool(sportLeague: SportLeague): boolean {
-    return sportLeague === 'GOLF';
   }
 
   async getOrCreateTeamEntry(
@@ -368,6 +283,37 @@ export class TeamsService {
       teamEntry = await this.teamsEntryRepository.createEntry(teamId, position, leagueSettingsId);
     }
     return teamEntry;
+  }
+
+  // Get or create team entry and ensure cases exist (generate if needed)
+  private async getOrCreateTeamEntryWithCases(
+    teamId: string,
+    position: string,
+  ): Promise<ITeamEntry> {
+    const team = await this.findOne(teamId);
+    const league = await this.leaguesService.findOne(team.leagueId);
+    const leagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(team.leagueId);
+    
+    const entry = await this.getOrCreateTeamEntry(
+      teamId,
+      position,
+      leagueSettings.leagueSettingsId,
+    );
+    
+    // Check if audits exist for current reset
+    const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(entry.teamEntryId);
+    if (audits.length === 0) {
+      // Generate cases - this also handles shared pool exclusion for GOLF
+      await this.generateCasesForPosition(
+        team,
+        position,
+        leagueSettings,
+        league.sportLeague,
+        this.getNumberOfCases(await this.eventsService.findOneEventGroup(team.eventGroupId)),
+      );
+    }
+    
+    return entry;
   }
 
   async getCurrentOffer(teamId: string, position: string): Promise<PlayerOfferDto> {
@@ -595,6 +541,30 @@ export class TeamsService {
     return {
       boxes: updatedAudits,
     };
+  }
+
+  /**
+   * For sports where all positions draw from the same player pool (e.g. GOLF),
+   * returns the player IDs that should be excluded when generating cases for the
+   * given position — i.e. players already selected for other positions.
+   */
+  private async getExcludedPlayerIdsForPosition(
+    team: Team,
+    position: string,
+    sportLeague: SportLeague,
+  ): Promise<string[]> {
+    if (!this.sportUsesSharedPlayerPool(sportLeague)) {
+      return [];
+    }
+
+    const fullTeam = await this.findOne(team.teamId);
+    return fullTeam.players
+      .filter((player) => player.position !== position)
+      .map((player) => player.playerId);
+  }
+
+  private sportUsesSharedPlayerPool(sportLeague: SportLeague): boolean {
+    return sportLeague === 'GOLF';
   }
 
   addTeamsToOffer(offer: ITeamEntryOffer): PlayerOfferDto {
