@@ -21,5 +21,5 @@ export const getLeagueTeams = (leagueId: string, params?: { season?: string | nu
   return request<any[]>(`/leagues/${leagueId}/teams${qs ? `?${qs}` : ''}`);
 };
 
-export const getLeaguePositions = (leagueId: string) =>
+export const getLeaguePositions: (leagueId: string) => Promise<LeaguePosition[]> = (leagueId: string) =>
   request<LeaguePosition[]>(`/leagues/${leagueId}/positions`);
