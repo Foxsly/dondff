@@ -123,6 +123,7 @@ export interface LineUpSlot {
   position: string;
   playerName: string;
   complete: boolean;
+  status: 'pending' | 'playing' | 'finished';
 }
 
 // ─── Group game ───────────────────────────────────────────────────────────────

@@ -1,10 +1,10 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {getCurrentUser} from '../../api/auth';
-import {getLeague, getLeagueTeams} from '../../api/leagues';
+import {getLeague, getLeagueTeams, getLeaguePositions} from '../../api/leagues';
 import * as teamsApi from '../../api/teams';
 import {getSportConfig} from '../../sports/registry';
 import type {SportConfig} from '../../sports/types';
-import type {GameBox, GameOffer, GamePlayer, LineUpSlot, TeamUser} from '../../types';
+import type {GameBox, GameOffer, GamePlayer, LeaguePosition, LineUpSlot, TeamUser} from '../../types';
 
 interface UseGameStateParams {
   leagueId: string;
@@ -127,7 +127,10 @@ export const useGameState = ({ leagueId, season, eventGroupId, teamUser }: UseGa
 
   // Setup game
   const setupGame = useCallback(async () => {
-    const entries = await fetchTeamEntries();
+    const [entries, leaguePositions] = await Promise.all([
+      fetchTeamEntries(),
+      getLeaguePositions(leagueId),
+    ]);
 
     let teamPlayers: any[] = [];
     try {
@@ -137,10 +140,34 @@ export const useGameState = ({ leagueId, season, eventGroupId, teamUser }: UseGa
       console.warn("Failed to fetch team players", e);
     }
 
+    // Build lineup from all league positions (not just entries)
+    const initialLineup: LineUpSlot[] = leaguePositions.map((pos: LeaguePosition) => {
+      const entry = entries.find((e: any) => e.position === pos.position);
+      const player = teamPlayers.find((p: any) => p.position === pos.position);
+
+      if (!entry) {
+        // No entry yet - position is pending/playable
+        return {
+          position: pos.position,
+          playerName: 'pending...',
+          complete: false,
+          status: 'pending' as const,
+        };
+      }
+
+      return {
+        position: entry.position,
+        playerName: entry.status === 'finished' && player ? player.playerName : 'in progress...',
+        complete: entry.status === 'finished',
+        status: entry.status,
+      };
+    });
+    setLineUp(initialLineup);
+
     let selectedPosition: string | null = null;
-    for (const entry of entries) {
-      if (entry.status !== 'finished') {
-        selectedPosition = entry.position;
+    for (const slot of initialLineup) {
+      if (slot.status !== 'finished') {
+        selectedPosition = slot.position;
         break;
       }
     }
@@ -151,18 +178,8 @@ export const useGameState = ({ leagueId, season, eventGroupId, teamUser }: UseGa
 
     setPosition(selectedPosition);
 
-    const initialLineup: LineUpSlot[] = entries.map((entry: any) => {
-      const player = teamPlayers.find((p: any) => p.position === entry.position);
-      return {
-        position: entry.position,
-        playerName: entry.status === 'finished' && player ? player.playerName : 'awaiting game...',
-        complete: entry.status === 'finished',
-      };
-    });
-    setLineUp(initialLineup);
-
     const initialResetUsed: Record<string, boolean> = {};
-    entries.forEach((entry: any) => { initialResetUsed[entry.position] = false; });
+    initialLineup.forEach((slot: LineUpSlot) => { initialResetUsed[slot.position] = false; });
     setResetUsed((prev) => {
       const merged = { ...initialResetUsed };
       for (const key of Object.keys(prev)) {
@@ -181,7 +198,7 @@ export const useGameState = ({ leagueId, season, eventGroupId, teamUser }: UseGa
       const currentOffer = await teamsApi.getCurrentOffer(teamId!, selectedPosition);
       setOffer(currentOffer);
     }
-  }, [teamId, fetchTeamEntries]);
+  }, [teamId, leagueId, fetchTeamEntries]);
 
   useEffect(() => {
     if (hasSetupGameRef.current) return;
