@@ -52,6 +52,3 @@ export const rejectOffer = (teamId: string, body: { position: string }) =>
 
 export const finalDecision = (teamId: string, body: { position: string; decision: 'keep' | 'swap' }) =>
   request<FinalDecisionResponse>(`/teams/${teamId}/offers`, { method: 'POST', body });
-
-export const calculateScores = (eventGroupId: string) =>
-  request<void>(`/teams/scores/${eventGroupId}`, { method: 'POST' });
