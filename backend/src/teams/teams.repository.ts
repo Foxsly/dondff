@@ -14,6 +14,8 @@ export abstract class TeamsRepository {
   abstract update(id: string, team: Partial<Team>): Promise<Team | null>;
   abstract remove(id: string): Promise<boolean>;
   abstract upsertTeamPlayer(teamId: string, dto: ITeamPlayer): Promise<TeamPlayer>;
+  abstract updatePlayerActualPoints(teamId: string, position: string, actualPoints: number): Promise<void>;
+  abstract findTeamsByEventGroup(eventGroupId: string): Promise<ITeam[]>;
 }
 
 @Injectable()
@@ -87,6 +89,7 @@ export class DatabaseTeamsRepository extends TeamsRepository {
         playerId: dto.playerId,
         playerName: dto.playerName,
         projectedPoints: dto.projectedPoints ?? null,
+        actualPoints: dto.actualPoints ?? null,
       })
       .onConflict((oc) =>
         oc.columns(['teamId', 'position']).doUpdateSet({
@@ -105,6 +108,25 @@ export class DatabaseTeamsRepository extends TeamsRepository {
       .executeTakeFirstOrThrow();
 
     return row as TeamPlayer;
+  }
+
+  async updatePlayerActualPoints(teamId: string, position: string, actualPoints: number): Promise<void> {
+    await this.db
+      .updateTable('teamPlayer')
+      .set({ actualPoints })
+      .where('teamId', '=', teamId)
+      .where('position', '=', position)
+      .execute();
+  }
+
+  async findTeamsByEventGroup(eventGroupId: string): Promise<ITeam[]> {
+    const rows = await this.db
+      .selectFrom('team')
+      .selectAll()
+      .select((eb) => [withPlayers(eb)])
+      .where('eventGroupId', '=', eventGroupId)
+      .execute();
+    return rows as ITeam[];
   }
 }
 
@@ -131,6 +153,7 @@ export function withPlayers(eb: ExpressionBuilder<DB, 'team'>) {
         'teamPlayer.position',
         'teamPlayer.playerName',
         'teamPlayer.projectedPoints',
+        'teamPlayer.actualPoints',
       ])
       .whereRef('teamPlayer.teamId', '=', 'team.teamId'),
   ).as('players');

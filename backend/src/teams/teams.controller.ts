@@ -165,4 +165,9 @@ export class TeamsController {
   ) {
     return this.teamsService.handleFinalOffer(teamId, dto.position, dto.decision);
   }
+
+  @TypedRoute.Post('scores/:eventGroupId')
+  async calculateScores(@TypedParam('eventGroupId') eventGroupId: string): Promise<void> {
+    return this.teamsService.calculateAndPersistScores(eventGroupId);
+  }
 }

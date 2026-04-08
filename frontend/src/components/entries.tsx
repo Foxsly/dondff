@@ -2,7 +2,6 @@ import React, {useCallback, useEffect, useState} from "react";
 import {Link} from "react-router-dom";
 import {getCurrentUser} from "../api/auth";
 import {getLeagueTeams, getLeagueUsers} from "../api/leagues";
-import {getStats} from "../api/players";
 import * as teamsApi from "../api/teams";
 import {getUser} from "../api/users";
 import {useLeague} from "../contexts/LeagueContext";
@@ -16,6 +15,7 @@ function roundToTwo(number: number | undefined | null): number {
 interface EntryPlayer extends TeamPlayer {
   points?: number;
   pprScore?: number;
+  actualPoints?: number | null;
 }
 
 interface EntryLineUp {
@@ -126,16 +126,28 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, curre
             const teamStatus = await teamsApi.getTeamStatus(team.teamId);
 
             const lineUp: EntryLineUp = {};
+            let computedFinalScore: number | null = null;
+            let allHaveActual = true;
             for (const leaguePosition of effectivePositions) {
               const player = team.players?.find((p: any) => p.position === leaguePosition.position) || null;
               if (player) {
-                lineUp[leaguePosition.position] = { ...player, points: player.projectedPoints ?? 0 };
+                lineUp[leaguePosition.position] = {
+                  ...player,
+                  points: player.projectedPoints ?? 0,
+                  pprScore: player.actualPoints ?? undefined,
+                };
+                if (player.actualPoints != null) {
+                  computedFinalScore = (computedFinalScore ?? 0) + player.actualPoints;
+                } else {
+                  allHaveActual = false;
+                }
               } else {
                 lineUp[leaguePosition.position] = null;
+                allHaveActual = false;
               }
             }
 
-            const finalScore = team.finalScore ?? team.result?.finalScore ?? null;
+            const finalScore = allHaveActual ? computedFinalScore : null;
 
             return {
               ...team,
@@ -208,40 +220,32 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, curre
     return total;
   };
 
-  const calculateScores = useCallback(async () => {
-    if (!entries || entries.length === 0 || !sportConfig?.supportsScoring) return;
+  const fetchAndApplyScores = useCallback(async () => {
+    if (!entries || entries.length === 0) return;
     try {
-      const allStats = await Promise.all(
-        positions.map((pos) =>
-          getStats(season, eventGroupId, pos.position, sportConfig?.key).catch(() => [])
-        )
-      );
-      const finalStats = allStats.flat();
-
-      // For golf, stats are keyed by athlete name (not FanDuel ID).
-      // Build a normalized name lookup for matching.
-      const normalizeName = (name: string) =>
-        name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-
-      const statsByName = new Map(
-        finalStats.map((s: any) => [normalizeName(s.name ?? ''), s]),
-      );
+      // Trigger backend score calculation, then re-fetch teams with updated actualPoints
+      await teamsApi.calculateScores(eventGroupId);
+      const teamsData = await getLeagueTeams(leagueId, { season, eventGroupId });
+      const teams = Array.isArray(teamsData) ? teamsData : [];
 
       const updatedEntries = entries.map((entry) => {
+        const updatedTeam = teams.find((t: any) => t.teamId === entry.teamId);
+        if (!updatedTeam) return entry;
+
         let finalScore = 0;
         const updatedLineUp: EntryLineUp = { ...entry.lineUp };
 
         for (const pos of positions) {
-          const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
-          if (player?.playerId) {
-            // Try matching by playerId first (NFL), then by name (golf)
-            let stat = finalStats.find((p: any) => p.playerId === player.playerId);
-            if (!stat && player.playerName) {
-              stat = statsByName.get(normalizeName(player.playerName));
-            }
-            const score = stat?.points ?? 0;
+          const player = updatedTeam.players?.find((p: any) => p.position === pos.position);
+          if (player) {
+            const score = player.actualPoints ?? 0;
             finalScore += score;
-            updatedLineUp[pos.position] = { ...player, pprScore: score };
+            updatedLineUp[pos.position] = {
+              ...entry.lineUp?.[pos.position],
+              ...player,
+              points: player.projectedPoints ?? 0,
+              pprScore: score,
+            };
           }
         }
 
@@ -254,15 +258,21 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, curre
       console.error("Failed to calculate scores", err);
       setError(err?.message ?? "Failed to calculate scores");
     }
-  }, [entries, season, eventGroupId, positions, sportConfig]);
+  }, [entries, season, eventGroupId, leagueId, positions]);
 
   useEffect(() => {
     if (!showResults) return;
     if (!entries || entries.length === 0) return;
-    const needsScores = entries.some((entry) => typeof entry.finalScore !== "number");
+    // Only fetch scores if any player is missing actualPoints
+    const needsScores = entries.some((entry) =>
+      positions.some((pos) => {
+        const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
+        return player?.playerId && player.actualPoints == null;
+      })
+    );
     if (!needsScores) return;
-    void calculateScores();
-  }, [showResults, entries, calculateScores]);
+    void fetchAndApplyScores();
+  }, [showResults, entries, fetchAndApplyScores, positions]);
 
   const getDisplayName = (position: string) =>
     sportConfig?.getPositionDisplayName(position) ?? position;

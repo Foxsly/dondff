@@ -1,7 +1,7 @@
 import {ILeagueSettings} from '@/leagues/entities/league-settings.entity';
 import {SportLeague} from '@/leagues/entities/league.entity';
 import {LeaguesService} from '@/leagues/leagues.service';
-import {IPlayerProjection, PlayerProjectionResponse,} from '@/player-stats/entities/player-stats.entity';
+import {IPlayerProjection, IPlayerStats, PlayerProjectionResponse,} from '@/player-stats/entities/player-stats.entity';
 import {PlayerStatsService} from '@/player-stats/player-stats.service';
 import {ITeamPlayer, TeamPlayer} from '@/teams/entities/team-player.entity';
 import {ITeamStatus} from '@/teams/entities/team-status.entity';
@@ -9,7 +9,7 @@ import {TeamsEntryRepository} from '@/teams/teams-entry.repository';
 import {TeamsRepository} from '@/teams/teams.repository';
 import {EventsService} from '@/events/events.service';
 import {EventGroup} from '@/events/entities/event-group.entity';
-import {Injectable, NotFoundException} from '@nestjs/common';
+import {Injectable, Logger, NotFoundException} from '@nestjs/common';
 import {
     ITeamEntry,
     ITeamEntryAudit,
@@ -31,6 +31,8 @@ const shuffle = (v, r = [...v]) => v.map(() => r.splice(~~(Math.random() * r.len
 
 @Injectable()
 export class TeamsService {
+  private readonly logger = new Logger(TeamsService.name);
+
   constructor(
     private readonly teamsRepository: TeamsRepository,
     private readonly teamsEntryRepository: TeamsEntryRepository,
@@ -471,6 +473,7 @@ export class TeamsService {
       playerId: updatedOffer.playerId,
       playerName: updatedOffer.playerName,
       projectedPoints: updatedOffer.projectedPoints,
+      actualPoints: null,
       position: position,
       teamId: teamId,
     });
@@ -530,6 +533,7 @@ export class TeamsService {
       playerId: finalPlayer.playerId,
       playerName: finalPlayer.playerName,
       projectedPoints: finalPlayer.projectedPoints,
+      actualPoints: null,
       position: position,
       teamId: teamId,
     });
@@ -586,5 +590,63 @@ export class TeamsService {
       if (weekNumber === 20) return 6;
     }
     return 10;
+  }
+
+  async calculateAndPersistScores(eventGroupId: string): Promise<void> {
+    const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
+    const teams = await this.teamsRepository.findTeamsByEventGroup(eventGroupId);
+
+    if (teams.length === 0) {
+      this.logger.warn(`No teams found for event group ${eventGroupId}`);
+      return;
+    }
+
+    const leagueId = teams[0].leagueId;
+    const seasonYear = teams[0].seasonYear;
+    const sportLeague = eventGroup.sportLeague as SportLeague;
+    const positions = await this.leaguesService.getPositionsForLeague(leagueId);
+
+    // Fetch stats once per position
+    const statsByPosition = new Map<string, IPlayerStats[]>();
+    for (const pos of positions) {
+      const stats = await this.playerStatsService.getPlayerStatistics(
+        pos.position,
+        seasonYear,
+        eventGroupId,
+        sportLeague,
+      );
+      statsByPosition.set(pos.position, stats);
+    }
+
+    // Build lookup maps for matching
+    const normalizeName = (name: string) =>
+      name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+
+    for (const team of teams) {
+      for (const player of team.players) {
+        const stats = statsByPosition.get(player.position) ?? [];
+
+        // Try matching by playerId first (NFL), then by name (golf)
+        let matched = stats.find((s) => s.playerId === player.playerId);
+        if (!matched && player.playerName) {
+          const normalizedPlayerName = normalizeName(player.playerName);
+          matched = stats.find((s) => normalizeName(s.name) === normalizedPlayerName);
+        }
+
+        if (matched) {
+          await this.teamsRepository.updatePlayerActualPoints(
+            team.teamId,
+            player.position,
+            matched.points,
+          );
+        } else {
+          this.logger.warn(
+            `No stats found for player "${player.playerName}" (${player.playerId}) in ${player.position}`,
+          );
+        }
+      }
+    }
+
+    this.logger.log(`Scores persisted for event group "${eventGroup.name}" (${teams.length} teams)`);
   }
 }
