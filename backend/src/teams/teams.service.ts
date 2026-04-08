@@ -353,12 +353,16 @@ export class TeamsService {
     const previousOffers = await this.getOffers(teamEntry.teamId, teamEntry.position);
     const previousOfferPlayerIds = previousOffers.map((offer) => offer.playerId);
 
-    // Remove players in boxes and previously offered players from the projections
+    // For sports with shared player pools (e.g., GOLF), exclude players already selected for other positions
+    const excludedPlayerIds = await this.getExcludedPlayerIdsForPosition(team, teamEntry.position, league.sportLeague);
+
+    // Remove players in boxes, previously offered players, and already-selected players from the projections
     let playerIdsInBoxes = teamEntryAudits.map((entry) => entry.playerId);
     let availableOffers = projections.filter(
       (player) =>
         !playerIdsInBoxes.includes(player.playerId) &&
-        !previousOfferPlayerIds.includes(player.playerId),
+        !previousOfferPlayerIds.includes(player.playerId) &&
+        !excludedPlayerIds.includes(player.playerId),
     );
 
     if (availableOffers.length === 0) {
