@@ -1,6 +1,7 @@
 import { db } from '@/infrastructure/database/database';
 import { DatabaseModule } from '@/infrastructure/database/database.module';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
+import { TeamsModule } from '@/teams/teams.module';
 import { LeaguesController } from './leagues.controller';
 import { DatabaseLeaguesRepository, LeaguesRepository } from './leagues.repository';
 import { LeaguesService } from './leagues.service';
@@ -18,7 +19,7 @@ import { LeaguesService } from './leagues.service';
       useClass: DatabaseLeaguesRepository,
     },
   ],
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, forwardRef(() => TeamsModule)],
   exports: [LeaguesService],
 })
 export class LeaguesModule {}
