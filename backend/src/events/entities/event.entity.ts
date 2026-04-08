@@ -5,10 +5,10 @@ export interface IEvent {
   eventId: string & tags.Format<'uuid'>;
   eventGroupId: string & tags.Format<'uuid'>;
   name: string;
-  startDate: string | Date | null;
-  endDate: string | Date | null;
-  externalEventId: string | null;
-  externalEventSource: string | null;
+  startDate: string | Date;
+  endDate: string | Date;
+  externalEventId?: string;
+  externalEventSource?: string;
 }
 
 export type Event = Selectable<IEvent>;

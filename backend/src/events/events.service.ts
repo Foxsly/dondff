@@ -69,9 +69,9 @@ export class EventsService {
 
     return {
       ...eventGroup,
+      status,
       startDate: dateRange.startDate,
       endDate: dateRange.endDate,
-      status,
     };
   }
 
@@ -116,15 +116,16 @@ export class EventsService {
         const espnMatch = espnSchedule.find((espn) =>
           this.normalizeEventName(espn.name).includes(this.normalizeEventName(fanduelEvent.name)),
         );
-
-        await this.createEvent({
-          eventGroupId: eventGroup.eventGroupId,
-          name: fanduelEvent.name,
-          startDate: espnMatch?.startDate ?? null,
-          endDate: espnMatch?.endDate ?? null,
-          externalEventId: fanduelEvent.id,
-          externalEventSource: 'FANDUEL',
-        });
+        if (espnMatch){
+          await this.createEvent({
+            eventGroupId: eventGroup.eventGroupId,
+            name: fanduelEvent.name,
+            startDate: espnMatch?.startDate,
+            endDate: espnMatch?.endDate,
+            externalEventId: fanduelEvent.id,
+            externalEventSource: 'FANDUEL',
+          });
+        }
       }
     }
   }
@@ -211,23 +212,16 @@ export class EventsService {
     return this.eventsRepository.findEventsByEventGroup(eventGroupId);
   }
 
-  async getDateRangeForEventGroup(eventGroupId: string): Promise<{ startDate: Date | null; endDate: Date | null }> {
+  async getDateRangeForEventGroup(eventGroupId: string): Promise<{ startDate: Date ; endDate: Date }> {
     const events = await this.eventsRepository.findEventsByEventGroup(eventGroupId);
     
-    if (events.length === 0) {
-      return { startDate: null, endDate: null };
-    }
-
     const startDates = events.map(e => e.startDate).filter((d): d is string | Date => d != null);
     const endDates = events.map(e => e.endDate).filter((d): d is string | Date => d != null);
 
+    //Don't need a null check, dates are required for Events
     return {
-      startDate: startDates.length > 0 
-        ? new Date(Math.min(...startDates.map(d => new Date(d).getTime()))) 
-        : null,
-      endDate: endDates.length > 0 
-        ? new Date(Math.max(...endDates.map(d => new Date(d).getTime()))) 
-        : null,
+      startDate: new Date(Math.min(...startDates.map(d => new Date(d).getTime()))),
+      endDate: new Date(Math.max(...endDates.map(d => new Date(d).getTime())))
     };
   }
 }

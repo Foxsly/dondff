@@ -88,14 +88,14 @@ export class DatabaseTeamsRepository extends TeamsRepository {
         position: dto.position,
         playerId: dto.playerId,
         playerName: dto.playerName,
-        projectedPoints: dto.projectedPoints ?? null,
-        actualPoints: dto.actualPoints ?? null,
+        ...(dto.projectedPoints && {projectedPoints: dto.projectedPoints}),
+        ...(dto.actualPoints && {actualPoints: dto.actualPoints}),
       })
       .onConflict((oc) =>
         oc.columns(['teamId', 'position']).doUpdateSet({
           playerId: dto.playerId,
           playerName: dto.playerName,
-          projectedPoints: dto.projectedPoints ?? null,
+          ...(dto.projectedPoints && {projectedPoints: dto.projectedPoints}),
         }),
       )
       .execute();

@@ -473,7 +473,6 @@ export class TeamsService {
       playerId: updatedOffer.playerId,
       playerName: updatedOffer.playerName,
       projectedPoints: updatedOffer.projectedPoints,
-      actualPoints: null,
       position: position,
       teamId: teamId,
     });
@@ -533,7 +532,6 @@ export class TeamsService {
       playerId: finalPlayer.playerId,
       playerName: finalPlayer.playerName,
       projectedPoints: finalPlayer.projectedPoints,
-      actualPoints: null,
       position: position,
       teamId: teamId,
     });

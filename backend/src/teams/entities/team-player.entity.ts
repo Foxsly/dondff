@@ -6,8 +6,8 @@ export interface ITeamPlayer {
   position: string & tags.MinLength<1>;
   playerId: string & tags.MinLength<1>;
   playerName: string & tags.MinLength<1>;
-  projectedPoints: number | null;
-  actualPoints: number | null;
+  projectedPoints?: number;
+  actualPoints?: number;
 }
 
 export type TeamPlayer = Selectable<ITeamPlayer>;
