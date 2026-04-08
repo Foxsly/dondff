@@ -27,56 +27,13 @@ export async function up(db: Kysely<any>): Promise<void> {
     .execute();
 
   // Migrate existing league settings to use the new position table
-  // Since pool sizes have never been user-configurable, use default values
-  const existingSettings = await db
-    .selectFrom('league_settings')
-    .select(['league_settings_id', 'positions'])
-    .execute();
-  
-  for (const setting of existingSettings) {
-    const now = new Date().toISOString();
-    
-    // Parse the positions JSON array, default to ['RB', 'WR'] if invalid
-    let positions: string[] = ['RB', 'WR'];
-    try {
-      if (setting.positions) {
-        if (typeof setting.positions === 'string') {
-          const parsed = JSON.parse(setting.positions);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            positions = parsed.map(String);
-          }
-        } else if (Array.isArray(setting.positions)) {
-          positions = setting.positions.map(String);
-        }
-      }
-    } catch (e) {
-      // Keep default ['RB', 'WR'] if parsing fails
-    }
-    
-    // Create position entries with default pool sizes
-    const positionEntries = positions.map(position => {
-      let poolSize;
-      switch (position) {
-        case 'RB': poolSize = 64; break;
-        case 'WR': poolSize = 96; break;
-        case 'QB': poolSize = 32; break;
-        case 'TE': poolSize = 32; break;
-        default: poolSize = 100; // Default for any other positions
-      }
-      
-      return {
-        league_settings_id: setting.league_settings_id,
-        position: position,
-        pool_size: poolSize,
-        created_at: now,
-        updated_at: now,
-      };
-    });
-    
-    if (positionEntries.length > 0) {
-      await db.insertInto('league_settings_position').values(positionEntries).execute();
-    }
-  }
+  // Simply insert RB and WR for each league with fixed pool sizes
+  await sql`
+    INSERT INTO league_settings_position (league_settings_id, position, pool_size, created_at, updated_at)
+    SELECT ls.league_settings_id, pos.position, pos.pool_size, NOW(), NOW()
+    FROM league_settings ls
+    CROSS JOIN (VALUES ('RB', 64), ('WR', 96)) AS pos(position, pool_size)
+  `.execute(db);
 
   // Drop old columns after migration is complete
   await db.schema.alterTable('league_settings').dropColumn('rb_pool_size').execute();
