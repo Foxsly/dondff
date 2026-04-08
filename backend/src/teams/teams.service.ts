@@ -591,11 +591,29 @@ export class TeamsService {
   }
 
   async calculateAndPersistScores(eventGroupId: string): Promise<void> {
-    const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
+    // Get event group with status (status is calculated on-the-fly)
+    const eventGroupWithStatus = await this.eventsService.getEventGroupWithDates(eventGroupId);
+    
+    if (eventGroupWithStatus.status !== 'FINISHED') {
+      this.logger.warn(`Event group "${eventGroupWithStatus.name}" is not finished (status: ${eventGroupWithStatus.status}), skipping score calculation`);
+      return;
+    }
+
+    const eventGroup = eventGroupWithStatus;
     const teams = await this.teamsRepository.findTeamsByEventGroup(eventGroupId);
 
     if (teams.length === 0) {
       this.logger.warn(`No teams found for event group ${eventGroupId}`);
+      return;
+    }
+
+    // Check if scores are already calculated for all teams
+    const allScoresCalculated = teams.every(team => 
+      team.players.every(player => player.actualPoints !== undefined)
+    );
+
+    if (allScoresCalculated) {
+      this.logger.log(`Scores already calculated for event group "${eventGroup.name}", skipping`);
       return;
     }
 
