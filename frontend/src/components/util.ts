@@ -1,39 +1,33 @@
+import { request } from '../api/client';
 import type { PoolPlayer, GameCase } from '../types';
 
-const API_BASE =
-  (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
-  "http://localhost:3001"; // fallback only for local dev
-
 export const getPlayers = async (
-  week: string | number,
+  eventGroupId: string,
   position: string,
   seasonYear: string | number,
   playerLimit: number,
   callback: (players: PoolPlayer[]) => void,
 ): Promise<void> => {
-  console.log("calling getPlayers with " + week + " " + position + " " + seasonYear + " " + playerLimit);
   const players: PoolPlayer[] = [];
   try {
-    const url = `${API_BASE}/players/projections/${seasonYear}/${week}/${position}`;
-    const response = await fetch(url);
-    const json = await response.json();
-    for (let i = 0; i < playerLimit; i++) {
-      const playerJson = json[i];
-      if (!playerJson) { continue; }
-      const player: PoolPlayer = {
-        name: playerJson.name,
-        points: playerJson.projectedPoints,
-        status: playerJson.injuryStatus,
-        opponent: playerJson.oppTeam,
-        team: playerJson.team,
-        playerId: playerJson.playerId,
-      };
-      players.push(player);
+    const json = await request<any[]>(`/players/projections/${seasonYear}/${eventGroupId}/${position}`);
+    if (Array.isArray(json)) {
+      for (let i = 0; i < playerLimit; i++) {
+        const playerJson = json[i];
+        if (!playerJson) continue;
+        players.push({
+          name: playerJson.name,
+          points: playerJson.projectedPoints,
+          status: playerJson.injuryStatus,
+          opponent: playerJson.oppTeam,
+          team: playerJson.team,
+          playerId: playerJson.playerId,
+        });
+      }
     }
-    console.log(players);
     callback(players);
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
 

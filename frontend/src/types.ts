@@ -1,5 +1,7 @@
 // ─── Domain types shared across components ────────────────────────────────────
 
+export type SportLeague = 'NFL' | 'GOLF' | 'NBA' | 'NHL' | 'MLB';
+
 export interface User {
   id?: string;
   userId?: string;
@@ -8,15 +10,24 @@ export interface User {
 }
 
 export interface League {
-  id?: string;
   leagueId?: string;
   name?: string;
-  leagueName?: string;
   role?: string;
-  membershipRole?: string;
-  userRole?: string;
   currentSeason?: string | number;
-  currentWeek?: string | number;
+  currentEventGroupId?: string;
+  sportLeague?: SportLeague;
+}
+
+export interface LeagueSettings {
+  leagueSettingsId: string;
+  leagueId: string;
+  scoringType: string;
+}
+
+export interface LeaguePosition {
+  leagueSettingsId: string;
+  position: string;
+  poolSize: number;
 }
 
 export interface LeagueMember {
@@ -33,6 +44,8 @@ export interface TeamPlayer {
   playerId?: string;
   playerName?: string;
   position?: string;
+  projectedPoints?: number | null;
+  actualPoints?: number | null;
   points?: number;
   pprScore?: number;
 }
@@ -42,7 +55,7 @@ export interface Team {
   userId: string;
   leagueId: string;
   seasonYear?: number;
-  week?: number;
+  eventGroupId?: string;
   players: TeamPlayer[];
   finalScore?: number | null;
 }
@@ -111,6 +124,7 @@ export interface LineUpSlot {
   position: string;
   playerName: string;
   complete: boolean;
+  status: 'pending' | 'playing' | 'finished';
 }
 
 // ─── Group game ───────────────────────────────────────────────────────────────

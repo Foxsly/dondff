@@ -19,13 +19,13 @@ import { ITeam } from '@/teams/entities/team.entity';
 export async function getLeagueTeams(
   connection: IConnection,
   leagueId: string,
-  season: number,
-  week: number,
+  season?: number,
+  eventGroupId?: string,
 ): Promise<getLeagueTeams.Output> {
   return PlainFetcher.fetch(connection, {
     ...getLeagueTeams.METADATA,
     template: getLeagueTeams.METADATA.path,
-    path: getLeagueTeams.path(leagueId, season, week),
+    path: getLeagueTeams.path(leagueId, season, eventGroupId),
   });
 }
 export namespace getLeagueTeams {
@@ -42,11 +42,11 @@ export namespace getLeagueTeams {
     status: 200,
   } as const;
 
-  export const path = (leagueId: string, season: number, week: number) => {
+  export const path = (leagueId: string, season?: number, eventGroupId?: string) => {
     const variables: URLSearchParams = new URLSearchParams();
     for (const [key, value] of Object.entries({
       season: season,
-      week: week,
+      eventGroupId: eventGroupId,
     } as any))
       if (undefined === value) continue;
       else if (Array.isArray(value))

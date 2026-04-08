@@ -1,22 +1,26 @@
-import { Controller, Body, Query } from '@nestjs/common';
-import { LeaguesService } from './leagues.service';
-import { TypedBody, TypedParam, TypedRoute, TypedQuery } from '@nestia/core';
-import type {
-  AddLeagueUserDto,
-  ILeagueUser,
-  UpdateLeagueUserDto,
-} from './entities/league-user.entity';
-import type { CreateLeagueDto, League, UpdateLeagueDto } from '@/leagues/entities/league.entity';
-import { ITeam } from '@/teams/entities/team.entity';
 import type {
   CreateLeagueSettingsDto,
   ILeagueSettings,
   ILeagueSettingsPosition,
 } from '@/leagues/entities/league-settings.entity';
+import type { CreateLeagueDto, League, UpdateLeagueDto } from '@/leagues/entities/league.entity';
+import { ITeam } from '@/teams/entities/team.entity';
+import { TeamsService } from '@/teams/teams.service';
+import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
+import { Body, Controller, Query } from '@nestjs/common';
+import type {
+  AddLeagueUserDto,
+  ILeagueUser,
+  UpdateLeagueUserDto,
+} from './entities/league-user.entity';
+import { LeaguesService } from './leagues.service';
 
 @Controller('leagues')
 export class LeaguesController {
-  constructor(private readonly leaguesService: LeaguesService) {}
+  constructor(
+    private readonly leaguesService: LeaguesService,
+    private readonly teamsService: TeamsService,
+  ) {}
 
   @TypedRoute.Post()
   create(@Body() createLeagueDto: CreateLeagueDto): Promise<League> {
@@ -79,10 +83,14 @@ export class LeaguesController {
    * Get all teams/entries for a league
    */
   @TypedRoute.Get(':id/teams')
-  getLeagueTeams(@TypedParam('id') leagueId: string,
-                 @Query('season') season: number,
-                 @Query('week') week: number): Promise<ITeam[]> {
-    return this.leaguesService.getLeagueTeams(leagueId, season, week);
+  async getLeagueTeams(@TypedParam('id') leagueId: string,
+                 @Query('season') season?: number,
+                 @Query('eventGroupId') eventGroupId?: string): Promise<ITeam[]> {
+    if (eventGroupId) {
+      //trigger a check for calculating final scores
+      await this.teamsService.calculateAndPersistScores(eventGroupId);
+    }
+    return this.leaguesService.getLeagueTeams(leagueId, season, eventGroupId);
   }
 
   /**

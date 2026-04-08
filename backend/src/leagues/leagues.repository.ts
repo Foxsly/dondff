@@ -58,6 +58,7 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
       .values({
         leagueId: crypto.randomUUID(),
         name: league.name,
+        sportLeague: league.sportLeague,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -84,6 +85,7 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
       .updateTable('league')
       .set({
         ...(league.name && { name: league.name }),
+        ...(league.sportLeague && { sportLeague: league.sportLeague }),
       })
       .where('leagueId', '=', id)
       .returningAll()
@@ -165,7 +167,6 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
         leagueSettingsId,
         leagueId: leagueId,
         scoringType: input.scoringType,
-        sportLeague: input.sportLeague,
       })
       .returningAll()
       .executeTakeFirstOrThrow();

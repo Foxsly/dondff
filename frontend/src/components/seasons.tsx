@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getCurrentUser } from "../api/auth";
-
-const API_BASE =
-  (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
-  "http://localhost:3001"; // fallback only for local dev
+import { getLeagueTeams } from "../api/leagues";
+import { useLeague } from "../contexts/LeagueContext";
+import LoadingSpinner from "./ui/LoadingSpinner";
 
 interface SeasonsProps {
   leagueId: string;
@@ -12,6 +11,7 @@ interface SeasonsProps {
 
 const Seasons: React.FC<SeasonsProps> = ({ leagueId }) => {
   const navigate = useNavigate();
+  const { sportConfig } = useLeague();
 
   const [seasons, setSeasons] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,51 +33,24 @@ const Seasons: React.FC<SeasonsProps> = ({ leagueId }) => {
 
         const userId = current.id || current.userId;
         if (!userId) {
-          console.warn("No user id found on current user", current);
           if (!cancelled) navigate("/");
           return;
         }
 
-        const [teamsRes, stateRes] = await Promise.all([
-          fetch(`${API_BASE}/teams`, { credentials: "include" }),
-          fetch(`${API_BASE}/sleeper/state`, { credentials: "include" }),
-        ]);
-
-        if (!teamsRes.ok) throw new Error(`Failed to load teams (status ${teamsRes.status})`);
-        if (!stateRes.ok) throw new Error(`Failed to load Sleeper state (status ${stateRes.status})`);
-
-        const teams = await teamsRes.json();
-        const sleeperState = await stateRes.json();
+        const teams = await getLeagueTeams(leagueId);
 
         if (cancelled) return;
 
         const seasonSet = new Set<string>();
 
         if (Array.isArray(teams)) {
-          const leagueTeams = teams.filter((team: any) => {
-            const teamLeagueId = team.leagueId || team.league_id || team.league;
-            return teamLeagueId && String(teamLeagueId) === String(leagueId);
-          });
-
-          leagueTeams.forEach((team: any) => {
-            const value =
-              team.season ??
-              team.year ??
-              team.seasonYear ??
-              team.season_id ??
-              null;
-            if (value != null) seasonSet.add(String(value));
-          });
+          const leagueTeams = teams.filter((team: any) => team.leagueId === leagueId);
+          leagueTeams.forEach((team: any) => seasonSet.add(String(team.seasonYear)));
         }
 
-        if (sleeperState) {
-          const currentSeason =
-            sleeperState.season ??
-            sleeperState.year ??
-            sleeperState.seasonId ??
-            sleeperState.current_season ??
-            null;
-          if (currentSeason != null) seasonSet.add(String(currentSeason));
+        if (sportConfig) {
+          const currentSeason = await sportConfig.fetchCurrentSeason();
+          if (currentSeason != null) seasonSet.add(currentSeason);
         }
 
         const derivedSeasons = Array.from(seasonSet);
@@ -97,15 +70,13 @@ const Seasons: React.FC<SeasonsProps> = ({ leagueId }) => {
       setLoading(false);
     }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [leagueId, navigate]);
+    return () => { cancelled = true; };
+  }, [leagueId, navigate, sportConfig]);
 
   if (loading) {
     return (
       <div className="mx-auto p-4 space-y-4">
-        <p>Loading seasons...</p>
+        <LoadingSpinner message="Loading seasons..." />
       </div>
     );
   }

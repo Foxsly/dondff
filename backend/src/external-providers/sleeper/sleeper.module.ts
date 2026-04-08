@@ -1,7 +1,7 @@
+import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
-import { SleeperService } from './sleeper.service';
 import { SleeperController } from './sleeper.controller';
-import { HttpModule } from '@nestjs/axios'
+import { SleeperService } from './sleeper.service';
 
 @Module({
   imports: [HttpModule],

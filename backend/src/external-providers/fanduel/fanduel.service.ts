@@ -2,8 +2,8 @@ import {
   FanduelGolfEventsResponse,
   FanduelGolfProjectionsResponse,
   FanduelGolfSlatesResponse,
-} from '@/fanduel/entities/fanduel-golf.entity';
-import { FanduelNflProjectionsResponse } from '@/fanduel/entities/fanduel-nfl.entity';
+} from '@/external-providers/fanduel/entities/fanduel-golf.entity';
+import { FanduelNflProjectionsResponse } from '@/external-providers/fanduel/entities/fanduel-nfl.entity';
 import { HttpService } from '@nestjs/axios';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
@@ -54,6 +54,7 @@ export class FanduelService {
       slateId: slateId,
     });
     const filtered = projections.filter((projection) => projection?.salary && projection.salary !== 'N/A');
+    //TODO would be nice to return the event details (or at least the event name) with this
     return this.assertGolfProjections(filtered);
   }
 

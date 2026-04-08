@@ -1,20 +1,26 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { getCurrentUser } from "../api/auth";
-import type { User, LeagueMember, TeamPlayer } from "../types";
-
-const API_BASE =
-  (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
-  "http://localhost:3001"; // fallback only for local dev
+import React, {useEffect, useState} from "react";
+import {Link} from "react-router-dom";
+import {getCurrentUser} from "../api/auth";
+import {getLeagueTeams, getLeagueUsers} from "../api/leagues";
+import * as teamsApi from "../api/teams";
+import {getUser} from "../api/users";
+import {useLeague} from "../contexts/LeagueContext";
+import type {LeagueMember, LeaguePosition, TeamPlayer, User} from "../types";
+import LoadingSpinner from "./ui/LoadingSpinner";
 
 function roundToTwo(number: number | undefined | null): number {
   return number ? Math.round(number * 100) / 100 : 0;
 }
 
+interface EntryPlayer extends TeamPlayer {
+  points?: number;
+  pprScore?: number;
+  actualPoints?: number | null;
+}
+
 interface EntryLineUp {
-  RB: (TeamPlayer & { points?: number; pprScore?: number }) | null;
-  WR: (TeamPlayer & { points?: number; pprScore?: number }) | null;
-  finalScore?: number | null;
+  [position: string]: EntryPlayer | null;
+  finalScore?: any;
 }
 
 interface Entry {
@@ -35,19 +41,30 @@ interface FullMember extends LeagueMember {
 interface EntriesProps {
   leagueId: string;
   season: string | number;
-  week: string | number;
-  actualWeek?: number | null;
+  eventGroupId: string;
+  currentEventGroupId?: string | null;
+  startDate?: string | Date | null;
+  endDate?: string | Date | null;
+  status?: 'PENDING' | 'PLAYING' | 'FINISHED';
 }
 
-const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
+const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, currentEventGroupId, startDate, endDate, status }) => {
+  const { positions: leaguePositions, sportConfig } = useLeague();
+
   const [user, setUser] = useState<User | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [members, setMembers] = useState<FullMember[]>([]);
+  const [positions, setPositions] = useState<LeaguePosition[]>([]);
   const [selectedMembers, setSelectedMembers] = useState<FullMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [currentNflWeek, setCurrentNflWeek] = useState<number | null>(null);
-  const [currentNflSeason, setCurrentNflSeason] = useState<number | null>(null);
+  const [currentSeason, setCurrentSeason] = useState<number | null>(null);
+
+  // TODO: Make this smarter - allow playing if status is PENDING or PLAYING
+  // Remove reliance on currentEventGroup concept entirely
+  const isEventGroupEnded = status === 'FINISHED';
+
+  const isCurrentEventGroup = status === 'PENDING' || status === 'PLAYING';
 
   useEffect(() => {
     let cancelled = false;
@@ -65,86 +82,36 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
           if (!cancelled) setUser(null);
         }
 
-        if (!leagueId || !season || !week) return;
+        if (!leagueId || !season || !eventGroupId) return;
 
-        const [teamsRes, membersRes, rbProjRes, wrProjRes, stateRes] = await Promise.all([
-          fetch(`${API_BASE}/leagues/${leagueId}/teams?season=${season}&week=${week}`, { credentials: "include" }),
-          fetch(`${API_BASE}/leagues/${leagueId}/users`, { credentials: "include" }),
-          fetch(`${API_BASE}/players/projections/${season}/${week}/RB`, { credentials: "include" }),
-          fetch(`${API_BASE}/players/projections/${season}/${week}/WR`, { credentials: "include" }),
-          fetch(`${API_BASE}/sleeper/state`, { credentials: "include" }),
+        const effectivePositions = leaguePositions.length > 0 ? leaguePositions : [];
+        if (effectivePositions.length === 0) {
+          throw new Error('No positions configured for this league');
+        }
+        setPositions(effectivePositions);
+
+        const [teamsData, membersData] = await Promise.all([
+          getLeagueTeams(leagueId, { season, eventGroupId }),
+          getLeagueUsers(leagueId),
         ]);
-
-        if (!teamsRes.ok) throw new Error(`Failed to load league teams (status ${teamsRes.status})`);
-        if (!membersRes.ok) throw new Error(`Failed to load league members (status ${membersRes.status})`);
-
-        const teamsData = await teamsRes.json();
-        const membersData: LeagueMember[] = await membersRes.json();
-
-        const rbProjections = new Map<string, number>();
-        const wrProjections = new Map<string, number>();
-
-        try {
-          if (rbProjRes.ok) {
-            const rbData = await rbProjRes.json();
-            if (Array.isArray(rbData)) {
-              rbData.forEach((entry: any) => {
-                const id = entry.playerId;
-                const pts = entry.projectedPoints ?? 0;
-                if (id) rbProjections.set(String(id), pts);
-              });
-            }
-          } else {
-            console.warn(`Failed to load RB projections (status ${rbProjRes.status})`);
-          }
-        } catch (e) {
-          console.error("Error processing RB projections", e);
-        }
-
-        try {
-          if (wrProjRes.ok) {
-            const wrData = await wrProjRes.json();
-            if (Array.isArray(wrData)) {
-              wrData.forEach((entry: any) => {
-                const id = entry.playerId;
-                const pts = entry.projectedPoints ?? 0;
-                if (id) wrProjections.set(String(id), pts);
-              });
-            }
-          } else {
-            console.warn(`Failed to load WR projections (status ${wrProjRes.status})`);
-          }
-        } catch (e) {
-          console.error("Error processing WR projections", e);
-        }
 
         if (cancelled) return;
 
-        let stateWeekNumber: number | null = null;
-        let seasonNumber: number | null = null;
-        try {
-          if (stateRes.ok) {
-            const sleeperState = await stateRes.json();
-            if (sleeperState) {
-              const currentWeek = sleeperState.week ?? null;
-              const currentSeason = sleeperState.season ?? null;
-              if (currentWeek != null) stateWeekNumber = Number(currentWeek);
-              if (currentSeason != null) seasonNumber = Number(currentSeason);
-            }
-          } else {
-            console.warn(`Failed to load Sleeper state (status ${stateRes.status})`);
+        // Fetch current season from sport config
+        if (sportConfig?.supportsScoring) {
+          try {
+            const fetchedSeason = await sportConfig.fetchCurrentSeason();
+            if (fetchedSeason != null && !cancelled) setCurrentSeason(Number(fetchedSeason));
+          } catch (e) {
+            console.error("Error fetching current season", e);
           }
-        } catch (e) {
-          console.error("Error processing Sleeper state", e);
+        } else {
+          if (!cancelled) setCurrentSeason(Number(season));
         }
-
-        if (!cancelled && stateWeekNumber != null) setCurrentNflWeek(stateWeekNumber);
-        if (!cancelled && seasonNumber != null) setCurrentNflSeason(seasonNumber);
 
         const fullMembers: FullMember[] = await Promise.all(
           membersData.map(async (leagueMember) => {
-            const memberRes = await fetch(`${API_BASE}/users/${leagueMember.userId}`, { credentials: "include" });
-            const member = await memberRes.json();
+            const member = await getUser(leagueMember.userId);
             return { ...leagueMember, user: member } as FullMember;
           })
         );
@@ -156,28 +123,37 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
         const derivedEntries: Entry[] = await Promise.all(
           teams.map(async (team: any) => {
             const member = fullMembers.find((u) => u.userId === team.userId);
-            const teamStatusResponse = await fetch(`${API_BASE}/teams/${team.teamId}/status`, { credentials: "include" });
-            const teamStatus = await teamStatusResponse.json();
+            const teamStatus = await teamsApi.getTeamStatus(team.teamId);
 
-            const rb = team.players?.find((p: any) => p.position === 'RB') || null;
-            const wr = team.players?.find((p: any) => p.position === 'WR') || null;
+            const lineUp: EntryLineUp = {};
+            let computedFinalScore: number | null = null;
+            let allHaveActual = true;
+            for (const leaguePosition of effectivePositions) {
+              const player = team.players?.find((p: any) => p.position === leaguePosition.position) || null;
+              if (player) {
+                lineUp[leaguePosition.position] = {
+                  ...player,
+                  points: player.projectedPoints ?? 0,
+                  pprScore: player.actualPoints ?? undefined,
+                };
+                if (player.actualPoints != null) {
+                  computedFinalScore = (computedFinalScore ?? 0) + player.actualPoints;
+                } else {
+                  allHaveActual = false;
+                }
+              } else {
+                lineUp[leaguePosition.position] = null;
+                allHaveActual = false;
+              }
+            }
 
-            const rbId = rb?.playerId ?? null;
-            const wrId = wr?.playerId ?? null;
-
-            const rbProjection = rbId ? rbProjections.get(String(rbId)) ?? 0 : 0;
-            const wrProjection = wrId ? wrProjections.get(String(wrId)) ?? 0 : 0;
-
-            const rbWithProjection = rb ? { ...rb, points: rbProjection } : null;
-            const wrWithProjection = wr ? { ...wr, points: wrProjection } : null;
-
-            const finalScore = team.finalScore ?? team.result?.finalScore ?? null;
+            const finalScore = allHaveActual ? computedFinalScore : null;
 
             return {
               ...team,
               name: member?.user?.name,
               email: member?.user?.email,
-              lineUp: { RB: rbWithProjection, WR: wrWithProjection, finalScore },
+              lineUp: { ...lineUp, finalScore },
               finalScore,
               playable: teamStatus.playable,
             };
@@ -195,7 +171,7 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
 
     load();
     return () => { cancelled = true; };
-  }, [leagueId, season, week]);
+  }, [leagueId, season, eventGroupId, leaguePositions, sportConfig]);
 
   const memberLabel = (email: string | undefined) => {
     const member = members?.find(
@@ -224,159 +200,191 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
         ? currentlySelectedMembers.filter((s) => s.userId !== member.userId)
         : [...currentlySelectedMembers, member]
     );
-    console.log('Selected', selectedMembers);
   };
 
   const sortedEntries = entries ? [...entries].sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0)) : [];
 
-  const weekNum = Number(week);
   const seasonNum = Number(season);
-  const isPastWeek = currentNflWeek != null && weekNum < currentNflWeek;
-  const isCurrentWeek = currentNflWeek != null && weekNum === currentNflWeek;
-  const isPastSeason = currentNflSeason != null && seasonNum < currentNflSeason;
-  const isCurrentSeason = currentNflSeason != null && seasonNum === currentNflSeason;
-  const showResults = isPastWeek && (isCurrentSeason || isPastSeason);
+  const isPastSeason = currentSeason != null && seasonNum < currentSeason;
+  const isCurrentSeason = currentSeason != null && seasonNum === currentSeason;
+  // Show results when event group has ended (by date or by season/eventGroup comparison)
+  const isPastEventGroup = isEventGroupEnded || (!isCurrentEventGroup && (isCurrentSeason || isPastSeason));
+  const showResults = isPastEventGroup;
 
-  const projectedTotal = (entry: Entry) =>
-    (entry.lineUp?.RB?.points ?? 0) + (entry.lineUp?.WR?.points ?? 0);
-
-  const calculateScores = useCallback(async () => {
-    if (!entries || entries.length === 0) return;
-    try {
-      const rbUrl = `${API_BASE}/players/stats/${season}/${week}/RB`;
-      const wrUrl = `${API_BASE}/players/stats/${season}/${week}/WR`;
-      const [rbResponse, wrResponse] = await Promise.all([
-        fetch(rbUrl, { credentials: "include" }),
-        fetch(wrUrl, { credentials: "include" }),
-      ]);
-
-      if (!rbResponse.ok || !wrResponse.ok) throw new Error("Failed to load Sleeper stats");
-
-      const rbJson = await rbResponse.json();
-      const wrJson = await wrResponse.json();
-      const finalStats = [...rbJson, ...wrJson];
-
-      const updatedEntries = entries.map((entry) => {
-        const rbId = entry.lineUp?.RB?.playerId;
-        const wrId = entry.lineUp?.WR?.playerId;
-        const rb = finalStats.find((p: any) => p.playerId === rbId);
-        const wr = finalStats.find((p: any) => p.playerId === wrId);
-        const rbScore = rb?.points ? rb.points : 0.0;
-        const wrScore = wr?.points ? wr.points : 0.0;
-        const finalScore = rbScore + wrScore;
-
-        return {
-          ...entry,
-          lineUp: {
-            ...entry.lineUp,
-            RB: { ...(entry.lineUp?.RB ?? {}), pprScore: rbScore },
-            WR: { ...(entry.lineUp?.WR ?? {}), pprScore: wrScore },
-            finalScore,
-          },
-          finalScore,
-        };
-      });
-
-      setEntries(updatedEntries);
-      console.warn("Score calculation updated entries locally; backend persistence for entries has not been implemented yet.");
-    } catch (err: any) {
-      console.error("Failed to calculate scores", err);
-      setError(err?.message ?? "Failed to calculate scores");
+  const projectedTotal = (entry: Entry) => {
+    let total = 0;
+    for (const pos of positions) {
+      const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
+      total += player?.points ?? 0;
     }
-  }, [entries, season, week]);
+    return total;
+  };
 
-  useEffect(() => {
-    if (!showResults) return;
-    if (!entries || entries.length === 0) return;
-    const needsScores = entries.some((entry) => typeof entry.finalScore !== "number");
-    if (!needsScores) return;
-    void calculateScores();
-  }, [showResults, entries, calculateScores]);
+  const getDisplayName = (position: string) =>
+    sportConfig?.getPositionDisplayName(position) ?? position;
 
-  function ResultsTable({ entries }: { entries: Entry[] }) {
+  function EntryCard({ entry, showFinal, rank }: { entry: Entry; showFinal: boolean; rank?: number }) {
+    const projTotal = projectedTotal(entry);
+    const hasFinal = showFinal && typeof entry.finalScore === "number";
+
+    const rankColors: Record<number, { bg: string; text: string; border: string }> = {
+      1: { bg: '#44370a', text: '#fbbf24', border: '#92700c' },
+      2: { bg: '#2a2d30', text: '#9ca3af', border: '#4b5563' },
+      3: { bg: '#3b2410', text: '#fb923c', border: '#9a3412' },
+    };
+    const rankStyle = rank != null ? rankColors[rank] : null;
+
     return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-left border border-[#3a465b]">
-          <thead className="bg-[#3a465b]">
-            <tr>
-              <th className="p-2 border-b border-[#3a465b]">Member</th>
-              <th className="p-2 border-b border-[#3a465b]">RB</th>
-              <th className="p-2 border-b border-[#3a465b]">RB Projection</th>
-              <th className="p-2 border-b border-[#3a465b]">RB Final</th>
-              <th className="p-2 border-b border-[#3a465b]">WR</th>
-              <th className="p-2 border-b border-[#3a465b]">WR Projection</th>
-              <th className="p-2 border-b border-[#3a465b]">WR Final</th>
-              <th className="p-2 border-b border-[#3a465b]">Projected Total</th>
-              <th className="p-2 border-b border-[#3a465b]">Final Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry) => (
-              <tr key={entry.teamId || entry.name || entry.email} className="odd:bg-[#3a465b]/20">
-                <td className="p-2 border-b border-[#3a465b]">{memberLabel(entry.name || entry.email)}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.RB?.playerName ?? ""}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.RB?.points) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.RB?.pprScore) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.WR?.playerName ?? ""}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.WR?.points) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.WR?.pprScore) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(projectedTotal(entry))}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.finalScore ? roundToTwo(entry.finalScore) : ""}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div
+        style={{
+          width: 340,
+          background: '#182030',
+          border: '1px solid #2d3d52',
+          borderRadius: 12,
+          overflow: 'hidden',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: '14px 20px',
+            background: '#1e2a3c',
+            borderBottom: '1px solid #2d3d52',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          {rank != null && (
+            <span
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 13,
+                fontWeight: 700,
+                flexShrink: 0,
+                background: rankStyle?.bg ?? '#2d3d52',
+                color: rankStyle?.text ?? '#6b7280',
+                border: `1px solid ${rankStyle?.border ?? '#3a465b'}`,
+              }}
+            >
+              {rank}
+            </span>
+          )}
+          <span style={{ fontSize: 16, fontWeight: 600, color: '#fff', letterSpacing: '-0.01em' }}>
+            {memberLabel(entry.name || entry.email)}
+          </span>
+        </div>
+
+        {/* Column headers */}
+        <div
+          style={{
+            padding: '10px 20px 4px',
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: 10,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            color: '#6b7280',
+          }}
+        >
+          <span style={{ flex: 1 }}>Player</span>
+          <span style={{ width: 56, textAlign: 'right' }}>Proj</span>
+          {hasFinal && <span style={{ width: 56, textAlign: 'right' }}>Final</span>}
+        </div>
+
+        {/* Player rows */}
+        <div style={{ padding: '0 12px' }}>
+          {positions.map((pos, i) => {
+            const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
+            const isLast = i === positions.length - 1;
+            return (
+              <div
+                key={pos.position}
+                style={{
+                  margin: '0 8px',
+                  padding: '10px 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  borderBottom: isLast ? 'none' : '1px solid rgba(45,61,82,0.5)',
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280', lineHeight: 1 }}>
+                    {getDisplayName(pos.position)}
+                  </div>
+                  <div style={{ fontSize: 14, color: '#e5e7eb', fontWeight: 500, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {player?.playerName ?? <span style={{ color: '#4b5563', fontStyle: 'italic' }}>---</span>}
+                  </div>
+                </div>
+                <span style={{ width: 56, textAlign: 'right', fontSize: 14, fontFamily: 'monospace', color: '#9ca3af', fontVariantNumeric: 'tabular-nums' }}>
+                  {roundToTwo(player?.points)}
+                </span>
+                {hasFinal && (
+                  <span style={{ width: 56, textAlign: 'right', fontSize: 14, fontFamily: 'monospace', color: '#e5e7eb', fontVariantNumeric: 'tabular-nums' }}>
+                    {roundToTwo(player?.pprScore)}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Totals footer */}
+        <div
+          style={{
+            margin: '4px 20px 16px',
+            paddingTop: 12,
+            borderTop: '1px solid #2d3d52',
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7280' }}>
+              Proj Total
+            </div>
+            <div style={{ fontSize: 20, fontFamily: 'monospace', color: '#9ca3af', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
+              {roundToTwo(projTotal)}
+            </div>
+          </div>
+          {hasFinal && (
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7280' }}>
+                Final Score
+              </div>
+              <div style={{ fontSize: 28, fontFamily: 'monospace', fontWeight: 700, color: '#34d399', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
+                {roundToTwo(entry.finalScore)}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
-  function ProjectionsTable({ entries }: { entries: Entry[] }) {
-    return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-left border border-[#3a465b]">
-          <thead className="bg-[#3a465b]">
-            <tr>
-              <th className="p-2 border-b border-[#3a465b]">Member</th>
-              <th className="p-2 border-b border-[#3a465b]">RB</th>
-              <th className="p-2 border-b border-[#3a465b]">RB Projection</th>
-              <th className="p-2 border-b border-[#3a465b]">WR</th>
-              <th className="p-2 border-b border-[#3a465b]">WR Projection</th>
-              <th className="p-2 border-b border-[#3a465b]">Projected Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry) => (
-              <tr key={entry.teamId || entry.name || entry.email} className="odd:bg-[#3a465b]/20">
-                <td className="p-2 border-b border-[#3a465b]">{memberLabel(entry.name || entry.email)}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.RB?.playerName ?? ""}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.RB?.points) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{entry.lineUp?.WR?.playerName ?? ""}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(entry.lineUp?.WR?.points) ?? 0}</td>
-                <td className="p-2 border-b border-[#3a465b]">{roundToTwo(projectedTotal(entry))}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  if (loading) return <div className="space-y-4"><p>Loading entries...</p></div>;
+  if (loading) return <div className="space-y-4"><LoadingSpinner message="Loading entries..." /></div>;
   if (error) return <div className="space-y-4"><p className="text-red-500">{error}</p></div>;
 
   return (
     <div className="space-y-4">
-      {showResults ? (
-        <ResultsTable entries={sortedEntries} />
-      ) : (
-        <ProjectionsTable entries={sortedEntries} />
-      )}
-      {isCurrentSeason && isCurrentWeek && entries && isEntryPlayable && user && (
-        <Link to="/game/setting-lineups" state={{ leagueId, season, week }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, justifyContent: 'center' }}>
+        {sortedEntries.map((entry, i) => (
+          <EntryCard key={entry.teamId} entry={entry} showFinal={showResults} rank={showResults ? i + 1 : undefined} />
+        ))}
+      </div>
+      {isCurrentSeason && isCurrentEventGroup && entries && isEntryPlayable && user && (
+        <Link to="/game/setting-lineups" state={{ leagueId, season, eventGroupId }}>
           <button className="btn-primary">Play Game</button>
         </Link>
       )}
-      {isAdmin && isCurrentSeason && isCurrentWeek && playersWithPlayableEntries.length > 0 && (
+      {isAdmin && isCurrentSeason && isCurrentEventGroup && playersWithPlayableEntries.length > 0 && (
         <>
           <div className="space-y-4">
             {playersWithPlayableEntries.map((member) => (
@@ -389,7 +397,7 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, week }) => {
                 {member.user.name}
               </div>
             ))}
-            <Link to="/game/group" state={{ leagueId, season, week, participants: selectedMembers }}>
+            <Link to="/game/group" state={{ leagueId, season, eventGroupId, participants: selectedMembers }}>
               <button className="btn-primary" disabled={selectedMembers.length === 0}>
                 Start Group Game
               </button>

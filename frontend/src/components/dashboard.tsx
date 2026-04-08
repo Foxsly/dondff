@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, {useEffect, useState} from "react";
+import {useNavigate} from "react-router-dom";
+import {getCurrentUser} from "../api/auth";
+import {addLeagueUser, createLeague} from "../api/leagues";
+import {getUserLeagues} from "../api/users";
+import {getAllSports} from "../sports/registry";
+import type {League, SportLeague, User} from "../types";
 import Breadcrumbs from "./breadcrumbs";
-import { getCurrentUser } from "../api/auth";
-import type { User, League } from "../types";
-
-const API_BASE =
-  (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_BASE_URL) ||
-  "http://localhost:3001"; // fallback only for local dev
+import ErrorDisplay from "./ui/ErrorDisplay";
+import LoadingSpinner from "./ui/LoadingSpinner";
 
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -14,11 +15,13 @@ const Dashboard: React.FC = () => {
   const [newLeague, setNewLeague] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [sportLeague, setSportLeague] = useState<SportLeague>("NFL");
   const [showJoinForm, setShowJoinForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
+  const sports = getAllSports();
 
   useEffect(() => {
     let cancelled = false;
@@ -26,35 +29,21 @@ const Dashboard: React.FC = () => {
     async function load() {
       try {
         const current = await getCurrentUser();
-        const userId = current && (current.id || current.userId);
+        const userId = current?.userId;
         if (!userId) {
-          console.warn("No user id found on current user", current);
-          if (!cancelled) {
-            navigate("/");
-          }
+          if (!cancelled) navigate("/");
           return;
         }
 
         if (!current) {
-          if (!cancelled) {
-            navigate("/");
-          }
+          if (!cancelled) navigate("/");
           return;
         }
 
         if (cancelled) return;
-        setUser({ ...current, id: current.id || current.userId });
+        setUser({ ...current, id: current.userId });
 
-        const res = await fetch(
-          `${API_BASE}/users/${userId}/leagues`,
-          { credentials: "include" }
-        );
-
-        if (!res.ok) {
-          throw new Error(`Failed to load leagues (status ${res.status})`);
-        }
-
-        const data = await res.json();
+        const data = await getUserLeagues(userId);
         if (!cancelled) {
           setLeagues(Array.isArray(data) ? data : []);
         }
@@ -72,68 +61,35 @@ const Dashboard: React.FC = () => {
 
     load();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [navigate]);
 
-  const addLeague = async () => {
+  const addLeagueHandler = async () => {
     const name = newLeague.trim();
     if (!name) return;
-    const userId = user && (user.id || user.userId);
-    if (!userId) {
-      console.warn("Cannot create league: user is not loaded");
-      return;
-    }
+    const userId = user?.userId;
+    if (!userId) return;
 
     try {
       setError("");
 
-      const createRes = await fetch(`${API_BASE}/leagues`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ name }),
-      });
-
-      if (!createRes.ok) {
-        throw new Error(`Failed to create league (status ${createRes.status})`);
-      }
-
-      const createdLeague: League = await createRes.json();
+      const createdLeague = await createLeague({ name, sportLeague });
 
       try {
-        const memberRes = await fetch(
-          `${API_BASE}/leagues/${createdLeague.id || createdLeague.leagueId}/users`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ userId, role: "admin" }),
-          }
-        );
-
-        if (!memberRes.ok) {
-          console.error("Failed to add user to league after creation", memberRes.status);
-        }
+        await addLeagueUser(createdLeague.leagueId!, { userId, role: "admin" });
       } catch (err) {
         console.error("Error while adding user to league", err);
       }
 
       try {
-        const leaguesRes = await fetch(
-          `${API_BASE}/users/${userId}/leagues`,
-          { credentials: "include" }
-        );
-        if (leaguesRes.ok) {
-          const data = await leaguesRes.json();
-          setLeagues(Array.isArray(data) ? data : []);
-        }
+        const data = await getUserLeagues(userId);
+        setLeagues(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to refresh leagues list", err);
       }
 
       setNewLeague("");
+      setSportLeague("NFL");
       setShowCreateForm(false);
     } catch (err: any) {
       console.error("Failed to create league", err);
@@ -145,38 +101,17 @@ const Dashboard: React.FC = () => {
     const code = joinCode.trim();
     if (!code) return;
 
-    const userId = user && (user.id || user.userId);
-    if (!userId) {
-      console.warn("Cannot join league: user is not loaded");
-      return;
-    }
+    const userId = user?.userId;
+    if (!userId) return;
 
     try {
       setError("");
 
-      const memberRes = await fetch(
-        `${API_BASE}/leagues/${code}/users`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ userId, role: "player" }),
-        }
-      );
-
-      if (!memberRes.ok) {
-        throw new Error(`Failed to join league (status ${memberRes.status})`);
-      }
+      await addLeagueUser(code, { userId, role: "player" });
 
       try {
-        const leaguesRes = await fetch(
-          `${API_BASE}/users/${userId}/leagues`,
-          { credentials: "include" }
-        );
-        if (leaguesRes.ok) {
-          const data = await leaguesRes.json();
-          setLeagues(Array.isArray(data) ? data : []);
-        }
+        const data = await getUserLeagues(userId);
+        setLeagues(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to refresh leagues list after join", err);
       }
@@ -193,7 +128,7 @@ const Dashboard: React.FC = () => {
     return (
       <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
         <Breadcrumbs items={[{ label: "Dashboard" }]} />
-        <p>Loading your dashboard...</p>
+        <LoadingSpinner message="Loading your dashboard..." />
       </div>
     );
   }
@@ -202,11 +137,7 @@ const Dashboard: React.FC = () => {
     return (
       <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
         <Breadcrumbs items={[{ label: "Dashboard" }]} />
-        <h2 className="text-2xl font-bold">Something went wrong</h2>
-        <p className="text-red-500">{error}</p>
-        <button className="btn-primary" onClick={() => navigate("/")}>
-          Return to Sign In
-        </button>
+        <ErrorDisplay message={error} action={{ label: "Return to Sign In", onClick: () => navigate("/") }} />
       </div>
     );
   }
@@ -224,20 +155,25 @@ const Dashboard: React.FC = () => {
         </p>
       )}
       {leagues.map((league) => {
-        const role =
-          league.role || league.membershipRole || league.userRole || "Player";
-        return (
+          return (
           <div
-            key={league.id || league.leagueId}
+            key={league.leagueId}
             className="flex items-center justify-between p-4 mb-2 rounded bg-[#3a465b]/50"
           >
-            <p className="font-semibold">
-              {league.name || league.leagueName || "Unnamed League"}
-            </p>
-            <p>{role === "admin" ? "Admin" : role}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-semibold">
+                {league.name || "Unnamed League"}
+              </p>
+              {league.sportLeague && (
+                <span className="text-xs px-2 py-0.5 rounded bg-[#00ceb8]/20 text-[#00ceb8]">
+                  {league.sportLeague}
+                </span>
+              )}
+            </div>
+            <p>{league.role === "admin" ? "Admin" : league.role}</p>
             <button
               className="px-3 py-1 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
-              onClick={() => navigate(`/league/${league.id || league.leagueId}`)}
+              onClick={() => navigate(`/league/${league.leagueId}`)}
             >
               View
             </button>
@@ -255,16 +191,27 @@ const Dashboard: React.FC = () => {
       </div>
 
       {showCreateForm && (
-        <div className="flex mt-4 space-x-2">
-          <input
-            className="flex-1 p-2 bg-transparent border rounded border-[#3a465b]"
-            placeholder="Enter League Name..."
-            value={newLeague}
-            onChange={(e) => setNewLeague(e.target.value)}
-          />
-          <button className="btn-primary" onClick={addLeague}>
-            Submit
-          </button>
+        <div className="mt-4 space-y-2">
+          <div className="flex space-x-2">
+            <input
+              className="flex-1 p-2 bg-transparent border rounded border-[#3a465b]"
+              placeholder="Enter League Name..."
+              value={newLeague}
+              onChange={(e) => setNewLeague(e.target.value)}
+            />
+            <select
+              className="p-2 bg-[#102131] border rounded border-[#3a465b] text-white"
+              value={sportLeague}
+              onChange={(e) => setSportLeague(e.target.value as SportLeague)}
+            >
+              {sports.map((sport) => (
+                <option key={sport.key} value={sport.key}>{sport.displayName}</option>
+              ))}
+            </select>
+            <button className="btn-primary" onClick={addLeagueHandler}>
+              Submit
+            </button>
+          </div>
         </div>
       )}
 

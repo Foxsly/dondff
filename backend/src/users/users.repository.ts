@@ -72,7 +72,12 @@ export class DatabaseUsersRepository extends UsersRepository {
     const rows = await this.db
       .selectFrom('leagueUser')
       .innerJoin('league', 'league.leagueId', 'leagueUser.leagueId')
-      .select(['leagueUser.leagueId', 'leagueUser.role', 'league.name as leagueName'])
+      .select([
+        'leagueUser.leagueId',
+        'leagueUser.role',
+        'league.name',
+        'league.sportLeague',
+      ])
       .where('leagueUser.userId', '=', userId)
       .execute();
     return rows as UserLeagues[];

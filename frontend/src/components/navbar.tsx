@@ -1,7 +1,7 @@
-import React, { useContext, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { getCurrentUser, logout as logoutUser } from '../api/auth';
-import { AuthContext } from "./AuthContext";
+import React, {useContext, useEffect} from 'react';
+import {Link, useNavigate} from 'react-router-dom';
+import {getCurrentUser, logout as logoutUser} from '../api/auth';
+import {AuthContext} from "../contexts/AuthContext";
 
 const Navbar: React.FC = () => {
   const { user, setUser } = useContext(AuthContext);

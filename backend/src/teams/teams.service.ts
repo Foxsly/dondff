@@ -1,7 +1,11 @@
+import { EventGroup } from '@/events/entities/event-group.entity';
+import { EventsService } from '@/events/events.service';
 import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
+import { SportLeague } from '@/leagues/entities/league.entity';
 import { LeaguesService } from '@/leagues/leagues.service';
 import {
   IPlayerProjection,
+  IPlayerStats,
   PlayerProjectionResponse,
 } from '@/player-stats/entities/player-stats.entity';
 import { PlayerStatsService } from '@/player-stats/player-stats.service';
@@ -9,7 +13,7 @@ import { ITeamPlayer, TeamPlayer } from '@/teams/entities/team-player.entity';
 import { ITeamStatus } from '@/teams/entities/team-status.entity';
 import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
 import { TeamsRepository } from '@/teams/teams.repository';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   ITeamEntry,
   ITeamEntryAudit,
@@ -31,27 +35,18 @@ const shuffle = (v, r = [...v]) => v.map(() => r.splice(~~(Math.random() * r.len
 
 @Injectable()
 export class TeamsService {
+  private readonly logger = new Logger(TeamsService.name);
+
   constructor(
     private readonly teamsRepository: TeamsRepository,
     private readonly teamsEntryRepository: TeamsEntryRepository,
     private readonly leaguesService: LeaguesService,
     private readonly playerStatsService: PlayerStatsService,
+    private readonly eventsService: EventsService,
   ) {}
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
-    let createdTeam: Team = await this.teamsRepository.create(createTeamDto);
-    let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
-      createdTeam.leagueId,
-    );
-    
-    // Get positions from the new league_settings_position table
-    const positions = await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId);
-    
-    for (const position of positions) {
-      await this.generateCasesForPosition(createdTeam, position.position, leagueSettings, this.getNumberOfCases(createTeamDto.week));
-    }
-    
-    return createdTeam;
+    return this.teamsRepository.create(createTeamDto);
   }
 
   async findAll(): Promise<ITeam[]> {
@@ -59,11 +54,11 @@ export class TeamsService {
   }
 
   async findOne(id: string): Promise<ITeam> {
-    const league = await this.teamsRepository.findOne(id);
-    if (!league) {
+    const team = await this.teamsRepository.findOne(id);
+    if (!team) {
       throw new NotFoundException(`Team with id ${id} not found`);
     }
-    return league;
+    return team;
   }
 
   async update(id: string, updateTeamDto: UpdateTeamDto): Promise<Team> {
@@ -98,23 +93,45 @@ export class TeamsService {
     return teamEntry;
   }
 
+  // Check if all positions configured for the league have finished
+  // If all positions are finished, the team is no longer playable
   async getTeamStatus(teamId: string): Promise<ITeamStatus> {
-    const teamEntries = await this.getAllTeamEntriesForTeam(teamId);
+    const team: ITeam = await this.findOne(teamId);
+    const leagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(team.leagueId);
+    const positions = await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId);
+
+    // Get existing entries for this team
+    const existingEntries = await this.getAllTeamEntriesForTeam(teamId);
+    const entryMap = new Map(existingEntries.map(e => [e.position, e]));
+    
+    // Check if ALL positions are finished
+    const allFinished = positions.every(pos => {
+      const entry = entryMap.get(pos.position);
+      return entry?.status === 'finished';
+    });
+    
     return {
-      // No entries means the game hasn't started yet — always playable
-      playable: teamEntries.length === 0 || !teamEntries.every((e) => e.status === 'finished'),
+      // No positions configured or no entries means game hasn't started — always playable
+      playable: positions.length === 0 || existingEntries.length === 0 || !allFinished,
     } as ITeamStatus;
   }
 
+  // Returns only existing entries - does not include pending positions without entries
+  // TODO: Consider returning all positions including pending ones that don't have entries yet
   async getAllTeamEntriesForTeam(teamId: string): Promise<ITeamEntry[]> {
     let team: ITeam = await this.findOne(teamId);
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       team.leagueId,
     );
-    //TODO update this to pull the positions from leagueSettingsPosition
+    const positions = await this.leaguesService.getPositionsForLeagueSettings(
+      leagueSettings.leagueSettingsId,
+    );
     const teamEntries: ITeamEntry[] = [];
-    for (const position of ['RB', 'WR']) {
-      const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(teamId, position);
+    for (const position of positions) {
+      const entry = await this.teamsEntryRepository.findLatestEntryForTeamPosition(
+        teamId,
+        position.position,
+      );
       if (entry) teamEntries.push(entry);
     }
     return teamEntries;
@@ -132,8 +149,10 @@ export class TeamsService {
     teamId: string,
     position: string,
   ): Promise<TeamEntryCasesResponseDto> {
-    const entry = await this.getTeamEntry(teamId, position);
+    // Get or create entry, generate cases if they don't exist
+    const entry = await this.getOrCreateTeamEntryWithCases(teamId, position);
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(entry.teamEntryId);
+
     const playerListAudits = audits.map((audit) => ({
       ...audit,
       boxStatus: audit.boxStatus === 'selected' ? 'available' : audit.boxStatus,
@@ -191,8 +210,6 @@ export class TeamsService {
 
   async resetCases(teamId: string, position: string) {
     let teamEntry = await this.getTeamEntry(teamId, position);
-    //TODO This should not update the reset count; we should be creating a new team entry with an updated resetCount?
-    //Or am I overthinking this - do we need a new entry per reset count, or just new team_entry_audits?
     //We do not need a new entry per reset count. We should be updating, and there should generally only be one entry per team/position
     //The only thing that doesn't have a reset_number is team_entry_offer, but you shouldn't be able to reset after getting an offer anyways
     let updatedTeamEntry = await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, {
@@ -203,18 +220,28 @@ export class TeamsService {
       throw new NotFoundException(`Could not update TeamEntry with id ${teamEntry.teamEntryId}`);
     }
     let team: Team = await this.findOne(teamId);
+    const league = await this.leaguesService.findOne(team.leagueId);
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       team.leagueId,
     );
-    await this.generateCasesForPosition(team, position, leagueSettings, this.getNumberOfCases(team.week));
+    const eventGroup = await this.eventsService.findOneEventGroup(team.eventGroupId);
+    await this.generateCasesForPosition(
+      team,
+      position,
+      leagueSettings,
+      league.sportLeague,
+      this.getNumberOfCases(eventGroup),
+    );
   }
 
-  async generateCasesForPosition(team: Team, position: string, leagueSettings: ILeagueSettings, numberOfCases: number = 10) {
-    let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(
-      position,
-      team.seasonYear,
-      team.week,
-    );
+  async generateCasesForPosition(
+    team: Team,
+    position: string,
+    leagueSettings: ILeagueSettings,
+    sportLeague: SportLeague,
+    numberOfCases: number = 10,
+  ) {
+    let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(position, team.seasonYear, team.eventGroupId, sportLeague,);
     let teamEntry: ITeamEntry = await this.getOrCreateTeamEntry(
       team.teamId,
       position,
@@ -222,10 +249,16 @@ export class TeamsService {
     );
     let boxNumber = 1;
 
-    let trimmedPlayers: IPlayerProjection[] = playerProjections.slice(
-      0,
-      leagueSettings[position.toLowerCase() + 'PoolSize'],
-    );
+    //TODO this seems like we could probably extract this logic to a "getPositionForLeagueSettings" method on LeaguesService
+    const poolSize = (await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId))
+      .find((positionSettings) => positionSettings.position === position)?.poolSize;
+
+    // For sports with shared player pools (e.g., GOLF), exclude players already selected for other positions
+    const excludedPlayerIds = await this.getExcludedPlayerIdsForPosition(team, position, sportLeague);
+    let trimmedPlayers: IPlayerProjection[] = playerProjections
+      .filter(p => !excludedPlayerIds.includes(p.playerId))
+      .slice(0, poolSize);
+
     let cases: Array<Omit<ITeamEntryAudit, 'auditId'>> = shuffle(trimmedPlayers)
       .slice(0, numberOfCases)
       .map((player: IPlayerProjection) => ({
@@ -256,13 +289,45 @@ export class TeamsService {
     return teamEntry;
   }
 
-  async getCurrentOffer(teamId: string, position: string): Promise<ITeamEntryOffer> {
+  // Get or create team entry and ensure cases exist (generate if needed)
+  private async getOrCreateTeamEntryWithCases(
+    teamId: string,
+    position: string,
+  ): Promise<ITeamEntry> {
+    const team = await this.findOne(teamId);
+    const league = await this.leaguesService.findOne(team.leagueId);
+    const leagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(team.leagueId);
+    
+    const entry = await this.getOrCreateTeamEntry(
+      teamId,
+      position,
+      leagueSettings.leagueSettingsId,
+    );
+    
+    // Check if audits exist for current reset
+    const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(entry.teamEntryId);
+    if (audits.length === 0) {
+      // Generate cases - this also handles shared pool exclusion for GOLF
+      await this.generateCasesForPosition(
+        team,
+        position,
+        leagueSettings,
+        league.sportLeague,
+        this.getNumberOfCases(await this.eventsService.findOneEventGroup(team.eventGroupId)),
+      );
+    }
+    
+    return entry;
+  }
+
+  async getCurrentOffer(teamId: string, position: string): Promise<PlayerOfferDto> {
     const teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
     const currentOffer = await this.teamsEntryRepository.getCurrentOffer(teamEntry.teamEntryId);
     if (!currentOffer) {
-      return this.calculateOffer(teamEntry);
+      const newOffer = await this.calculateOffer(teamEntry);
+      return this.addTeamsToOffer(newOffer);
     }
-    return currentOffer;
+    return this.addTeamsToOffer(currentOffer);
   }
 
   async calculateOffer(teamEntry: ITeamEntry): Promise<ITeamEntryOffer> {
@@ -277,34 +342,40 @@ export class TeamsService {
       throw new Error('No eligible cases found for offer calculation');
     }
 
-    const finalOfferValue = Math.sqrt(
-      eligibleCases.map((a) => a.projectedPoints ** 2).reduce((sum, v) => sum + v, 0) /
-        eligibleCases.length,
-    );
-
     const team: ITeam = await this.findOne(teamEntry.teamId);
+    const league = await this.leaguesService.findOne(team.leagueId);
     const projections = await this.playerStatsService.getPlayerProjections(
       teamEntry.position,
       team.seasonYear,
-      team.week,
+      team.eventGroupId,
+      league.sportLeague,
     );
 
     // Get all previous offers (both accepted and rejected) to filter them out
     const previousOffers = await this.getOffers(teamEntry.teamId, teamEntry.position);
     const previousOfferPlayerIds = previousOffers.map((offer) => offer.playerId);
 
-    // Remove players in boxes and previously offered players from the projections
+    // For sports with shared player pools (e.g., GOLF), exclude players already selected for other positions
+    const excludedPlayerIds = await this.getExcludedPlayerIdsForPosition(team, teamEntry.position, league.sportLeague);
+
+    // Remove players in boxes, previously offered players, and already-selected players from the projections
     let playerIdsInBoxes = teamEntryAudits.map((entry) => entry.playerId);
     let availableOffers = projections.filter(
       (player) =>
         !playerIdsInBoxes.includes(player.playerId) &&
-        !previousOfferPlayerIds.includes(player.playerId),
+        !previousOfferPlayerIds.includes(player.playerId) &&
+        !excludedPlayerIds.includes(player.playerId),
     );
 
     if (availableOffers.length === 0) {
       throw new Error('No available players left to make an offer');
     }
 
+    const finalOfferValue = Math.sqrt(
+      eligibleCases.map((a) => a.projectedPoints ** 2)
+                   .reduce((sum, v) => sum + v, 0)
+      / eligibleCases.length,
+    );
     const closestOffer = availableOffers.reduce((closest, current) => {
       const currentDiff = Math.abs(current.projectedPoints - finalOfferValue);
       const closestDiff = Math.abs(closest.projectedPoints - finalOfferValue);
@@ -368,7 +439,9 @@ export class TeamsService {
     }
 
     if (availableAudits.length < casesToEliminate) {
-      throw new Error(`Not enough available cases to eliminate (need at least ${casesToEliminate})`);
+      throw new Error(
+        `Not enough available cases to eliminate (need at least ${casesToEliminate})`,
+      );
     }
 
     // Randomly select the specified number of audits to eliminate
@@ -405,8 +478,9 @@ export class TeamsService {
     await this.upsertTeamPlayer(teamId, {
       playerId: updatedOffer.playerId,
       playerName: updatedOffer.playerName,
+      projectedPoints: updatedOffer.projectedPoints,
       position: position,
-      teamId: teamId
+      teamId: teamId,
     });
     return {
       offer: this.addTeamsToOffer(updatedOffer),
@@ -451,15 +525,19 @@ export class TeamsService {
     // Update team entry status to finished
     await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, { status: 'finished' });
     // Set player on teamPlayer
-    const finalPlayer = decision === 'keep' ? audits.find(audit => audit.boxStatus === 'selected') : lastNonSelectedBox;
+    const finalPlayer =
+      decision === 'keep'
+        ? audits.find((audit) => audit.boxStatus === 'selected')
+        : lastNonSelectedBox;
 
-    if(!finalPlayer) {
+    if (!finalPlayer) {
       throw new Error(`Could not save final player. Decision: ${decision}`);
     }
 
     await this.upsertTeamPlayer(teamId, {
       playerId: finalPlayer.playerId,
       playerName: finalPlayer.playerName,
+      projectedPoints: finalPlayer.projectedPoints,
       position: position,
       teamId: teamId,
     });
@@ -473,6 +551,30 @@ export class TeamsService {
     };
   }
 
+  /**
+   * For sports where all positions draw from the same player pool (e.g. GOLF),
+   * returns the player IDs that should be excluded when generating cases for the
+   * given position — i.e. players already selected for other positions.
+   */
+  private async getExcludedPlayerIdsForPosition(
+    team: Team,
+    position: string,
+    sportLeague: SportLeague,
+  ): Promise<string[]> {
+    if (!this.sportUsesSharedPlayerPool(sportLeague)) {
+      return [];
+    }
+
+    const fullTeam = await this.findOne(team.teamId);
+    return fullTeam.players
+      .filter((player) => player.position !== position)
+      .map((player) => player.playerId);
+  }
+
+  private sportUsesSharedPlayerPool(sportLeague: SportLeague): boolean {
+    return sportLeague === 'GOLF';
+  }
+
   addTeamsToOffer(offer: ITeamEntryOffer): PlayerOfferDto {
     return {
       ...offer,
@@ -480,16 +582,93 @@ export class TeamsService {
     };
   }
 
-    /**
-     * As we get further into the playoffs, the number of available players drops.
-     * To account for this, we limit the number of cases as well
-     */
-  getNumberOfCases(week: number): number {
-      switch(week) {
-          case 20:
-              return 6
-          default:
-              return 10;
+  /**
+   * Determines the number of cases for a given event group.
+   * For NFL playoff weeks with fewer available players, we reduce the case count.
+   */
+  getNumberOfCases(eventGroup: EventGroup): number {
+    // Check if this is an NFL event group with a week number
+    const weekMatch = eventGroup.name.match(/Week\s+(\d+)/);
+    if (weekMatch) {
+      const weekNumber = parseInt(weekMatch[1], 10);
+      if (weekNumber === 20) return 6;
+    }
+    return 10;
+  }
+
+  async calculateAndPersistScores(eventGroupId: string): Promise<void> {
+    // Get event group with status (status is calculated on-the-fly)
+    const eventGroupWithStatus = await this.eventsService.getEventGroupWithDates(eventGroupId);
+    
+    if (eventGroupWithStatus.status !== 'FINISHED') {
+      this.logger.warn(`Event group "${eventGroupWithStatus.name}" is not finished (status: ${eventGroupWithStatus.status}), skipping score calculation`);
+      return;
+    }
+
+    const eventGroup = eventGroupWithStatus;
+    const teams = await this.teamsRepository.findTeamsByEventGroup(eventGroupId);
+
+    if (teams.length === 0) {
+      this.logger.warn(`No teams found for event group ${eventGroupId}`);
+      return;
+    }
+
+    // Check if scores are already calculated for all teams
+    const allScoresCalculated = teams.every(team => 
+      team.players.every(player => player.actualPoints !== null)
+    );
+
+    if (allScoresCalculated) {
+      this.logger.log(`Scores already calculated for event group "${eventGroup.name}", skipping`);
+      return;
+    }
+
+    const leagueId = teams[0].leagueId;
+    const seasonYear = teams[0].seasonYear;
+    const sportLeague = eventGroup.sportLeague as SportLeague;
+    const positions = await this.leaguesService.getPositionsForLeague(leagueId);
+
+    // Fetch stats once per position
+    const statsByPosition = new Map<string, IPlayerStats[]>();
+    for (const pos of positions) {
+      const stats = await this.playerStatsService.getPlayerStatistics(
+        pos.position,
+        seasonYear,
+        eventGroupId,
+        sportLeague,
+      );
+      statsByPosition.set(pos.position, stats);
+    }
+
+    // Build lookup maps for matching
+    const normalizeName = (name: string) =>
+      name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+
+    for (const team of teams) {
+      for (const player of team.players) {
+        const stats = statsByPosition.get(player.position) ?? [];
+
+        // Try matching by playerId first (NFL), then by name (golf)
+        let matched = stats.find((s) => s.playerId === player.playerId);
+        if (!matched && player.playerName) {
+          const normalizedPlayerName = normalizeName(player.playerName);
+          matched = stats.find((s) => normalizeName(s.name) === normalizedPlayerName);
+        }
+
+        if (matched) {
+          await this.teamsRepository.updatePlayerActualPoints(
+            team.teamId,
+            player.position,
+            matched.points,
+          );
+        } else {
+          this.logger.warn(
+            `No stats found for player "${player.playerName}" (${player.playerId}) in ${player.position}`,
+          );
+        }
       }
+    }
+
+    this.logger.log(`Scores persisted for event group "${eventGroup.name}" (${teams.length} teams)`);
   }
 }

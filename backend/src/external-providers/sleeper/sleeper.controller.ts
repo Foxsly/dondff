@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { SleeperService } from './sleeper.service';
 import { TypedParam, TypedQuery, TypedRoute } from '@nestia/core';
-import type { SleeperStatRequest } from '@/sleeper/entities/sleeper.entity';
+import type { SleeperStatRequest } from '@/external-providers/sleeper/entities/sleeper.entity';
 
 @Controller('sleeper')
 export class SleeperController {

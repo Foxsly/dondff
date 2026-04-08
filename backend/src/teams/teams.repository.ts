@@ -14,6 +14,8 @@ export abstract class TeamsRepository {
   abstract update(id: string, team: Partial<Team>): Promise<Team | null>;
   abstract remove(id: string): Promise<boolean>;
   abstract upsertTeamPlayer(teamId: string, dto: ITeamPlayer): Promise<TeamPlayer>;
+  abstract updatePlayerActualPoints(teamId: string, position: string, actualPoints: number): Promise<void>;
+  abstract findTeamsByEventGroup(eventGroupId: string): Promise<ITeam[]>;
 }
 
 @Injectable()
@@ -30,7 +32,7 @@ export class DatabaseTeamsRepository extends TeamsRepository {
         leagueId: team.leagueId,
         userId: team.userId,
         seasonYear: team.seasonYear,
-        week: team.week,
+        eventGroupId: team.eventGroupId,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -42,7 +44,6 @@ export class DatabaseTeamsRepository extends TeamsRepository {
       .selectFrom('team')
       .selectAll()
       .select((eb) => [withPlayers(eb)])
-      .where('week', '>=', 1)
       .execute();
     return rows as ITeam[];
   }
@@ -65,7 +66,7 @@ export class DatabaseTeamsRepository extends TeamsRepository {
         ...(team.leagueId && { leagueId: team.leagueId }),
         ...(team.userId && { userId: team.userId }),
         ...(team.seasonYear && { seasonYear: team.seasonYear }),
-        ...(team.week && { week: team.week }),
+        ...(team.eventGroupId && { eventGroupId: team.eventGroupId }),
       })
       .where('teamId', '=', id)
       .returningAll()
@@ -87,11 +88,14 @@ export class DatabaseTeamsRepository extends TeamsRepository {
         position: dto.position,
         playerId: dto.playerId,
         playerName: dto.playerName,
+        ...(dto.projectedPoints && {projectedPoints: dto.projectedPoints}),
+        ...(dto.actualPoints && {actualPoints: dto.actualPoints}),
       })
       .onConflict((oc) =>
         oc.columns(['teamId', 'position']).doUpdateSet({
           playerId: dto.playerId,
           playerName: dto.playerName,
+          ...(dto.projectedPoints && {projectedPoints: dto.projectedPoints}),
         }),
       )
       .execute();
@@ -104,6 +108,25 @@ export class DatabaseTeamsRepository extends TeamsRepository {
       .executeTakeFirstOrThrow();
 
     return row as TeamPlayer;
+  }
+
+  async updatePlayerActualPoints(teamId: string, position: string, actualPoints: number): Promise<void> {
+    await this.db
+      .updateTable('teamPlayer')
+      .set({ actualPoints })
+      .where('teamId', '=', teamId)
+      .where('position', '=', position)
+      .execute();
+  }
+
+  async findTeamsByEventGroup(eventGroupId: string): Promise<ITeam[]> {
+    const rows = await this.db
+      .selectFrom('team')
+      .selectAll()
+      .select((eb) => [withPlayers(eb)])
+      .where('eventGroupId', '=', eventGroupId)
+      .execute();
+    return rows as ITeam[];
   }
 }
 
@@ -129,6 +152,8 @@ export function withPlayers(eb: ExpressionBuilder<DB, 'team'>) {
         'teamPlayer.playerId',
         'teamPlayer.position',
         'teamPlayer.playerName',
+        'teamPlayer.projectedPoints',
+        'teamPlayer.actualPoints',
       ])
       .whereRef('teamPlayer.teamId', '=', 'team.teamId'),
   ).as('players');

@@ -119,7 +119,7 @@ describe('LeaguesService', () => {
   });
 
   it('should get league teams', async () => {
-    const teams: ITeam[] = [{ teamId: 't1', leagueId: 'uuid-1', userId: 'u1', seasonYear: 2025, week: 1, players: [] }];
+    const teams: ITeam[] = [{ teamId: 't1', leagueId: 'uuid-1', userId: 'u1', seasonYear: 2025, eventGroupId: 'event-group-1', players: [] }];
     repo.findLeagueTeams.mockResolvedValue(teams);
     const result = await service.getLeagueTeams('uuid-1');
     expect(result).toEqual(teams);
