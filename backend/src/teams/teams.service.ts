@@ -1,30 +1,34 @@
-import {ILeagueSettings} from '@/leagues/entities/league-settings.entity';
-import {SportLeague} from '@/leagues/entities/league.entity';
-import {LeaguesService} from '@/leagues/leagues.service';
-import {IPlayerProjection, IPlayerStats, PlayerProjectionResponse,} from '@/player-stats/entities/player-stats.entity';
-import {PlayerStatsService} from '@/player-stats/player-stats.service';
-import {ITeamPlayer, TeamPlayer} from '@/teams/entities/team-player.entity';
-import {ITeamStatus} from '@/teams/entities/team-status.entity';
-import {TeamsEntryRepository} from '@/teams/teams-entry.repository';
-import {TeamsRepository} from '@/teams/teams.repository';
-import {EventsService} from '@/events/events.service';
-import {EventGroup} from '@/events/entities/event-group.entity';
-import {Injectable, Logger, NotFoundException} from '@nestjs/common';
+import { EventGroup } from '@/events/entities/event-group.entity';
+import { EventsService } from '@/events/events.service';
+import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
+import { SportLeague } from '@/leagues/entities/league.entity';
+import { LeaguesService } from '@/leagues/leagues.service';
 import {
-    ITeamEntry,
-    ITeamEntryAudit,
-    ITeamEntryOffer,
-    PlayerOfferDto,
-    TeamEntryAuditFinalDecision,
-    TeamEntryBoxStatus,
-    TeamEntryCaseBoxDto,
-    TeamEntryCasePlayerDto,
-    TeamEntryCasesResponseDto,
-    TeamEntryFinalResponseDto,
-    TeamEntryOfferResponseDto,
-    TeamEntryOfferStatus,
+  IPlayerProjection,
+  IPlayerStats,
+  PlayerProjectionResponse,
+} from '@/player-stats/entities/player-stats.entity';
+import { PlayerStatsService } from '@/player-stats/player-stats.service';
+import { ITeamPlayer, TeamPlayer } from '@/teams/entities/team-player.entity';
+import { ITeamStatus } from '@/teams/entities/team-status.entity';
+import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
+import { TeamsRepository } from '@/teams/teams.repository';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ITeamEntry,
+  ITeamEntryAudit,
+  ITeamEntryOffer,
+  PlayerOfferDto,
+  TeamEntryAuditFinalDecision,
+  TeamEntryBoxStatus,
+  TeamEntryCaseBoxDto,
+  TeamEntryCasePlayerDto,
+  TeamEntryCasesResponseDto,
+  TeamEntryFinalResponseDto,
+  TeamEntryOfferResponseDto,
+  TeamEntryOfferStatus,
 } from './entities/team-entry.entity';
-import {CreateTeamDto, ITeam, Team, UpdateTeamDto} from './entities/team.entity';
+import { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
 
 //yacht-fisher shuffle: https://github.com/queviva/yacht-fisher
 const shuffle = (v, r = [...v]) => v.map(() => r.splice(~~(Math.random() * r.length), 1)[0]);
@@ -42,9 +46,7 @@ export class TeamsService {
   ) {}
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
-    let createdTeam: Team = await this.teamsRepository.create(createTeamDto);
-    // Entries and cases are now created lazily on first access via getDisassociatedTeamCases
-    return createdTeam;
+    return this.teamsRepository.create(createTeamDto);
   }
 
   async findAll(): Promise<ITeam[]> {
@@ -613,7 +615,7 @@ export class TeamsService {
 
     // Check if scores are already calculated for all teams
     const allScoresCalculated = teams.every(team => 
-      team.players.every(player => player.actualPoints !== undefined)
+      team.players.every(player => player.actualPoints !== null)
     );
 
     if (allScoresCalculated) {

@@ -1,10 +1,10 @@
+import { forwardRef, Module } from '@nestjs/common';
 import { EventsModule } from '@/events/events.module';
 import { db } from '@/infrastructure/database/database';
 import { DatabaseModule } from '@/infrastructure/database/database.module';
 import { LeaguesModule } from '@/leagues/leagues.module';
 import { PlayerStatsModule } from '@/player-stats/player-stats.module';
 import { DatabaseTeamsEntryRepository, TeamsEntryRepository } from '@/teams/teams-entry.repository';
-import { Module } from '@nestjs/common';
 import { TeamsController } from './teams.controller';
 import { DatabaseTeamsRepository, TeamsRepository } from './teams.repository';
 import { TeamsService } from './teams.service';
@@ -26,6 +26,7 @@ import { TeamsService } from './teams.service';
       useClass: DatabaseTeamsEntryRepository,
     },
   ],
-  imports: [DatabaseModule, LeaguesModule, PlayerStatsModule, EventsModule],
+  imports: [DatabaseModule, forwardRef(() => LeaguesModule), PlayerStatsModule, EventsModule],
+  exports: [TeamsService],
 })
 export class TeamsModule {}

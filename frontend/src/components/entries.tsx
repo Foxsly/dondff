@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from "react";
+import React, {useEffect, useState} from "react";
 import {Link} from "react-router-dom";
 import {getCurrentUser} from "../api/auth";
 import {getLeagueTeams, getLeagueUsers} from "../api/leagues";
@@ -219,60 +219,6 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, curre
     }
     return total;
   };
-
-  const fetchAndApplyScores = useCallback(async () => {
-    if (!entries || entries.length === 0) return;
-    try {
-      // Trigger backend score calculation, then re-fetch teams with updated actualPoints
-      await teamsApi.calculateScores(eventGroupId);
-      const teamsData = await getLeagueTeams(leagueId, { season, eventGroupId });
-      const teams = Array.isArray(teamsData) ? teamsData : [];
-
-      const updatedEntries = entries.map((entry) => {
-        const updatedTeam = teams.find((t: any) => t.teamId === entry.teamId);
-        if (!updatedTeam) return entry;
-
-        let finalScore = 0;
-        const updatedLineUp: EntryLineUp = { ...entry.lineUp };
-
-        for (const pos of positions) {
-          const player = updatedTeam.players?.find((p: any) => p.position === pos.position);
-          if (player) {
-            const score = player.actualPoints ?? 0;
-            finalScore += score;
-            updatedLineUp[pos.position] = {
-              ...entry.lineUp?.[pos.position],
-              ...player,
-              points: player.projectedPoints ?? 0,
-              pprScore: score,
-            };
-          }
-        }
-
-        updatedLineUp.finalScore = finalScore;
-        return { ...entry, lineUp: updatedLineUp, finalScore };
-      });
-
-      setEntries(updatedEntries);
-    } catch (err: any) {
-      console.error("Failed to calculate scores", err);
-      setError(err?.message ?? "Failed to calculate scores");
-    }
-  }, [entries, season, eventGroupId, leagueId, positions]);
-
-  useEffect(() => {
-    if (!showResults) return;
-    if (!entries || entries.length === 0) return;
-    // Only fetch scores if any player is missing actualPoints
-    const needsScores = entries.some((entry) =>
-      positions.some((pos) => {
-        const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
-        return player?.playerId && player.actualPoints == null;
-      })
-    );
-    if (!needsScores) return;
-    void fetchAndApplyScores();
-  }, [showResults, entries, fetchAndApplyScores, positions]);
 
   const getDisplayName = (position: string) =>
     sportConfig?.getPositionDisplayName(position) ?? position;
