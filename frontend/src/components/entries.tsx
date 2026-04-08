@@ -277,100 +277,162 @@ const Entries: React.FC<EntriesProps> = ({ leagueId, season, eventGroupId, curre
   const getDisplayName = (position: string) =>
     sportConfig?.getPositionDisplayName(position) ?? position;
 
-  const thClass = "p-2 border-b border-[#3a465b]";
-  const tdClass = "p-2 border-b border-[#3a465b]";
+  function EntryCard({ entry, showFinal, rank }: { entry: Entry; showFinal: boolean; rank?: number }) {
+    const projTotal = projectedTotal(entry);
+    const hasFinal = showFinal && typeof entry.finalScore === "number";
 
-  function ResultsTable({ entries }: { entries: Entry[] }) {
-    return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-left border border-[#3a465b]">
-          <thead className="bg-[#3a465b]">
-            <tr>
-              <th className={thClass}>Member</th>
-              {positions.map((pos) => (
-                <React.Fragment key={pos.position}>
-                  <th className={thClass}>{getDisplayName(pos.position)}</th>
-                  <th className={thClass}>{getDisplayName(pos.position)} Proj</th>
-                  <th className={thClass}>{getDisplayName(pos.position)} Final</th>
-                </React.Fragment>
-              ))}
-              <th className={thClass}>Projected Total</th>
-              <th className={thClass}>Final Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry) => (
-              <tr key={entry.teamId || entry.name || entry.email} className="odd:bg-[#3a465b]/20">
-                <td className={tdClass}>{memberLabel(entry.name || entry.email)}</td>
-                {positions.map((pos) => {
-                  const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
-                  return (
-                    <React.Fragment key={pos.position}>
-                      <td className={tdClass}>{player?.playerName ?? ""}</td>
-                      <td className={tdClass}>{roundToTwo(player?.points)}</td>
-                      <td className={tdClass}>{roundToTwo(player?.pprScore)}</td>
-                    </React.Fragment>
-                  );
-                })}
-                <td className={tdClass}>{roundToTwo(projectedTotal(entry))}</td>
-                <td className={tdClass}>{typeof entry.finalScore === "number" ? roundToTwo(entry.finalScore) : ""}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
+    const rankColors: Record<number, { bg: string; text: string; border: string }> = {
+      1: { bg: '#44370a', text: '#fbbf24', border: '#92700c' },
+      2: { bg: '#2a2d30', text: '#9ca3af', border: '#4b5563' },
+      3: { bg: '#3b2410', text: '#fb923c', border: '#9a3412' },
+    };
+    const rankStyle = rank != null ? rankColors[rank] : null;
 
-  function ProjectionsTable({ entries }: { entries: Entry[] }) {
     return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-left border border-[#3a465b]">
-          <thead className="bg-[#3a465b]">
-            <tr>
-              <th className={thClass}>Member</th>
-              {positions.map((pos) => (
-                <React.Fragment key={pos.position}>
-                  <th className={thClass}>{getDisplayName(pos.position)}</th>
-                  <th className={thClass}>{getDisplayName(pos.position)} Proj</th>
-                </React.Fragment>
-              ))}
-              <th className={thClass}>Projected Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry) => (
-              <tr key={entry.teamId || entry.name || entry.email} className="odd:bg-[#3a465b]/20">
-                <td className={tdClass}>{memberLabel(entry.name || entry.email)}</td>
-                {positions.map((pos) => {
-                  const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
-                  return (
-                    <React.Fragment key={pos.position}>
-                      <td className={tdClass}>{player?.playerName ?? ""}</td>
-                      <td className={tdClass}>{roundToTwo(player?.points)}</td>
-                    </React.Fragment>
-                  );
-                })}
-                <td className={tdClass}>{roundToTwo(projectedTotal(entry))}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div
+        style={{
+          width: 340,
+          background: '#182030',
+          border: '1px solid #2d3d52',
+          borderRadius: 12,
+          overflow: 'hidden',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: '14px 20px',
+            background: '#1e2a3c',
+            borderBottom: '1px solid #2d3d52',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          {rank != null && (
+            <span
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 13,
+                fontWeight: 700,
+                flexShrink: 0,
+                background: rankStyle?.bg ?? '#2d3d52',
+                color: rankStyle?.text ?? '#6b7280',
+                border: `1px solid ${rankStyle?.border ?? '#3a465b'}`,
+              }}
+            >
+              {rank}
+            </span>
+          )}
+          <span style={{ fontSize: 16, fontWeight: 600, color: '#fff', letterSpacing: '-0.01em' }}>
+            {memberLabel(entry.name || entry.email)}
+          </span>
+        </div>
+
+        {/* Column headers */}
+        <div
+          style={{
+            padding: '10px 20px 4px',
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: 10,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            color: '#6b7280',
+          }}
+        >
+          <span style={{ flex: 1 }}>Player</span>
+          <span style={{ width: 56, textAlign: 'right' }}>Proj</span>
+          {hasFinal && <span style={{ width: 56, textAlign: 'right' }}>Final</span>}
+        </div>
+
+        {/* Player rows */}
+        <div style={{ padding: '0 12px' }}>
+          {positions.map((pos, i) => {
+            const player = entry.lineUp?.[pos.position] as EntryPlayer | null;
+            const isLast = i === positions.length - 1;
+            return (
+              <div
+                key={pos.position}
+                style={{
+                  margin: '0 8px',
+                  padding: '10px 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  borderBottom: isLast ? 'none' : '1px solid rgba(45,61,82,0.5)',
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280', lineHeight: 1 }}>
+                    {getDisplayName(pos.position)}
+                  </div>
+                  <div style={{ fontSize: 14, color: '#e5e7eb', fontWeight: 500, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {player?.playerName ?? <span style={{ color: '#4b5563', fontStyle: 'italic' }}>---</span>}
+                  </div>
+                </div>
+                <span style={{ width: 56, textAlign: 'right', fontSize: 14, fontFamily: 'monospace', color: '#9ca3af', fontVariantNumeric: 'tabular-nums' }}>
+                  {roundToTwo(player?.points)}
+                </span>
+                {hasFinal && (
+                  <span style={{ width: 56, textAlign: 'right', fontSize: 14, fontFamily: 'monospace', color: '#e5e7eb', fontVariantNumeric: 'tabular-nums' }}>
+                    {roundToTwo(player?.pprScore)}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Totals footer */}
+        <div
+          style={{
+            margin: '4px 20px 16px',
+            paddingTop: 12,
+            borderTop: '1px solid #2d3d52',
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7280' }}>
+              Proj Total
+            </div>
+            <div style={{ fontSize: 20, fontFamily: 'monospace', color: '#9ca3af', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
+              {roundToTwo(projTotal)}
+            </div>
+          </div>
+          {hasFinal && (
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7280' }}>
+                Final Score
+              </div>
+              <div style={{ fontSize: 28, fontFamily: 'monospace', fontWeight: 700, color: '#34d399', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
+                {roundToTwo(entry.finalScore)}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
   if (loading) return <div className="space-y-4"><LoadingSpinner message="Loading entries..." /></div>;
   if (error) return <div className="space-y-4"><p className="text-red-500">{error}</p></div>;
-    console.log('[DEBUG] Link conditions:', { isCurrentSeason, isCurrentEventGroup, entriesLength: entries?.length, isEntryPlayable, user: user?.name, userId: user?.userId })
 
   return (
     <div className="space-y-4">
-      {showResults ? (
-        <ResultsTable entries={sortedEntries} />
-      ) : (
-        <ProjectionsTable entries={sortedEntries} />
-      )}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, justifyContent: 'center' }}>
+        {sortedEntries.map((entry, i) => (
+          <EntryCard key={entry.teamId} entry={entry} showFinal={showResults} rank={showResults ? i + 1 : undefined} />
+        ))}
+      </div>
       {isCurrentSeason && isCurrentEventGroup && entries && isEntryPlayable && user && (
         <Link to="/game/setting-lineups" state={{ leagueId, season, eventGroupId }}>
           <button className="btn-primary">Play Game</button>
