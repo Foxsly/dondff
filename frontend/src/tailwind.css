@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom form styling for dark theme */
+input, select, textarea {
+  background-color: #020617;
+  color: #ffffff;
+  border-color: #374151;
+}
+
+body {
+  background-color: #102131;
+  color: #fff;
+}
