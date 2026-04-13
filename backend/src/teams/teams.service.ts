@@ -8,6 +8,7 @@ import {
   IPlayerStats,
   PlayerProjectionResponse,
 } from '@/player-stats/entities/player-stats.entity';
+import { normalizeName } from '@/player-stats/golf-scoring.util';
 import { PlayerStatsService } from '@/player-stats/player-stats.service';
 import { ITeamPlayer, TeamPlayer } from '@/teams/entities/team-player.entity';
 import { ITeamStatus } from '@/teams/entities/team-status.entity';
@@ -639,10 +640,6 @@ export class TeamsService {
       );
       statsByPosition.set(pos.position, stats);
     }
-
-    // Build lookup maps for matching
-    const normalizeName = (name: string) =>
-      name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
 
     for (const team of teams) {
       for (const player of team.players) {
