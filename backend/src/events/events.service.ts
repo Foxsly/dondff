@@ -212,19 +212,16 @@ export class EventsService {
     return this.eventsRepository.findEventsByEventGroup(eventGroupId);
   }
 
-  async getDateRangeForEventGroup(eventGroupId: string): Promise<{ startDate: Date | undefined; endDate: Date | undefined }> {
+  async getDateRangeForEventGroup(eventGroupId: string): Promise<{ startDate: Date ; endDate: Date }> {
     const events = await this.eventsRepository.findEventsByEventGroup(eventGroupId);
-
+    
     const startDates = events.map(e => e.startDate).filter((d): d is string | Date => d != null);
     const endDates = events.map(e => e.endDate).filter((d): d is string | Date => d != null);
 
+    //Don't need a null check, dates are required for Events
     return {
-      startDate: startDates.length > 0
-        ? new Date(Math.min(...startDates.map(d => new Date(d).getTime())))
-        : undefined,
-      endDate: endDates.length > 0
-        ? new Date(Math.max(...endDates.map(d => new Date(d).getTime())))
-        : undefined,
+      startDate: new Date(Math.min(...startDates.map(d => new Date(d).getTime()))),
+      endDate: new Date(Math.max(...endDates.map(d => new Date(d).getTime())))
     };
   }
 }
