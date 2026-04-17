@@ -92,6 +92,8 @@ export class LeaguesService {
       await this.createDefaultNflPositions(settings.leagueSettingsId);
     } else if (league.sportLeague === 'GOLF') {
       await this.createDefaultGolfPositions(settings.leagueSettingsId);
+    } else if (league.sportLeague === 'NBA') {
+      await this.createDefaultNbaPositions(settings.leagueSettingsId);
     }
 
     return settings;
@@ -116,6 +118,18 @@ export class LeaguesService {
     ];
 
     for (const pos of defaultGolfPositions) {
+      await this.leaguesRepository.createLeagueSettingsPosition(leagueSettingsId, pos);
+    }
+  }
+
+  async createDefaultNbaPositions(leagueSettingsId: string): Promise<void> {
+    const defaultNbaPositions = [
+      { position: 'G', poolSize: 64 },
+      { position: 'F', poolSize: 64 },
+      { position: 'C', poolSize: 32 },
+    ];
+
+    for (const pos of defaultNbaPositions) {
       await this.leaguesRepository.createLeagueSettingsPosition(leagueSettingsId, pos);
     }
   }
