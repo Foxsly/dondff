@@ -1,8 +1,11 @@
 import { tags } from 'typia';
+
 /**
- * Stolen from https://github.com/seanwessmith/sleeper-api/blob/main/src/index.ts
+ * Base interfaces for Sleeper API
+ * Sport-specific types are in sleeper-nfl.entity.ts and sleeper-nba.entity.ts
  */
-// State Interface
+
+// State Interface - shared across sports
 export interface ISleeperState {
   week: number;
   season_type: string;
@@ -15,47 +18,23 @@ export interface ISleeperState {
 }
 
 // -----------------------------
-// Player
+// Base Player
 // -----------------------------
+export interface ISleeperPlayerMetadata {
+  [key: string]: string | number | null;
+}
+
 export interface ISleeperPlayer {
-  fantasy_positions: (string & tags.Pattern<'^(QB|RB|FB|WR|TE|K|DEF|DB)$'>)[];
+  fantasy_positions: string[];
   first_name: string & tags.MinLength<1>;
   last_name: string & tags.MinLength<1>;
-  position: string & tags.Pattern<'^(QB|RB|FB|WR|TE|K|DEF|DB)$'>;
-  // Ignore this team - players who have been cut would have a 'null' team
-  // The team on ISleeperPlayerEntry represents their team at the time of the game
-  // team: string & tags.MinLength<2> & tags.MaxLength<3>;
+  position: string;
   injury_status: string | null;
-  metadata: ISleeperPlayerMetadata
-}
-
-export interface ISleeperPlayerMetadata {
-  genius_id: string;
+  metadata: ISleeperPlayerMetadata;
 }
 
 // -----------------------------
-// Base Stats
-// -----------------------------
-export interface IBaseSleeperPlayerStats {
-  pts_std: number;
-  pts_half_ppr: number;
-  pts_ppr: number;
-}
-
-// Stats for "stat" endpoint
-export interface ISleeperPlayerStats extends IBaseSleeperPlayerStats {
-  pos_rank_std?: number & tags.Minimum<1>;
-  pos_rank_half_ppr?: number & tags.Minimum<1>;
-  pos_rank_ppr?: number & tags.Minimum<1>;
-}
-
-// Stats for "projection" endpoint
-export interface ISleeperPlayerProjectionStats extends IBaseSleeperPlayerStats {
-  pos_adp_dd_ppr?: number & tags.Minimum<1>;
-}
-
-// -----------------------------
-// Shared entry
+// Shared entry - generic over stats type
 // -----------------------------
 export interface ISleeperPlayerEntry<TStats> {
   stats: TStats;
@@ -63,7 +42,7 @@ export interface ISleeperPlayerEntry<TStats> {
   week: number & tags.Minimum<1> & tags.Maximum<25>;
   season: number & tags.Minimum<2000>;
   season_type: 'regular' | 'post' | 'pre';
-  sport: 'nfl';
+  sport: 'nfl' | 'nba';
   player_id: string & tags.MinLength<1>;
 
   player: ISleeperPlayer;
@@ -76,10 +55,3 @@ export interface ISleeperPlayerEntry<TStats> {
   last_modified: Date; // converted from epoch ms
   updated_at: Date; // converted from epoch ms
 }
-
-// -----------------------------
-// Responses
-// -----------------------------
-export type SleeperStatResponse = ISleeperPlayerEntry<ISleeperPlayerStats>[];
-export type SleeperProjectionResponse = ISleeperPlayerEntry<ISleeperPlayerProjectionStats>[];
-export type SleeperStatRequest = Pick<ISleeperPlayer, 'position'>;

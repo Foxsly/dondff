@@ -1,21 +1,19 @@
-import { Inject, Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
+import { Inject, Injectable } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
-import {
-  ISleeperPlayerEntry,
-  ISleeperState,
-  SleeperProjectionResponse,
-  SleeperStatResponse,
-} from './entities/sleeper.entity';
 import typia from 'typia';
+import {
+  SleeperNflProjectionResponse,
+  SleeperNflStatResponse,
+} from './entities/sleeper-nfl.entity';
+import { ISleeperPlayerEntry, ISleeperState } from './entities/sleeper.entity';
 
 @Injectable()
 export class SleeperService {
   private readonly BASE_URL = 'https://api.sleeper.app';
 
-  // Create transformer functions
-  private assertSleeperStats = typia.misc.createAssertPrune<SleeperStatResponse>();
-  private assertSleeperProjections = typia.misc.createAssertPrune<SleeperProjectionResponse>();
+  private assertSleeperNflStats = typia.misc.createAssertPrune<SleeperNflStatResponse>();
+  private assertSleeperNflProjections = typia.misc.createAssertPrune<SleeperNflProjectionResponse>();
 
   constructor(
     @Inject(HttpService)
@@ -50,15 +48,13 @@ export class SleeperService {
     position: string,
     season: number,
     week: number,
-  ): Promise<SleeperProjectionResponse> {
+  ): Promise<SleeperNflProjectionResponse> {
     const url = `${this.BASE_URL}/projections/nfl/${season}/${week}?season_type=regular&position=${position}&order_by=pts_ppr`;
     const response$ = this.httpService.get(url);
     const response = await lastValueFrom(response$);
-    return this.assertSleeperProjections(
+    return this.assertSleeperNflProjections(
       this.transformSleeperEntries(
-        response.data.filter(
-          (entry) => entry?.stats?.pts_ppr && entry.player.metadata.genius_id,
-        ),
+        response.data.filter((entry) => entry?.stats?.pts_ppr && entry.player.metadata.genius_id),
       ),
     );
   }
@@ -68,11 +64,11 @@ export class SleeperService {
     season: number,
     week: number,
     seasonType: string = 'regular',
-  ): Promise<SleeperStatResponse> {
+  ): Promise<SleeperNflStatResponse> {
     const url = `${this.BASE_URL}/stats/nfl/${season}/${week}?season_type=${seasonType}&position=${position}&order_by=pts_ppr`;
     const response$ = this.httpService.get(url);
     const response = await lastValueFrom(response$);
-    return this.assertSleeperStats(
+    return this.assertSleeperNflStats(
       this.transformSleeperEntries(
         response.data
           .filter((entry) => entry.player.metadata.genius_id)

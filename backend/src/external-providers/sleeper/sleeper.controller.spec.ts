@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SleeperController } from './sleeper.controller';
 import { SleeperService } from './sleeper.service';
+import { ISleeperState } from './entities/sleeper.entity';
 import {
-  ISleeperState,
-  SleeperProjectionResponse,
-  SleeperStatResponse,
-  SleeperStatRequest,
-} from './entities/sleeper.entity';
+  SleeperNflProjectionResponse,
+  SleeperNflStatResponse,
+  SleeperNflStatRequest,
+} from './entities/sleeper-nfl.entity';
 
 describe('SleeperController', () => {
   let controller: SleeperController;
@@ -23,9 +23,9 @@ describe('SleeperController', () => {
     display_week: 3,
   };
 
-  const mockProjectionResponse: SleeperProjectionResponse = [
+  const mockProjectionResponse: SleeperNflProjectionResponse = [
     {
-      stats: { pts_std: 15, pts_half_ppr: 18, pts_ppr: 20, pos_adp_dd_ppr: 5 },
+      stats: { pts_std: 15, pts_half_ppr: 18, pts_ppr: 20},
       week: 3,
       season: 2025,
       season_type: 'regular',
@@ -37,6 +37,7 @@ describe('SleeperController', () => {
         last_name: 'Mahomes',
         position: 'QB',
         injury_status: null,
+        metadata: { genius_id: '123' },
       },
       team: 'KC',
       opponent: 'LAC',
@@ -47,9 +48,9 @@ describe('SleeperController', () => {
     },
   ];
 
-  const mockStatResponse: SleeperStatResponse = [
+  const mockStatResponse: SleeperNflStatResponse = [
     {
-      stats: { pts_std: 10, pts_half_ppr: 12, pts_ppr: 14, pos_rank_std: 2 },
+      stats: { pts_std: 10, pts_half_ppr: 12, pts_ppr: 14},
       week: 4,
       season: 2025,
       season_type: 'regular',
@@ -61,6 +62,7 @@ describe('SleeperController', () => {
         last_name: 'McCaffrey',
         position: 'RB',
         injury_status: null,
+        metadata: { genius_id: '456' },
       },
       team: 'SF',
       opponent: 'SEA',
@@ -103,7 +105,7 @@ describe('SleeperController', () => {
 
   describe('getProjections', () => {
     it('should call service.getPlayerProjections with correct args and return projections', async () => {
-      const query: SleeperStatRequest = { position: 'QB' };
+      const query: SleeperNflStatRequest = { position: 'QB'};
       service.getPlayerProjections.mockResolvedValue(mockProjectionResponse);
 
       const result = await controller.getProjections(2025, 3, query);
@@ -115,7 +117,7 @@ describe('SleeperController', () => {
 
   describe('getStats', () => {
     it('should call service.getPlayerStatistics with correct args and return stats', async () => {
-      const query: SleeperStatRequest = { position: 'RB' };
+      const query: SleeperNflStatRequest = { position: 'RB'};
       service.getPlayerStatistics.mockResolvedValue(mockStatResponse);
 
       const result = await controller.getStats(2025, 4, query);

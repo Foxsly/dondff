@@ -3,9 +3,9 @@ import { HttpService } from '@nestjs/axios';
 import { of } from 'rxjs';
 import { SleeperService } from './sleeper.service';
 import {
-  SleeperProjectionResponse,
-  SleeperStatResponse,
-} from './entities/sleeper.entity';
+  SleeperNflProjectionResponse,
+  SleeperNflStatResponse,
+} from './entities/sleeper-nfl.entity';
 import stateFixture from './__fixtures__/sleeper-state.test.json';
 import rawProjectionsFixture from './__fixtures__/sleeper-projections.raw.test.json';
 import projectionsFixture from './__fixtures__/sleeper-projections.transformed.test.json';
@@ -52,7 +52,7 @@ describe('SleeperService', () => {
   it('should return player projections with transformed dates and season', async () => {
     httpService.get.mockReturnValueOnce(of(mockAxiosResponse(mockRawProjectionResponse)));
 
-    const result: SleeperProjectionResponse = await service.getPlayerProjections('WR', 2025, 4);
+    const result: SleeperNflProjectionResponse = await service.getPlayerProjections('WR', 2025, 4);
     expect(
       result.map((e) => ({
         ...e,
@@ -66,7 +66,7 @@ describe('SleeperService', () => {
   it('should return player stats with defaults and transformed dates', async () => {
     httpService.get.mockReturnValueOnce(of(mockAxiosResponse(mockRawStatResponse)));
 
-    const result: SleeperStatResponse = await service.getPlayerStatistics('WR', 2025, 4);
+    const result: SleeperNflStatResponse = await service.getPlayerStatistics('WR', 2025, 4);
     expect(
       result.map((e) => ({
         ...e,
