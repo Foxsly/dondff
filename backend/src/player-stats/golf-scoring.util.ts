@@ -130,6 +130,12 @@ export function calculateGolferScore(competitor: EspnCompetitor): number {
 
 export function normalizeName(name: string): string {
   return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ø/g, 'o').replace(/Ø/g, 'O')
+    .replace(/æ/g, 'ae').replace(/Æ/g, 'AE')
+    .replace(/ð/g, 'd').replace(/Ð/g, 'D')
+    .replace(/ß/g, 'ss')
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, '')
     .replace(/\b(jr|sr|ii|iii|iv)\b/g, '')
