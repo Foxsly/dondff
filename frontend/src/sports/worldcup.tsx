@@ -37,12 +37,15 @@ export const worldCupConfig: SportConfig = {
   supportsScoring: true,
 
   renderPlayerDetails: (player: GamePlayer) => (
-    <span className="proj">Value: ${(player.projectedPoints * 1000).toLocaleString()}</span>
+    <>
+      <span className="status">{player.matchup?.team ?? ''} vs {player.matchup?.opponent ?? ''}</span><br />
+      <span className="proj">Value: ${(player.projectedPoints * 1000).toLocaleString()}</span>
+    </>
   ),
 
   renderOfferDetails: (offer: GameOffer) => (
     <>
-      <br />
+      <span className="status">{offer.matchup?.team ?? ''} vs {offer.matchup?.opponent ?? ''}</span><br />
       <span className="proj">Value: ${(offer.projectedPoints * 1000).toLocaleString()}</span>
     </>
   ),

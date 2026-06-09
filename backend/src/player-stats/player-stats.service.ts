@@ -48,7 +48,9 @@ export class PlayerStatsService {
     if (sportLeague === 'GOLF') {
       return this.getGolfProjections();
     } else if (sportLeague === 'WORLDCUP') {
-      return this.getWorldCupProjections(eventGroupId, position);
+      const projections = await this.getWorldCupProjections(eventGroupId, position);
+      projections.forEach(this.setPlayerTeamMappings, this);
+      return projections;
     }
 
     const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
