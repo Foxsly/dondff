@@ -99,6 +99,7 @@ export class FifaService {
       });
     }
 
+    projections.sort((a, b) => b.price - a.price);
     return projections;
   }
 }
