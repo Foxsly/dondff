@@ -50,11 +50,18 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ leagueId, childr
         if (cancelled) return;
 
         setLeague(leagueData);
-        setPositions(positionsData);
 
         if (leagueData.sportLeague) {
-          setSportConfig(getSportConfig(leagueData.sportLeague));
+          const config = getSportConfig(leagueData.sportLeague);
+          if (config.positionOrder) {
+            positionsData.sort(
+              (a, b) => config.positionOrder!.indexOf(a.position) - config.positionOrder!.indexOf(b.position)
+            );
+          }
+          setSportConfig(config);
         }
+
+        setPositions(positionsData);
       } catch (err: any) {
         if (!cancelled) setError(err?.message ?? 'Failed to load league');
       } finally {

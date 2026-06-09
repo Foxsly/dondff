@@ -52,5 +52,7 @@ export const worldCupConfig: SportConfig = {
 
   getPositionDisplayName: (position: string) => position,
 
+  positionOrder: ['GK', 'DEF', 'MID', 'FWD'],
+
   supportsQuickPlay: false,
 };

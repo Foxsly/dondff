@@ -52,5 +52,7 @@ export const golfConfig: SportConfig = {
     return position;
   },
 
+  positionOrder: ['GOLF_PLAYER_1', 'GOLF_PLAYER_2', 'GOLF_PLAYER_3'],
+
   supportsQuickPlay: false,
 };

@@ -71,6 +71,8 @@ export const nflConfig: SportConfig = {
 
   getPositionDisplayName: (position: string) => position,
 
+  positionOrder: ['RB', 'WR'],
+
   supportsQuickPlay: true,
   quickPlayPositions: ['WR', 'RB'],
   quickPlayWeekCount: 21,
