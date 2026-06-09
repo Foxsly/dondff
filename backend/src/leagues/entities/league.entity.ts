@@ -10,4 +10,4 @@ export interface ILeague {
 export type League = Selectable<ILeague>;
 export type CreateLeagueDto = Omit<ILeague, 'leagueId'>;
 export type UpdateLeagueDto = Partial<ILeague>;
-export type SportLeague = 'NFL' | 'GOLF' | 'NBA' | 'NHL' | 'MLB';
+export type SportLeague = 'NFL' | 'GOLF' | 'NBA' | 'NHL' | 'MLB' | 'WORLDCUP';
