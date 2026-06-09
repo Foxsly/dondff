@@ -84,6 +84,22 @@ This document tracks remaining and current **end-to-end (E2E)** coverage across 
 
 ---
 
+## FIFA (`src/external-providers/fifa/fifa.e2e.spec.ts`)
+
+### ✅ Covered
+- [x] `GET /fifa/rounds` — returns rounds from upstream API (mocked).
+- [x] `GET /fifa/players` — returns players from upstream API (mocked).
+- [x] `GET /fifa/squads` — returns squads from upstream API (mocked).
+- [x] `GET /fifa/rounds/:roundId/projections` — returns merged player+squad+match projections for a round (mocked).
+- [x] `GET /fifa/rounds/:roundId/projections` — returns empty array for unknown round ID.
+
+### ⏭️ Remaining / Next Up
+- [ ] Upstream errors: propagate 4xx/5xx with clear error messages.
+- [ ] Timeouts / retry behavior (if implemented).
+- [ ] Caching semantics (if any): warm cache, subsequent reads from cache; invalidation policy.
+
+---
+
 ## Cross-cutting / Infrastructure
 - [ ] **Error contract**: Ensure all endpoints return consistent error payloads for 400/404 (assert `{ statusCode, message }`).
 - [ ] **Typia runtime validation**: Confirm `@TypedRoute` + `typia` validation active for all DTOs.

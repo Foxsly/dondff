@@ -1,0 +1,92 @@
+[
+  {
+    "id": 1,
+    "status": "scheduled",
+    "startDate": "2026-06-11T20:00:00+01:00",
+    "endDate": "2026-06-18T05:00:00+01:00",
+    "tournaments": [
+      {
+        "id": 1,
+        "period": "pre_match",
+        "minutes": 0,
+        "extraMinutes": 0,
+        "venueName": "Estadio Banorte",
+        "venueCity": "Mexico City",
+        "venueId": 1,
+        "date": "2026-06-11T20:00:00+01:00",
+        "status": "scheduled",
+        "isSuspended": false,
+        "homeSquadId": 28,
+        "awaySquadId": 40,
+        "homeSquadName": "Mexico",
+        "awaySquadName": "South Africa",
+        "homeSquadAbbr": "MEX",
+        "awaySquadAbbr": "RSA",
+        "homeScore": null,
+        "homePenaltyScore": null,
+        "homeGoalScorersAssists": null,
+        "awayScore": null,
+        "awayPenaltyScore": null,
+        "awayGoalScorersAssists": null
+      },
+      {
+        "id": 2,
+        "period": "pre_match",
+        "minutes": 0,
+        "extraMinutes": 0,
+        "venueName": "Estadio Akron",
+        "venueCity": "Guadalajara",
+        "venueId": 2,
+        "date": "2026-06-12T03:00:00+01:00",
+        "status": "scheduled",
+        "isSuspended": false,
+        "homeSquadId": 27,
+        "awaySquadId": 15,
+        "homeSquadName": "Korea Republic",
+        "awaySquadName": "Czechia",
+        "homeSquadAbbr": "KOR",
+        "awaySquadAbbr": "CZE",
+        "homeScore": null,
+        "homePenaltyScore": null,
+        "homeGoalScorersAssists": null,
+        "awayScore": null,
+        "awayPenaltyScore": null,
+        "awayGoalScorersAssists": null
+      }
+    ],
+    "stage": "GROUP"
+  },
+  {
+    "id": 2,
+    "status": "scheduled",
+    "startDate": "2026-06-18T17:00:00+01:00",
+    "endDate": "2026-06-24T05:00:00+01:00",
+    "tournaments": [
+      {
+        "id": 25,
+        "period": "pre_match",
+        "minutes": 0,
+        "extraMinutes": 0,
+        "venueName": "Mercedes-benz Stadium",
+        "venueCity": "Atlanta, Georgia",
+        "venueId": 13,
+        "date": "2026-06-18T17:00:00+01:00",
+        "status": "scheduled",
+        "isSuspended": false,
+        "homeSquadId": 15,
+        "awaySquadId": 40,
+        "homeSquadName": "Czechia",
+        "awaySquadName": "South Africa",
+        "homeSquadAbbr": "CZE",
+        "awaySquadAbbr": "RSA",
+        "homeScore": null,
+        "homePenaltyScore": null,
+        "homeGoalScorersAssists": null,
+        "awayScore": null,
+        "awayPenaltyScore": null,
+        "awayGoalScorersAssists": null
+      }
+    ],
+    "stage": "GROUP"
+  }
+]

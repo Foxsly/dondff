@@ -12,6 +12,7 @@ const unique = () => Math.random().toString(36).slice(2, 8);
 
 export const leagueFactory = (overrides: Partial<CreateLeagueDto> = {}): CreateLeagueDto => ({
   name: overrides.name ?? `Test League ${unique()}`,
+  sportLeague: overrides.sportLeague ?? 'NFL',
 });
 
 export const userFactory = (overrides: Partial<CreateUserDto> = {}): CreateUserDto => {
@@ -27,11 +28,6 @@ export const leagueSettingsFactory = (
 ): CreateLeagueSettingsDto => ({
   leagueId: overrides.leagueId ?? crypto.randomUUID(),
   scoringType: overrides.scoringType ?? 'PPR',
-  positions: overrides.positions ?? ['QB', 'RB', 'WR', 'TE', 'FLEX', 'DST'],
-  rbPoolSize: overrides.rbPoolSize ?? 24,
-  wrPoolSize: overrides.wrPoolSize ?? 36,
-  qbPoolSize: overrides.qbPoolSize ?? 12,
-  tePoolSize: overrides.tePoolSize ?? 12,
 });
 
 export const teamFactory = (overrides: Partial<CreateTeamDto> = {}): CreateTeamDto => ({
