@@ -1,0 +1,30 @@
+[
+  {
+    "id": 58,
+    "firstName": "Jordan",
+    "lastName": "Bos",
+    "knownName": null,
+    "position": "DEF",
+    "price": 4.0,
+    "status": "playing",
+    "fantasyPoints": 0,
+    "team": "Korea Republic",
+    "opponent": "Czechia",
+    "matchDate": "2026-06-12T03:00:00+01:00",
+    "group": "a"
+  },
+  {
+    "id": 59,
+    "firstName": "Kye",
+    "lastName": "Rowles",
+    "knownName": null,
+    "position": "DEF",
+    "price": 3.9,
+    "status": "transferred",
+    "fantasyPoints": 0,
+    "team": "Korea Republic",
+    "opponent": "Czechia",
+    "matchDate": "2026-06-12T03:00:00+01:00",
+    "group": "a"
+  }
+]

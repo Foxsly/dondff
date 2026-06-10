@@ -19,7 +19,7 @@ export interface IPlayerStats extends IPlayer {
 }
 
 export type PlayerStatResponse = IPlayerStats[];
-export type PlayerPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DST' | 'GOLF_PLAYER';
+export type PlayerPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DST' | 'GOLF_PLAYER' | 'GK' | 'DEF' | 'MID' | 'FWD';
 
 export type PlayerTeams = {
   team: string;

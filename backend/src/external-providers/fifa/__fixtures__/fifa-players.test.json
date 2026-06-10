@@ -1,0 +1,80 @@
+[
+  {
+    "id": 58,
+    "firstName": "Jordan",
+    "lastName": "Bos",
+    "knownName": null,
+    "squadId": 27,
+    "position": "DEF",
+    "price": 4.0,
+    "status": "playing",
+    "matchStatus": null,
+    "percentSelected": 0.5,
+    "roundsSelected": { "1": 0.5 },
+    "stats": {
+      "totalPoints": 0,
+      "avgPoints": 0,
+      "form": 0,
+      "lastRoundPoints": 0,
+      "roundPoints": [],
+      "nextFixtureFromActiveRound": null,
+      "nextFixtureFromScheduledRound": 8
+    },
+    "oneToWatch": false,
+    "oneToWatchText": null,
+    "qualificationRoundIds": [],
+    "fifaId": null
+  },
+  {
+    "id": 59,
+    "firstName": "Kye",
+    "lastName": "Rowles",
+    "knownName": null,
+    "squadId": 27,
+    "position": "DEF",
+    "price": 3.9,
+    "status": "transferred",
+    "matchStatus": null,
+    "percentSelected": 0,
+    "roundsSelected": { "1": 0 },
+    "stats": {
+      "totalPoints": 0,
+      "avgPoints": 0,
+      "form": 0,
+      "lastRoundPoints": 0,
+      "roundPoints": [],
+      "nextFixtureFromActiveRound": null,
+      "nextFixtureFromScheduledRound": 8
+    },
+    "oneToWatch": false,
+    "oneToWatchText": null,
+    "qualificationRoundIds": [],
+    "fifaId": null
+  },
+  {
+    "id": 1,
+    "firstName": "Rayan",
+    "lastName": "Aït-Nouri",
+    "knownName": null,
+    "squadId": 1,
+    "position": "DEF",
+    "price": 4.9,
+    "status": "playing",
+    "matchStatus": null,
+    "percentSelected": 1.2,
+    "roundsSelected": { "1": 1.2 },
+    "stats": {
+      "totalPoints": 0,
+      "avgPoints": 0,
+      "form": 0,
+      "lastRoundPoints": 0,
+      "roundPoints": [],
+      "nextFixtureFromActiveRound": null,
+      "nextFixtureFromScheduledRound": 19
+    },
+    "oneToWatch": false,
+    "oneToWatchText": null,
+    "qualificationRoundIds": [],
+    "fifaId": null
+  }
+]
