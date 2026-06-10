@@ -1,6 +1,7 @@
 import { EventsService } from '@/events/events.service';
 import { EspnService } from '@/external-providers/espn/espn.service';
 import { FanduelService } from '@/external-providers/fanduel/fanduel.service';
+import { FifaService } from '@/external-providers/fifa/fifa.service';
 import { SportLeague } from '@/leagues/entities/league.entity';
 import {
   IPlayerProjection,
@@ -24,6 +25,7 @@ export class PlayerStatsService {
     private readonly fanduelService: FanduelService,
     private readonly eventsService: EventsService,
     private readonly espnService: EspnService,
+    private readonly fifaService: FifaService,
   ) {
     this.playerTeams = new Map<string, PlayerTeams>()
   }
@@ -45,6 +47,10 @@ export class PlayerStatsService {
   ): Promise<PlayerProjectionResponse> {
     if (sportLeague === 'GOLF') {
       return this.getGolfProjections();
+    } else if (sportLeague === 'WORLDCUP') {
+      const projections = await this.getWorldCupProjections(eventGroupId, position);
+      projections.forEach(this.setPlayerTeamMappings, this);
+      return projections;
     }
 
     const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
@@ -120,6 +126,8 @@ export class PlayerStatsService {
   ): Promise<PlayerStatResponse> {
     if (sportLeague === 'GOLF') {
       return this.getGolfStatistics(season, eventGroupId);
+    } else if (sportLeague === 'WORLDCUP') {
+      return this.getWorldCupStats(eventGroupId, position);
     }
 
     const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
@@ -180,6 +188,65 @@ export class PlayerStatsService {
       injuryStatus: null,
       team: '',
     }));
+  }
+
+  private getWorldCupPlayerName(knownName: string | null, firstName: string, lastName: string): string {
+    return knownName ?? `${firstName} ${lastName}`;
+  }
+
+  private async resolveWorldCupRoundId(eventGroupId: string): Promise<number> {
+    const events = await this.eventsService.findEventsByEventGroup(eventGroupId);
+    if (events.length === 0) {
+      throw new Error(`No events found for event group ${eventGroupId}`);
+    }
+
+    //Pull the FIFA round ID from the external event ID
+    const match = events[0].externalEventId?.match(/^WC-(\d+)-/);
+    if (!match) {
+      throw new Error(
+        `Cannot parse round ID from externalEventId: ${events[0].externalEventId}`,
+      );
+    }
+    return parseInt(match[1], 10);
+  }
+
+  private async getWorldCupProjections(
+    eventGroupId: string,
+    position: string,
+  ): Promise<PlayerProjectionResponse> {
+    const roundId = await this.resolveWorldCupRoundId(eventGroupId);
+    const projections = await this.fifaService.getRoundProjections(roundId);
+    return projections
+      .filter((p) => p.status !== 'transferred')
+      .filter((p) => p.position === position)
+      .map((p) => ({
+        playerId: `${p.id}`,
+        name: this.getWorldCupPlayerName(p.knownName, p.firstName, p.lastName),
+        position: p.position as PlayerPosition,
+        projectedPoints: p.price,
+        injuryStatus: p.status,
+        oppTeam: p.opponent,
+        team: p.team,
+      }));
+  }
+
+  private async getWorldCupStats(
+    eventGroupId: string,
+    position: string,
+  ): Promise<PlayerStatResponse> {
+    const roundId = await this.resolveWorldCupRoundId(eventGroupId);
+    const projections = await this.fifaService.getRoundProjections(roundId);
+    return projections
+      .filter((p) => p.status !== 'transferred')
+      .filter((p) => p.position === position)
+      .map((p) => ({
+        playerId: `${p.id}`,
+        name: this.getWorldCupPlayerName(p.knownName, p.firstName, p.lastName),
+        position: p.position as PlayerPosition,
+        points: p.fantasyPoints,
+        oppTeam: p.opponent,
+        team: p.team,
+      }));
   }
 
   getTeamAndOpponentForPlayer(playerId: string): PlayerTeams {

@@ -15,7 +15,7 @@ const OfferPanel: React.FC<OfferPanelProps> = ({
   <div className="action-box">
     <div className="offer-box">The Banker offers you:
       <div className="list-player">
-        {offer.playerName}
+        {offer.playerName}<br />
         {sportConfig?.renderOfferDetails(offer)}
       </div>
     </div>

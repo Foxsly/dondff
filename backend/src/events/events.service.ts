@@ -12,14 +12,24 @@ import { SportLeague } from '@/leagues/entities/league.entity';
 import { FanduelService } from '@/external-providers/fanduel/fanduel.service';
 import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
 import { EspnService } from '@/external-providers/espn/espn.service';
+import { FifaService } from '@/external-providers/fifa/fifa.service';
 
 @Injectable()
 export class EventsService {
+  private readonly WORLD_CUP_STAGE_NAMES: Record<string, string> = {
+    R32: 'Round of 32',
+    R16: 'Round of 16',
+    QF: 'Quarter-finals',
+    SF: 'Semi-finals',
+    F: 'Final',
+  };
+
   constructor(
     private readonly eventsRepository: EventsRepository,
     private readonly fanduelService: FanduelService,
     private readonly sleeperService: SleeperService,
     private readonly espnService: EspnService,
+    private readonly fifaService: FifaService,
   ) {}
 
   async createEventGroup(dto: CreateEventGroupDto): Promise<EventGroup> {
@@ -80,6 +90,8 @@ export class EventsService {
       await this.syncGolfEvents();
     } else if (sportLeague === 'NFL') {
       await this.syncNflEvents();
+    } else if (sportLeague === 'WORLDCUP') {
+      await this.syncWorldCupEvents();
     }
     return this.eventsRepository.findEventGroupsBySportLeague(sportLeague);
   }
@@ -159,6 +171,49 @@ export class EventsService {
         externalEventId,
         externalEventSource: 'SLEEPER',
       });
+    }
+  }
+
+  private stageDisplayName(stage: string, roundId: number): string {
+    if (stage === 'GROUP') {
+      return `Group Stage – Matchday ${roundId}`;
+    }
+    const name = this.WORLD_CUP_STAGE_NAMES[stage];
+    return name ? `Knockout Stage – ${name}` : `Stage ${stage}`;
+  }
+
+  private async syncWorldCupEvents(): Promise<void> {
+    const rounds = await this.fifaService.getRounds();
+
+    for (const round of rounds) {
+      for (const match of round.tournaments) {
+        const externalEventId = `WC-${round.id}-${match.id}`;
+        const existingEvent = await this.eventsRepository.findEventByExternalEvent(
+          externalEventId,
+          'FIFA',
+        );
+        if (existingEvent) {
+          continue;
+        }
+
+        const groupName = `World Cup ${this.stageDisplayName(round.stage, round.id)}`;
+        let eventGroup = await this.eventsRepository.findEventGroupByName(groupName);
+        if (!eventGroup) {
+          eventGroup = await this.createEventGroup({
+            name: groupName,
+            sportLeague: 'WORLDCUP',
+          });
+        }
+
+        await this.createEvent({
+          eventGroupId: eventGroup.eventGroupId,
+          name: `${match.homeSquadName} vs ${match.awaySquadName}`,
+          startDate: match.date,
+          endDate: match.date,
+          externalEventId,
+          externalEventSource: 'FIFA',
+        });
+      }
     }
   }
 

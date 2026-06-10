@@ -1,5 +1,6 @@
 import { EspnModule } from '@/external-providers/espn/espn.module';
 import { FanduelModule } from '@/external-providers/fanduel/fanduel.module';
+import { FifaModule } from '@/external-providers/fifa/fifa.module';
 import { SleeperModule } from '@/external-providers/sleeper/sleeper.module';
 import { DatabaseModule } from '@/infrastructure/database/database.module';
 import { Module } from '@nestjs/common';
@@ -16,7 +17,7 @@ import { EventsService } from './events.service';
       useClass: DatabaseEventsRepository,
     },
   ],
-  imports: [DatabaseModule, FanduelModule, SleeperModule, EspnModule],
+  imports: [DatabaseModule, FanduelModule, SleeperModule, EspnModule, FifaModule],
   exports: [EventsService],
 })
 export class EventsModule {}

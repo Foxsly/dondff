@@ -2,10 +2,12 @@ import type { SportLeague } from '../types';
 import type { SportConfig } from './types';
 import { nflConfig } from './nfl';
 import { golfConfig } from './golf';
+import { worldCupConfig } from './worldcup';
 
 const configs: Record<string, SportConfig> = {
   NFL: nflConfig,
   GOLF: golfConfig,
+  WORLDCUP: worldCupConfig,
 };
 
 export const getSportConfig = (sport: SportLeague): SportConfig => {

@@ -132,6 +132,12 @@ export const useGameState = ({ leagueId, season, eventGroupId, teamUser }: UseGa
       getLeaguePositions(leagueId),
     ]);
 
+    if (sportConfig?.positionOrder) {
+      leaguePositions.sort(
+        (a, b) => sportConfig.positionOrder!.indexOf(a.position) - sportConfig.positionOrder!.indexOf(b.position)
+      );
+    }
+
     let teamPlayers: any[] = [];
     try {
       const teamData = await teamsApi.getTeam(teamId!);
@@ -198,7 +204,7 @@ export const useGameState = ({ leagueId, season, eventGroupId, teamUser }: UseGa
       const currentOffer = await teamsApi.getCurrentOffer(teamId!, selectedPosition);
       setOffer(currentOffer);
     }
-  }, [teamId, leagueId, fetchTeamEntries]);
+  }, [teamId, leagueId, fetchTeamEntries, sportConfig]);
 
   useEffect(() => {
     if (hasSetupGameRef.current) return;

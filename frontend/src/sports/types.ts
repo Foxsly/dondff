@@ -48,6 +48,10 @@ export interface SportConfig {
   /** Map position key to a user-friendly display name */
   getPositionDisplayName: (position: string) => string;
 
+  // TODO if we decide to make leagues more customizable, we should move this into the backend in league_settings_position
+  /** Preferred display/play order for positions. Determines lineup build order. */
+  positionOrder?: string[];
+
   /** Quick-play config for the home page */
   supportsQuickPlay: boolean;
   quickPlayPositions?: string[];
