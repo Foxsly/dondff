@@ -125,9 +125,9 @@ export class LeaguesService {
   async createDefaultWorldCupPositions(leagueSettingsId: string): Promise<void> {
     const defaultWorldCupPositions = [
       { position: 'GK', poolSize: 48 },
-      { position: 'DEF', poolSize: 192 },
+      { position: 'DEF', poolSize: 168 },
       { position: 'MID', poolSize: 240 },
-      { position: 'FWD', poolSize: 144 },
+      { position: 'FWD', poolSize: 120 },
     ];
 
     for (const pos of defaultWorldCupPositions) {
