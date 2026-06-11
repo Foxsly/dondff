@@ -39,7 +39,6 @@ export const golfConfig: SportConfig = {
 
   renderOfferDetails: (offer: GameOffer) => (
     <>
-      <br />
       <span className="proj">Proj: {offer.projectedPoints}</span>
     </>
   ),
