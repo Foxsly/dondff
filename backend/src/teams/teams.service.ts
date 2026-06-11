@@ -1,3 +1,4 @@
+import { shuffle } from '@/common/util';
 import { EventGroup } from '@/events/entities/event-group.entity';
 import { EventsService } from '@/events/events.service';
 import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
@@ -30,9 +31,6 @@ import {
   TeamEntryOfferStatus,
 } from './entities/team-entry.entity';
 import { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
-
-//yacht-fisher shuffle: https://github.com/queviva/yacht-fisher
-const shuffle = (v, r = [...v]) => v.map(() => r.splice(~~(Math.random() * r.length), 1)[0]);
 
 @Injectable()
 export class TeamsService {
@@ -104,13 +102,13 @@ export class TeamsService {
     // Get existing entries for this team
     const existingEntries = await this.getAllTeamEntriesForTeam(teamId);
     const entryMap = new Map(existingEntries.map(e => [e.position, e]));
-    
+
     // Check if ALL positions are finished
     const allFinished = positions.every(pos => {
       const entry = entryMap.get(pos.position);
       return entry?.status === 'finished';
     });
-    
+
     return {
       // No positions configured or no entries means game hasn't started — always playable
       playable: positions.length === 0 || existingEntries.length === 0 || !allFinished,
@@ -242,7 +240,13 @@ export class TeamsService {
     sportLeague: SportLeague,
     numberOfCases: number = 10,
   ) {
-    let playerProjections: PlayerProjectionResponse = await this.playerStatsService.getPlayerProjections(position, team.seasonYear, team.eventGroupId, sportLeague,);
+    let playerProjections: PlayerProjectionResponse =
+      await this.playerStatsService.getPlayerProjections(
+        position,
+        team.seasonYear,
+        team.eventGroupId,
+        sportLeague,
+      );
     let teamEntry: ITeamEntry = await this.getOrCreateTeamEntry(
       team.teamId,
       position,
@@ -298,13 +302,13 @@ export class TeamsService {
     const team = await this.findOne(teamId);
     const league = await this.leaguesService.findOne(team.leagueId);
     const leagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(team.leagueId);
-    
+
     const entry = await this.getOrCreateTeamEntry(
       teamId,
       position,
       leagueSettings.leagueSettingsId,
     );
-    
+
     // Check if audits exist for current reset
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(entry.teamEntryId);
     if (audits.length === 0) {
@@ -317,7 +321,7 @@ export class TeamsService {
         this.getNumberOfCases(await this.eventsService.findOneEventGroup(team.eventGroupId)),
       );
     }
-    
+
     return entry;
   }
 
@@ -600,7 +604,7 @@ export class TeamsService {
   async calculateAndPersistScores(eventGroupId: string): Promise<void> {
     // Get event group with status (status is calculated on-the-fly)
     const eventGroupWithStatus = await this.eventsService.getEventGroupWithDates(eventGroupId);
-    
+
     if (eventGroupWithStatus.status !== 'FINISHED') {
       this.logger.warn(`Event group "${eventGroupWithStatus.name}" is not finished (status: ${eventGroupWithStatus.status}), skipping score calculation`);
       return;
