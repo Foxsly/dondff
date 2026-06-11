@@ -1,3 +1,4 @@
+import { shuffle } from '@/common/util';
 import { Inject, Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
@@ -99,7 +100,6 @@ export class FifaService {
       });
     }
 
-    projections.sort((a, b) => b.price - a.price);
-    return projections;
+    return shuffle(projections).sort((a, b) => b.price - a.price);
   }
 }
