@@ -1,3 +1,5 @@
+import { SportLeague } from '@/common/types/sport-league.type';
+
 /**
  * Dev seed — idempotent, safe to re-run.
  *
@@ -56,7 +58,7 @@ async function seed() {
       .values({
         leagueId: LEAGUE_ID,
         name: 'Dev League 2025',
-        sportLeague: 'NFL',
+        sportLeague: SportLeague.NFL,
       })
       .onConflict((oc) => oc.column('leagueId').doNothing())
       .execute();
@@ -119,7 +121,7 @@ async function seed() {
           .values({
             eventGroupId: eventGroupId,
             name: `NFL Week ${week}`,
-            sportLeague: 'NFL',
+            sportLeague: SportLeague.NFL,
           })
           .execute();
       }
@@ -143,7 +145,7 @@ async function seed() {
       .values({
         leagueId: GOLF_LEAGUE_ID,
         name: 'Dev LEAGUE Masters',
-        sportLeague: 'GOLF',
+        sportLeague: SportLeague.GOLF,
       })
       .onConflict((oc) => oc.column('leagueId').doNothing())
       .execute();
@@ -188,7 +190,7 @@ async function seed() {
       .values({
         eventGroupId: GOLF_EVENT_GROUP_ID,
         name: 'The Masters',
-        sportLeague: 'GOLF',
+        sportLeague: SportLeague.GOLF,
       })
       .onConflict((oc) => oc.column('eventGroupId').doNothing())
       .execute();

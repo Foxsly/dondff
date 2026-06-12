@@ -22,7 +22,7 @@ export class PlayerStatsService {
     position: string,
     season: number,
     eventGroupId: string,
-    sportLeague: SportLeague = 'NFL',
+    sportLeague = SportLeague.NFL,
   ): Promise<PlayerProjectionResponse> {
     const strategy = this.playerStatsRegistry.get(sportLeague);
     const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
@@ -36,7 +36,7 @@ export class PlayerStatsService {
     position: string,
     season: number,
     eventGroupId: string,
-    sportLeague: SportLeague = 'NFL',
+    sportLeague = SportLeague.NFL,
   ): Promise<PlayerStatResponse> {
     const strategy = this.playerStatsRegistry.get(sportLeague);
     const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);

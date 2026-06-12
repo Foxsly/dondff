@@ -15,9 +15,9 @@ export class EventSyncStrategyRegistry {
     worldCup: WorldCupEventSyncStrategy,
   ) {
     this.strategies = new Map<SportLeague, IEventSyncStrategy>([
-      ['NFL', nfl],
-      ['GOLF', golf],
-      ['WORLDCUP', worldCup],
+      [SportLeague.NFL, nfl],
+      [SportLeague.GOLF, golf],
+      [SportLeague.WORLDCUP, worldCup],
     ]);
   }
 

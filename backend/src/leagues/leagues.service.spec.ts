@@ -22,7 +22,7 @@ describe('LeaguesService', () => {
   const mockLeague: League = {
     leagueId: 'uuid-1',
     name: 'Test League',
-    sportLeague: 'NFL' as SportLeague,
+    sportLeague: SportLeague.NFL,
   };
 
   // ---------------------------------------------------------------------------
@@ -121,9 +121,9 @@ describe('LeaguesService', () => {
     repo.createLeague.mockResolvedValue(mockLeague);
     repo.findOneLeague.mockResolvedValue(mockLeague as any);
     repo.createLeagueSettings.mockResolvedValue({ leagueSettingsId: 'settings-uuid', leagueId: 'uuid-1', scoringType: 'PPR' } as any);
-    const result = await service.create({ name: 'Test League', sportLeague: 'NFL' });
+    const result = await service.create({ name: 'Test League', sportLeague: SportLeague.NFL });
     expect(result).toEqual(mockLeague);
-    expect(repo.createLeague).toHaveBeenCalledWith({ name: 'Test League', sportLeague: 'NFL' });
+    expect(repo.createLeague).toHaveBeenCalledWith({ name: 'Test League', sportLeague: SportLeague.NFL });
   });
 
   it('should find all leagues', async () => {
@@ -268,7 +268,7 @@ describe('LeaguesService', () => {
   //    If someone accidentally adds a 5th position, toHaveBeenCalledTimes(4)
   //    will catch it
   it('should create default World Cup positions when league is WORLDCUP', async () => {
-    const leagueDto = { name: 'WC League', sportLeague: 'WORLDCUP' as SportLeague };
+    const leagueDto = { name: 'WC League', sportLeague: SportLeague.WORLDCUP };
     const createdLeague = { leagueId: 'uuid-wc', ...leagueDto };
     const createdSettings = { leagueSettingsId: 'settings-uuid', leagueId: 'uuid-wc', scoringType: 'PPR' };
 

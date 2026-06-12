@@ -15,9 +15,9 @@ export class PlayerStatsStrategyRegistry {
     worldCup: WorldCupPlayerStatsStrategy,
   ) {
     this.strategies = new Map<SportLeague, IPlayerStatsStrategy>([
-      ['NFL', nfl],
-      ['GOLF', golf],
-      ['WORLDCUP', worldCup],
+      [SportLeague.NFL, nfl],
+      [SportLeague.GOLF, golf],
+      [SportLeague.WORLDCUP, worldCup],
     ]);
   }
 
