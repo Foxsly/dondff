@@ -3,7 +3,7 @@ import { FanduelService } from '@/external-providers/fanduel/fanduel.service';
 import { EspnService } from '@/external-providers/espn/espn.service';
 import { IPlayerStatsStrategy } from '@/player-stats/strategies/player-stats-strategy.interface';
 import { IPlayerProjection, IPlayerStats, PlayerPosition } from '@/player-stats/entities/player-stats.entity';
-import { calculateGolferScore } from '@/player-stats/golf-scoring.util';
+import { calculateGolferScore } from '@/golf/golf-scoring.util';
 import { EventGroup } from '@/events/entities/event-group.entity';
 import { Event } from '@/events/entities/event.entity';
 
