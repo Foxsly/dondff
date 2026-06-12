@@ -259,6 +259,8 @@ export class TeamsService {
       .find((positionSettings) => positionSettings.position === position)?.poolSize;
 
     // For sports with shared player pools (e.g., GOLF), exclude players already selected for other positions
+    //TODO extract this to a 'determinePlayerPool' strategy or something, where this is the default,
+    //TODO but for WC, we do 1 GK, 2 DEF, 2 MID, 2 FWD from each country and then fill in the remaining positions by cost
     const excludedPlayerIds = await this.getExcludedPlayerIdsForPosition(team, position, sportLeague);
     let trimmedPlayers: IPlayerProjection[] = playerProjections
       .filter(p => !excludedPlayerIds.includes(p.playerId))
