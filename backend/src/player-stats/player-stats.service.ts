@@ -6,20 +6,17 @@ import {
   PlayerStatResponse,
   PlayerTeams,
 } from '@/player-stats/entities/player-stats.entity';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PlayerStatsStrategyRegistry } from './strategies/player-stats-strategy.registry';
 
 @Injectable()
 export class PlayerStatsService {
-  private readonly logger = new Logger(PlayerStatsService.name);
-  private playerTeams: Map<string, PlayerTeams> = new Map<string, PlayerTeams>();
+  private playerTeams = new Map<string, PlayerTeams>();
 
   constructor(
     private readonly eventsService: EventsService,
     private readonly playerStatsRegistry: PlayerStatsStrategyRegistry,
-  ) {
-    this.playerTeams = new Map<string, PlayerTeams>();
-  }
+  ) {}
 
   async getPlayerProjections(
     position: string,

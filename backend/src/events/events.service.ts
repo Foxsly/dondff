@@ -115,8 +115,6 @@ export class EventsService {
     return result;
   }
 
-
-
   async updateEventGroup(id: string, dto: UpdateEventGroupDto): Promise<EventGroup> {
     const updated = await this.eventsRepository.updateEventGroup(id, dto);
     if (!updated) {
