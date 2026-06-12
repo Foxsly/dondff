@@ -13,6 +13,9 @@ import { ConfigModule } from '@nestjs/config';
 import { FanduelModule } from '@/external-providers/fanduel/fanduel.module';
 import { EspnModule } from '@/external-providers/espn/espn.module';
 import { FifaModule } from './external-providers/fifa/fifa.module';
+import { GolfModule } from './golf/golf.module';
+import { NflModule } from './nfl/nfl.module';
+import { WorldCupModule } from './world-cup/world-cup.module';
 
 @Module({
   imports: [
@@ -27,6 +30,9 @@ import { FifaModule } from './external-providers/fifa/fifa.module';
     PlayerStatsModule,
     EspnModule,
     FifaModule,
+    NflModule,
+    GolfModule,
+    WorldCupModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
