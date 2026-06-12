@@ -2,7 +2,7 @@ import { shuffle } from '@/common/util';
 import { EventGroup } from '@/events/entities/event-group.entity';
 import { EventsService } from '@/events/events.service';
 import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
-import { SportLeague } from '@/leagues/entities/league.entity';
+import { SportLeague } from '@/common/types/sport-league.type';
 import { LeaguesService } from '@/leagues/leagues.service';
 import {
   IPlayerProjection,

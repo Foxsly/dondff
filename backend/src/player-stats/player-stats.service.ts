@@ -2,7 +2,7 @@ import { EventsService } from '@/events/events.service';
 import { EspnService } from '@/external-providers/espn/espn.service';
 import { FanduelService } from '@/external-providers/fanduel/fanduel.service';
 import { FifaService } from '@/external-providers/fifa/fifa.service';
-import { SportLeague } from '@/leagues/entities/league.entity';
+import { SportLeague } from '@/common/types/sport-league.type';
 import {
   IPlayerProjection,
   IPlayerStats,

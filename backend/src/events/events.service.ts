@@ -8,7 +8,7 @@ import {
 } from './entities/event-group.entity';
 import { CreateEventDto, Event, UpdateEventDto } from './entities/event.entity';
 import { EventsRepository } from './events.repository';
-import { SportLeague } from '@/leagues/entities/league.entity';
+import { SportLeague } from '@/common/types/sport-league.type';
 import { FanduelService } from '@/external-providers/fanduel/fanduel.service';
 import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
 import { EspnService } from '@/external-providers/espn/espn.service';

@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LeaguesService } from './leagues.service';
 import { NotFoundException } from '@nestjs/common';
-import { League, SportLeague } from './entities/league.entity';
+import { League } from './entities/league.entity';
+import { SportLeague } from '@/common/types/sport-league.type';
 import { ITeam } from '@/teams/entities/team.entity';
 import { LeaguesRepository } from '@/leagues/leagues.repository';
 
