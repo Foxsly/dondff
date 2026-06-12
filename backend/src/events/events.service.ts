@@ -9,27 +9,13 @@ import {
 import { CreateEventDto, Event, UpdateEventDto } from './entities/event.entity';
 import { EventsRepository } from './events.repository';
 import { SportLeague } from '@/common/types/sport-league.type';
-import { FanduelService } from '@/external-providers/fanduel/fanduel.service';
-import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
-import { EspnService } from '@/external-providers/espn/espn.service';
-import { FifaService } from '@/external-providers/fifa/fifa.service';
+import { EventSyncStrategyRegistry } from './strategies/event-sync-strategy.registry';
 
 @Injectable()
 export class EventsService {
-  private readonly WORLD_CUP_STAGE_NAMES: Record<string, string> = {
-    R32: 'Round of 32',
-    R16: 'Round of 16',
-    QF: 'Quarter-finals',
-    SF: 'Semi-finals',
-    F: 'Final',
-  };
-
   constructor(
     private readonly eventsRepository: EventsRepository,
-    private readonly fanduelService: FanduelService,
-    private readonly sleeperService: SleeperService,
-    private readonly espnService: EspnService,
-    private readonly fifaService: FifaService,
+    private readonly eventSyncRegistry: EventSyncStrategyRegistry,
   ) {}
 
   async createEventGroup(dto: CreateEventGroupDto): Promise<EventGroup> {
@@ -86,13 +72,36 @@ export class EventsService {
   }
 
   async findEventGroupsBySportLeague(sportLeague: SportLeague): Promise<EventGroup[]> {
-    if (sportLeague === 'GOLF') {
-      await this.syncGolfEvents();
-    } else if (sportLeague === 'NFL') {
-      await this.syncNflEvents();
-    } else if (sportLeague === 'WORLDCUP') {
-      await this.syncWorldCupEvents();
+    const strategy = this.eventSyncRegistry.get(sportLeague);
+    const groups = await strategy.fetchSyncData();
+
+    for (const group of groups) {
+      for (const eventData of group.events) {
+        const existing = await this.eventsRepository.findEventByExternalEvent(
+          eventData.externalId,
+          eventData.externalSource,
+        );
+        if (existing) continue;
+
+        let eventGroup = await this.eventsRepository.findEventGroupByName(group.name);
+        if (!eventGroup) {
+          eventGroup = await this.createEventGroup({
+            name: group.name,
+            sportLeague,
+          });
+        }
+
+        await this.createEvent({
+          eventGroupId: eventGroup.eventGroupId,
+          name: eventData.name,
+          startDate: eventData.startDate,
+          endDate: eventData.endDate,
+          externalEventId: eventData.externalId,
+          externalEventSource: eventData.externalSource,
+        });
+      }
     }
+
     return this.eventsRepository.findEventGroupsBySportLeague(sportLeague);
   }
 
@@ -106,116 +115,7 @@ export class EventsService {
     return result;
   }
 
-  private async syncGolfEvents(): Promise<void> {
-    const currentYear = new Date().getFullYear();
-    const [fanduelEvents, espnSchedule] = await Promise.all([
-      this.fanduelService.getGolfEvents(),
-      this.espnService.getPgaSchedule(currentYear),
-    ]);
 
-    for (const fanduelEvent of fanduelEvents) {
-      const existingEvent = await this.eventsRepository.findEventByExternalEvent(
-        fanduelEvent.id,
-        'FANDUEL',
-      );
-
-      if (!existingEvent) {
-        const eventGroup = await this.createEventGroup({
-          name: fanduelEvent.name,
-          sportLeague: 'GOLF',
-        });
-
-        const espnMatch = espnSchedule.find((espn) =>
-          this.normalizeEventName(espn.name).includes(this.normalizeEventName(fanduelEvent.name)),
-        );
-        if (espnMatch){
-          await this.createEvent({
-            eventGroupId: eventGroup.eventGroupId,
-            name: fanduelEvent.name,
-            startDate: espnMatch?.startDate,
-            endDate: espnMatch?.endDate,
-            externalEventId: fanduelEvent.id,
-            externalEventSource: 'FANDUEL',
-          });
-        }
-      }
-    }
-  }
-
-  private normalizeEventName(name: string): string {
-    return name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-  }
-
-  private async syncNflEvents(): Promise<void> {
-    const nflState = await this.sleeperService.getNflState();
-    const weekNumber = nflState.week;
-    const seasonYear = Number(nflState.season);
-    const externalEventId = `${seasonYear}-${weekNumber}`;
-
-    const existingEvent = await this.eventsRepository.findEventByExternalEvent(
-      externalEventId,
-      'SLEEPER',
-    );
-
-    if (!existingEvent) {
-      const eventGroup = await this.createEventGroup({
-        name: `NFL Week ${weekNumber}`,
-        sportLeague: 'NFL',
-      });
-      await this.createEvent({
-        eventGroupId: eventGroup.eventGroupId,
-        name: `NFL Week ${weekNumber}`,
-        //TODO make these dates right
-        startDate: new Date().toISOString(),
-        endDate: new Date().toISOString(),
-        externalEventId,
-        externalEventSource: 'SLEEPER',
-      });
-    }
-  }
-
-  private stageDisplayName(stage: string, roundId: number): string {
-    if (stage === 'GROUP') {
-      return `Group Stage – Matchday ${roundId}`;
-    }
-    const name = this.WORLD_CUP_STAGE_NAMES[stage];
-    return name ? `Knockout Stage – ${name}` : `Stage ${stage}`;
-  }
-
-  private async syncWorldCupEvents(): Promise<void> {
-    const rounds = await this.fifaService.getRounds();
-
-    for (const round of rounds) {
-      for (const match of round.tournaments) {
-        const externalEventId = `WC-${round.id}-${match.id}`;
-        const existingEvent = await this.eventsRepository.findEventByExternalEvent(
-          externalEventId,
-          'FIFA',
-        );
-        if (existingEvent) {
-          continue;
-        }
-
-        const groupName = `World Cup ${this.stageDisplayName(round.stage, round.id)}`;
-        let eventGroup = await this.eventsRepository.findEventGroupByName(groupName);
-        if (!eventGroup) {
-          eventGroup = await this.createEventGroup({
-            name: groupName,
-            sportLeague: 'WORLDCUP',
-          });
-        }
-
-        await this.createEvent({
-          eventGroupId: eventGroup.eventGroupId,
-          name: `${match.homeSquadName} vs ${match.awaySquadName}`,
-          startDate: match.date,
-          endDate: match.date,
-          externalEventId,
-          externalEventSource: 'FIFA',
-        });
-      }
-    }
-  }
 
   async updateEventGroup(id: string, dto: UpdateEventGroupDto): Promise<EventGroup> {
     const updated = await this.eventsRepository.updateEventGroup(id, dto);
