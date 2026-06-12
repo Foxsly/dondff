@@ -1,19 +1,13 @@
 import { EventsService } from '@/events/events.service';
-import { EspnService } from '@/external-providers/espn/espn.service';
-import { FanduelService } from '@/external-providers/fanduel/fanduel.service';
-import { FifaService } from '@/external-providers/fifa/fifa.service';
 import { SportLeague } from '@/common/types/sport-league.type';
 import {
   IPlayerProjection,
-  IPlayerStats,
-  PlayerPosition,
   PlayerProjectionResponse,
   PlayerStatResponse,
   PlayerTeams,
 } from '@/player-stats/entities/player-stats.entity';
-import { calculateGolferScore } from '@/player-stats/golf-scoring.util';
-import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
 import { Injectable, Logger } from '@nestjs/common';
+import { PlayerStatsStrategyRegistry } from './strategies/player-stats-strategy.registry';
 
 @Injectable()
 export class PlayerStatsService {
@@ -21,22 +15,10 @@ export class PlayerStatsService {
   private playerTeams: Map<string, PlayerTeams> = new Map<string, PlayerTeams>();
 
   constructor(
-    private readonly sleeperService: SleeperService,
-    private readonly fanduelService: FanduelService,
     private readonly eventsService: EventsService,
-    private readonly espnService: EspnService,
-    private readonly fifaService: FifaService,
+    private readonly playerStatsRegistry: PlayerStatsStrategyRegistry,
   ) {
-    this.playerTeams = new Map<string, PlayerTeams>()
-  }
-
-  /**
-   * Resolves the NFL week number from an event group name (e.g. "NFL Week 3" → 3).
-   * Returns null if the event group name doesn't match the NFL week pattern.
-   */
-  private getWeekNumberFromEventGroup(eventGroupName: string): number | null {
-    const match = eventGroupName.match(/Week\s+(\d+)/);
-    return match ? parseInt(match[1], 10) : null;
+    this.playerTeams = new Map<string, PlayerTeams>();
   }
 
   async getPlayerProjections(
@@ -45,77 +27,12 @@ export class PlayerStatsService {
     eventGroupId: string,
     sportLeague: SportLeague = 'NFL',
   ): Promise<PlayerProjectionResponse> {
-    if (sportLeague === 'GOLF') {
-      return this.getGolfProjections();
-    } else if (sportLeague === 'WORLDCUP') {
-      const projections = await this.getWorldCupProjections(eventGroupId, position);
-      projections.forEach(this.setPlayerTeamMappings, this);
-      return projections;
-    }
-
+    const strategy = this.playerStatsRegistry.get(sportLeague);
     const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
-    const week = this.getWeekNumberFromEventGroup(eventGroup.name);
-    if (week === null) {
-      throw new Error(`Cannot resolve NFL week number from event group: ${eventGroup.name}`);
-    }
-
-    const isPostseason = week > 18;
-    //This currently works because the two APIs share a BetGenius ID. If we add more sources, this could become problematic.
-    if (isPostseason) {
-      const fanduelPlayerProjections = await this.fanduelService.getNflProjections();
-      const rawPlayerProjections: IPlayerProjection[] = fanduelPlayerProjections
-        .map((projection) => ({
-          playerId: `${projection.player.betGeniusId}`,
-          name: projection.player.name,
-          position: projection.player.position,
-          projectedPoints: projection.fantasy,
-          injuryStatus: null,
-          oppTeam:
-            projection.gameInfo.awayTeam.abbreviation === projection.team.abbreviation
-              ? projection.gameInfo.homeTeam.abbreviation
-              : projection.gameInfo.awayTeam.abbreviation,
-          team: projection.team.abbreviation,
-        }));
-        //Depending on the week, filter out player (or not)
-      let playerProjections: IPlayerProjection[] = [];
-      if (week === 20) {
-        // RBs: RB > 1.0, TE > 2.0
-        // WRs: WR > 1.0
-        const positionFilter = position === 'WR' ? [position] : [position, 'TE'];
-        playerProjections = rawPlayerProjections
-          .filter((projection) => positionFilter.includes(projection.position))
-          .filter((projection) =>
-            projection.position === 'TE'
-              ? projection.projectedPoints >= 2.0
-              : projection.projectedPoints >= 1.0,
-          );
-      } else {
-        playerProjections = rawPlayerProjections
-          //Need to filter out by position, since the fanduel API doesn't allow us to
-          .filter((projection) => projection.position === position)
-          //Filter out any 0-score players
-          .filter((projection) => projection.projectedPoints > 0.0);
-      }
-      playerProjections.forEach(this.setPlayerTeamMappings, this);
-      return playerProjections;
-    } else {
-      const sleeperProjections = await this.sleeperService.getPlayerProjections(
-        position,
-        season,
-        week,
-      );
-      const playerProjections: IPlayerProjection[] = sleeperProjections.map((projection) => ({
-        playerId: projection.player.metadata.genius_id,
-        name: `${projection.player.first_name} ${projection.player.last_name}`,
-        position: this.mapPosition(projection.player.position),
-        projectedPoints: projection.stats.pts_ppr,
-        injuryStatus: projection.player.injury_status ? projection.player.injury_status : null,
-        oppTeam: projection.opponent,
-        team: projection.team,
-      })) as IPlayerProjection[];
-      playerProjections.forEach(this.setPlayerTeamMappings, this);
-      return playerProjections;
-    }
+    const events = await this.eventsService.findEventsByEventGroup(eventGroupId);
+    const projections = await strategy.getProjections(season, eventGroup, events, position);
+    projections.forEach(this.setPlayerTeamMappings, this);
+    return projections;
   }
 
   async getPlayerStatistics(
@@ -124,154 +41,27 @@ export class PlayerStatsService {
     eventGroupId: string,
     sportLeague: SportLeague = 'NFL',
   ): Promise<PlayerStatResponse> {
-    if (sportLeague === 'GOLF') {
-      return this.getGolfStatistics(season, eventGroupId);
-    } else if (sportLeague === 'WORLDCUP') {
-      return this.getWorldCupStats(eventGroupId, position);
-    }
-
+    const strategy = this.playerStatsRegistry.get(sportLeague);
     const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
-    const week = this.getWeekNumberFromEventGroup(eventGroup.name);
-    if (week === null) {
-      throw new Error(`Cannot resolve NFL week number from event group: ${eventGroup.name}`);
-    }
-
-    const isPostseason = week > 18;
-    const sleeperStats = await this.sleeperService.getPlayerStatistics(
-      position,
-      season,
-      isPostseason ? week-18 : week,
-      //TODO figure out a better way to do this. Sleeper implementation details are leaking into the API doing this
-      isPostseason ? 'post' : 'regular');
-    return sleeperStats.map((player) => ({
-      playerId: player.player.metadata.genius_id,
-      name: `${player.player.first_name} ${player.player.last_name}`,
-      position: this.mapPosition(player.player.position),
-      points: player.stats.pts_ppr,
-      injuryStatus: player.player.injury_status ? player.player.injury_status : null,
-      oppTeam: player.opponent,
-      team: player.team,
-    })) as IPlayerStats[];
-  }
-
-  private async getGolfStatistics(
-    season: number,
-    eventGroupId: string,
-  ): Promise<PlayerStatResponse> {
-    const eventGroup = await this.eventsService.findOneEventGroup(eventGroupId);
-
-    const leaderboard = await this.espnService.getTournamentLeaderboard(season, eventGroup.name);
-
-    if (!leaderboard) {
-      this.logger.warn(`No ESPN leaderboard found for "${eventGroup.name}"`);
-      return [];
-    }
-
-    // Return all ESPN competitors with calculated scores.
-    // Use the athlete name as playerId — the frontend matches by name for golf.
-    return leaderboard.competitors.map((competitor) => ({
-      playerId: competitor.athleteName,
-      name: competitor.athleteName,
-      position: 'GOLF_PLAYER' as PlayerPosition,
-      points: calculateGolferScore(competitor),
-      team: '',
-    }));
-  }
-
-  async getGolfProjections(): Promise<PlayerProjectionResponse> {
-    const golfProjections = await this.fanduelService.getGolfProjections();
-    return golfProjections.map((projection) => ({
-      playerId: `${projection.player.numberFireId}`,
-      name: projection.player.name,
-      position: 'GOLF_PLAYER' as PlayerPosition,
-      projectedPoints: projection.fantasy,
-      injuryStatus: null,
-      team: '',
-    }));
-  }
-
-  private getWorldCupPlayerName(knownName: string | null, firstName: string, lastName: string): string {
-    return knownName ?? `${firstName} ${lastName}`;
-  }
-
-  private async resolveWorldCupRoundId(eventGroupId: string): Promise<number> {
     const events = await this.eventsService.findEventsByEventGroup(eventGroupId);
-    if (events.length === 0) {
-      throw new Error(`No events found for event group ${eventGroupId}`);
-    }
-
-    //Pull the FIFA round ID from the external event ID
-    const match = events[0].externalEventId?.match(/^WC-(\d+)-/);
-    if (!match) {
-      throw new Error(
-        `Cannot parse round ID from externalEventId: ${events[0].externalEventId}`,
-      );
-    }
-    return parseInt(match[1], 10);
-  }
-
-  private async getWorldCupProjections(
-    eventGroupId: string,
-    position: string,
-  ): Promise<PlayerProjectionResponse> {
-    const roundId = await this.resolveWorldCupRoundId(eventGroupId);
-    const projections = await this.fifaService.getRoundProjections(roundId);
-    return projections
-      .filter((p) => p.status !== 'transferred')
-      .filter((p) => p.position === position)
-      .map((p) => ({
-        playerId: `${p.id}`,
-        name: this.getWorldCupPlayerName(p.knownName, p.firstName, p.lastName),
-        position: p.position as PlayerPosition,
-        projectedPoints: p.price,
-        injuryStatus: p.status,
-        oppTeam: p.opponent,
-        team: p.team,
-      }));
-  }
-
-  private async getWorldCupStats(
-    eventGroupId: string,
-    position: string,
-  ): Promise<PlayerStatResponse> {
-    const roundId = await this.resolveWorldCupRoundId(eventGroupId);
-    const projections = await this.fifaService.getRoundProjections(roundId);
-    return projections
-      .filter((p) => p.status !== 'transferred')
-      .filter((p) => p.position === position)
-      .map((p) => ({
-        playerId: `${p.id}`,
-        name: this.getWorldCupPlayerName(p.knownName, p.firstName, p.lastName),
-        position: p.position as PlayerPosition,
-        points: p.fantasyPoints,
-        oppTeam: p.opponent,
-        team: p.team,
-      }));
+    return strategy.getStatistics(season, eventGroup, events, position);
   }
 
   getTeamAndOpponentForPlayer(playerId: string): PlayerTeams {
     const matchup = this.playerTeams.get(playerId);
-    if(!matchup) {
+    if (!matchup) {
       return {
         team: 'NA',
-        opponent: 'NA'
+        opponent: 'NA',
       };
     }
-    return matchup
+    return matchup;
   }
 
   private setPlayerTeamMappings(projection: IPlayerProjection) {
-    this.playerTeams.set(projection.playerId, {team: projection.team, opponent: projection.oppTeam!});
-  }
-
-  private mapPosition(position:string): PlayerPosition {
-    switch(position) {
-      case 'FB':
-        return 'RB';
-      case 'DEF':
-        return 'DST';
-      default:
-        return position as PlayerPosition;
-    }
+    this.playerTeams.set(projection.playerId, {
+      team: projection.team,
+      opponent: projection.oppTeam!,
+    });
   }
 }
