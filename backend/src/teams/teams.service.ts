@@ -1,5 +1,4 @@
 import { shuffle } from '@/common/util';
-import { EventGroup } from '@/events/entities/event-group.entity';
 import { EventsService } from '@/events/events.service';
 import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
 import { SportLeague } from '@/common/types/sport-league.type';
@@ -9,8 +8,8 @@ import {
   IPlayerStats,
   PlayerProjectionResponse,
 } from '@/player-stats/entities/player-stats.entity';
-import { normalizeName } from '@/player-stats/golf-scoring.util';
 import { PlayerStatsService } from '@/player-stats/player-stats.service';
+import { TeamsGameStrategyRegistry } from './strategies/teams-game-strategy.registry';
 import { ITeamPlayer, TeamPlayer } from '@/teams/entities/team-player.entity';
 import { ITeamStatus } from '@/teams/entities/team-status.entity';
 import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
@@ -42,6 +41,7 @@ export class TeamsService {
     private readonly leaguesService: LeaguesService,
     private readonly playerStatsService: PlayerStatsService,
     private readonly eventsService: EventsService,
+    private readonly teamsGameRegistry: TeamsGameStrategyRegistry,
   ) {}
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
@@ -218,7 +218,7 @@ export class TeamsService {
     if (!updatedTeamEntry) {
       throw new NotFoundException(`Could not update TeamEntry with id ${teamEntry.teamEntryId}`);
     }
-    let team: Team = await this.findOne(teamId);
+    let team: ITeam = await this.findOne(teamId);
     const league = await this.leaguesService.findOne(team.leagueId);
     let leagueSettings: ILeagueSettings = await this.leaguesService.getLatestLeagueSettingsByLeague(
       team.leagueId,
@@ -229,12 +229,12 @@ export class TeamsService {
       position,
       leagueSettings,
       league.sportLeague,
-      this.getNumberOfCases(eventGroup),
+      this.teamsGameRegistry.get(league.sportLeague).getNumberOfCases(eventGroup),
     );
   }
 
   async generateCasesForPosition(
-    team: Team,
+    team: ITeam,
     position: string,
     leagueSettings: ILeagueSettings,
     sportLeague: SportLeague,
@@ -261,7 +261,7 @@ export class TeamsService {
     // For sports with shared player pools (e.g., GOLF), exclude players already selected for other positions
     //TODO extract this to a 'determinePlayerPool' strategy or something, where this is the default,
     //TODO but for WC, we do 1 GK, 2 DEF, 2 MID, 2 FWD from each country and then fill in the remaining positions by cost
-    const excludedPlayerIds = await this.getExcludedPlayerIdsForPosition(team, position, sportLeague);
+    const excludedPlayerIds = await this.teamsGameRegistry.get(sportLeague).getExcludedPlayerIds(team, position);
     let trimmedPlayers: IPlayerProjection[] = playerProjections
       .filter(p => !excludedPlayerIds.includes(p.playerId))
       .slice(0, poolSize);
@@ -320,7 +320,9 @@ export class TeamsService {
         position,
         leagueSettings,
         league.sportLeague,
-        this.getNumberOfCases(await this.eventsService.findOneEventGroup(team.eventGroupId)),
+        this.teamsGameRegistry.get(league.sportLeague).getNumberOfCases(
+          await this.eventsService.findOneEventGroup(team.eventGroupId),
+        ),
       );
     }
 
@@ -363,7 +365,7 @@ export class TeamsService {
     const previousOfferPlayerIds = previousOffers.map((offer) => offer.playerId);
 
     // For sports with shared player pools (e.g., GOLF), exclude players already selected for other positions
-    const excludedPlayerIds = await this.getExcludedPlayerIdsForPosition(team, teamEntry.position, league.sportLeague);
+    const excludedPlayerIds = await this.teamsGameRegistry.get(league.sportLeague).getExcludedPlayerIds(team, teamEntry.position);
 
     // Remove players in boxes, previously offered players, and already-selected players from the projections
     let playerIdsInBoxes = teamEntryAudits.map((entry) => entry.playerId);
@@ -558,49 +560,11 @@ export class TeamsService {
     };
   }
 
-  /**
-   * For sports where all positions draw from the same player pool (e.g. GOLF),
-   * returns the player IDs that should be excluded when generating cases for the
-   * given position — i.e. players already selected for other positions.
-   */
-  private async getExcludedPlayerIdsForPosition(
-    team: Team,
-    position: string,
-    sportLeague: SportLeague,
-  ): Promise<string[]> {
-    if (!this.sportUsesSharedPlayerPool(sportLeague)) {
-      return [];
-    }
-
-    const fullTeam = await this.findOne(team.teamId);
-    return fullTeam.players
-      .filter((player) => player.position !== position)
-      .map((player) => player.playerId);
-  }
-
-  private sportUsesSharedPlayerPool(sportLeague: SportLeague): boolean {
-    return sportLeague === 'GOLF';
-  }
-
   addTeamsToOffer(offer: ITeamEntryOffer): PlayerOfferDto {
     return {
       ...offer,
       matchup: this.playerStatsService.getTeamAndOpponentForPlayer(offer.playerId),
     };
-  }
-
-  /**
-   * Determines the number of cases for a given event group.
-   * For NFL playoff weeks with fewer available players, we reduce the case count.
-   */
-  getNumberOfCases(eventGroup: EventGroup): number {
-    // Check if this is an NFL event group with a week number
-    const weekMatch = eventGroup.name.match(/Week\s+(\d+)/);
-    if (weekMatch) {
-      const weekNumber = parseInt(weekMatch[1], 10);
-      if (weekNumber === 20) return 6;
-    }
-    return 10;
   }
 
   async calculateAndPersistScores(eventGroupId: string): Promise<void> {
@@ -647,6 +611,8 @@ export class TeamsService {
       statsByPosition.set(pos.position, stats);
     }
 
+    const nameMatchStrategy = this.teamsGameRegistry.get(sportLeague);
+
     for (const team of teams) {
       for (const player of team.players) {
         const stats = statsByPosition.get(player.position) ?? [];
@@ -654,8 +620,8 @@ export class TeamsService {
         // Try matching by playerId first (NFL), then by name (golf)
         let matched = stats.find((s) => s.playerId === player.playerId);
         if (!matched && player.playerName) {
-          const normalizedPlayerName = normalizeName(player.playerName);
-          matched = stats.find((s) => normalizeName(s.name) === normalizedPlayerName);
+          const normalizedPlayerName = nameMatchStrategy.normalizePlayerName(player.playerName);
+          matched = stats.find((s) => nameMatchStrategy.normalizePlayerName(s.name) === normalizedPlayerName);
         }
 
         if (matched) {
