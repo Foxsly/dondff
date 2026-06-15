@@ -32,7 +32,18 @@ export class FifaService {
   async getPlayers(): Promise<FifaPlayerResponse> {
     const response$ = this.httpService.get(`${this.BASE_URL}/players.json`);
     const response = await lastValueFrom(response$);
-    return this.assertPlayers(response.data);
+
+    // Normalize roundPoints: API returns [] when no data, but our model uses Record<string, number>
+    const raw = response.data as { stats: { roundPoints: unknown } }[];
+    const normalized = raw.map(p => ({
+      ...p,
+      stats: {
+        ...p.stats,
+        roundPoints: Array.isArray(p.stats.roundPoints) ? ({} as Record<string, number>) : p.stats.roundPoints,
+      },
+    }));
+
+    return this.assertPlayers(normalized);
   }
 
   async getSquads(): Promise<FifaSquadResponse> {

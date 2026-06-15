@@ -72,7 +72,7 @@
       "avgPoints": 0,
       "form": 0,
       "lastRoundPoints": 0,
-      "roundPoints": {},
+      "roundPoints": [],
       "nextFixtureFromActiveRound": null,
       "nextFixtureFromScheduledRound": 19
     },

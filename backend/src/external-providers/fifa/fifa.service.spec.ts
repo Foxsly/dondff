@@ -49,7 +49,15 @@ describe('FifaService', () => {
 
     const result: FifaPlayerResponse = await service.getPlayers();
 
-    expect(result).toEqual(playersFixture);
+    // Service normalizes roundPoints: [] -> {} to match Record<string, number>
+    const expected = playersFixture.map(p => ({
+      ...p,
+      stats: {
+        ...p.stats,
+        roundPoints: Array.isArray(p.stats.roundPoints) ? {} : p.stats.roundPoints,
+      },
+    }));
+    expect(result).toEqual(expected);
   });
 
   it('should return squads', async () => {
