@@ -20,7 +20,10 @@
       "first_name": "Amon-Ra",
       "last_name": "St. Brown",
       "position": "WR",
-      "injury_status": null
+      "injury_status": null,
+      "metadata": {
+        "genius_id": "stats-7547"
+      }
     },
     "team": "DET",
     "opponent": "CHI",
@@ -50,7 +53,10 @@
       "first_name": "Ja'Marr",
       "last_name": "Chase",
       "position": "WR",
-      "injury_status": null
+      "injury_status": null,
+      "metadata": {
+        "genius_id": "stats-7564"
+      }
     },
     "team": "CIN",
     "opponent": "JAX",
@@ -81,7 +87,10 @@
       "first_name": "Travis",
       "last_name": "Hunter",
       "position": "WR",
-      "injury_status": null
+      "injury_status": null,
+      "metadata": {
+        "genius_id": "stats-2530"
+      }
     },
     "team": "JAX",
     "opponent": "CIN",
@@ -111,7 +120,10 @@
       "first_name": "Jayden",
       "last_name": "Reed",
       "position": "WR",
-      "injury_status": "IR"
+      "injury_status": "IR",
+      "metadata": {
+        "genius_id": "stats-0222"
+      }
     },
     "team": "GB",
     "opponent": "WAS",
@@ -141,7 +153,10 @@
       "first_name": "Rakim",
       "last_name": "Jarrett",
       "position": "WR",
-      "injury_status": null
+      "injury_status": null,
+      "metadata": {
+        "genius_id": "stats-9495"
+      }
     },
     "team": "PIT",
     "opponent": "SEA",
@@ -171,7 +186,10 @@
       "first_name": "Kyle",
       "last_name": "Juszczyk",
       "position": "FB",
-      "injury_status": null
+      "injury_status": null,
+      "metadata": {
+        "genius_id": "stats-1379"
+      }
     },
     "team": "SF",
     "opponent": "SEA",
@@ -201,7 +219,10 @@
       "first_name": "Taysom",
       "last_name": "Hill",
       "position": "TE",
-      "injury_status": "PUP"
+      "injury_status": "PUP",
+      "metadata": {
+        "genius_id": "stats-4381"
+      }
     },
     "team": "NO",
     "opponent": "ARI",
@@ -231,7 +252,10 @@
       "first_name": "Jared",
       "last_name": "Goff",
       "position": "QB",
-      "injury_status": null
+      "injury_status": null,
+      "metadata": {
+        "genius_id": "stats-3163"
+      }
     },
     "team": "DET",
     "opponent": "GB",
@@ -261,7 +285,10 @@
       "first_name": "Jake",
       "last_name": "Bates",
       "position": "K",
-      "injury_status": null
+      "injury_status": null,
+      "metadata": {
+        "genius_id": "stats-1539"
+      }
     },
     "team": "DET",
     "opponent": "GB",

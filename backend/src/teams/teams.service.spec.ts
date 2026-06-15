@@ -1,6 +1,4 @@
 import { SportLeague } from '@/common/types/sport-league.type';
-import { LeaguesModule } from '@/leagues/leagues.module';
-import { SleeperModule } from '@/external-providers/sleeper/sleeper.module';
 import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeamsService } from './teams.service';
@@ -11,6 +9,7 @@ import { LeaguesService } from '@/leagues/leagues.service';
 import { PlayerStatsService } from '@/player-stats/player-stats.service';
 import { EventsService } from '@/events/events.service';
 import { IPlayerProjection } from '@/player-stats/entities/player-stats.entity';
+import { TeamsGameStrategyRegistry } from '@/teams/strategies/teams-game-strategy.registry';
 
 /** Build N fake golf projections with sequential player IDs */
 function buildGolfProjections(count: number, startId: number = 1): IPlayerProjection[] {
@@ -54,10 +53,21 @@ describe('TeamsService', () => {
       updateAuditStatus: jest.fn(),
     } as any;
 
+    const mockLeaguesService = { findOne: jest.fn(), getLatestLeagueSettingsByLeague: jest.fn(), getPositionsForLeagueSettings: jest.fn() } as any;
+    const mockPlayerStatsService = { getPlayerProjections: jest.fn() } as any;
+    const mockEventsService = { findOneEventGroup: jest.fn() } as any;
+    const mockRegistry = { get: jest.fn().mockReturnValue({ getExcludedPlayerIds: jest.fn().mockResolvedValue([]), getNumberOfCases: jest.fn().mockReturnValue(10), normalizePlayerName: jest.fn(), usesSharedPlayerPool: jest.fn() }) };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [TeamsService, { provide: TeamsRepository, useValue: mockTeamsRepository }, {provide:TeamsEntryRepository, useValue: mockTeamsEntryRepository}],
-      imports: [SleeperModule, LeaguesModule]
+      providers: [
+        TeamsService,
+        { provide: TeamsRepository, useValue: mockTeamsRepository },
+        { provide: TeamsEntryRepository, useValue: mockTeamsEntryRepository },
+        { provide: LeaguesService, useValue: mockLeaguesService },
+        { provide: PlayerStatsService, useValue: mockPlayerStatsService },
+        { provide: EventsService, useValue: mockEventsService },
+        { provide: TeamsGameStrategyRegistry, useValue: mockRegistry },
+      ],
     }).compile();
 
     service = module.get<TeamsService>(TeamsService);
@@ -166,13 +176,23 @@ describe('TeamsService — golf shared pool exclusion', () => {
     { leagueSettingsId: 'ls-1', position: 'GOLF_PLAYER_3', poolSize: 150 },
   ];
 
-  const golfTeam: Team = {
+  const golfTeam: ITeam = {
     teamId: 'golf-team-1',
     leagueId: 'golf-league-1',
     userId: 'user-1',
     seasonYear: 2025,
     eventGroupId: 'eg-1',
+    players: [],
   };
+
+  /** Shared mock strategy for TeamsGameStrategyRegistry. */
+  const mockGolfStrategy = {
+    getExcludedPlayerIds: jest.fn(),
+    getNumberOfCases: jest.fn().mockReturnValue(10),
+    normalizePlayerName: jest.fn().mockReturnValue(''),
+    usesSharedPlayerPool: jest.fn().mockReturnValue(true),
+  };
+  const mockRegistry = { get: jest.fn() };
 
   beforeEach(async () => {
     teamsRepo = {
@@ -215,6 +235,8 @@ describe('TeamsService — golf shared pool exclusion', () => {
       findOneEventGroup: jest.fn(),
     } as any;
 
+    mockRegistry.get.mockReturnValue(mockGolfStrategy);
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TeamsService,
@@ -223,6 +245,7 @@ describe('TeamsService — golf shared pool exclusion', () => {
         { provide: LeaguesService, useValue: leaguesService },
         { provide: PlayerStatsService, useValue: playerStatsService },
         { provide: EventsService, useValue: eventsService },
+        { provide: TeamsGameStrategyRegistry, useValue: mockRegistry },
       ],
     }).compile();
 
@@ -246,6 +269,7 @@ describe('TeamsService — golf shared pool exclusion', () => {
       const projections = buildGolfProjections(20);
       const excludeIds = ['player-1', 'player-2', 'player-3'];
 
+      mockGolfStrategy.getExcludedPlayerIds.mockResolvedValue(excludeIds);
       playerStatsService.getPlayerProjections.mockResolvedValue(projections);
       entryRepo.findLatestEntryForTeamPosition.mockResolvedValue(null);
       entryRepo.createEntry.mockResolvedValue(mockTeamEntry('GOLF_PLAYER_1'));
@@ -253,8 +277,8 @@ describe('TeamsService — golf shared pool exclusion', () => {
       entryRepo.insertAuditSnapshots.mockResolvedValue(undefined as any);
 
       const leagueSettings = { leagueSettingsId: 'ls-1', leagueId: 'golf-league-1', scoringType: 'PPR' };
-      const result = await service.generateCasesForPosition(
-        golfTeam, 'GOLF_PLAYER_1', leagueSettings as any, SportLeague.GOLF, 10, excludeIds,
+      await service.generateCasesForPosition(
+        golfTeam, 'GOLF_PLAYER_1', leagueSettings as any, SportLeague.GOLF, 10,
       );
 
       // The inserted audit snapshots should not contain any excluded player IDs
@@ -265,13 +289,12 @@ describe('TeamsService — golf shared pool exclusion', () => {
         expect(insertedPlayerIds).not.toContain(excludedId);
       }
       expect(insertedCases).toHaveLength(10);
-      // Return value should match inserted player IDs
-      expect(result).toEqual(insertedPlayerIds);
     });
 
     it('should not filter any players when excludePlayerIds is empty', async () => {
       const projections = buildGolfProjections(20);
 
+      mockGolfStrategy.getExcludedPlayerIds.mockResolvedValue([]);
       playerStatsService.getPlayerProjections.mockResolvedValue(projections);
       entryRepo.findLatestEntryForTeamPosition.mockResolvedValue(null);
       entryRepo.createEntry.mockResolvedValue(mockTeamEntry('GOLF_PLAYER_1'));
@@ -280,7 +303,7 @@ describe('TeamsService — golf shared pool exclusion', () => {
 
       const leagueSettings = { leagueSettingsId: 'ls-1', leagueId: 'golf-league-1', scoringType: 'PPR' };
       await service.generateCasesForPosition(
-        golfTeam, 'GOLF_PLAYER_1', leagueSettings as any, SportLeague.GOLF, 10, [],
+        golfTeam, 'GOLF_PLAYER_1', leagueSettings as any, SportLeague.GOLF, 10,
       );
 
       const insertedCases = entryRepo.insertAuditSnapshots.mock.calls[0][0];
@@ -290,30 +313,18 @@ describe('TeamsService — golf shared pool exclusion', () => {
   });
 
   describe('create — golf team', () => {
-    it('should only generate cases for the first position at creation time', async () => {
-      const projections = buildGolfProjections(150);
-
+    it('should create a team record (case generation is lazy)', async () => {
       teamsRepo.create.mockResolvedValue(golfTeam);
-      leaguesService.findOne.mockResolvedValue({ leagueId: 'golf-league-1', name: 'Golf League', sportLeague: SportLeague.GOLF } as any);
-      leaguesService.getLatestLeagueSettingsByLeague.mockResolvedValue({ leagueSettingsId: 'ls-1', leagueId: 'golf-league-1', scoringType: 'PPR' } as any);
-      leaguesService.getPositionsForLeagueSettings.mockResolvedValue(GOLF_POSITIONS);
-      eventsService.findOneEventGroup.mockResolvedValue({ eventGroupId: 'eg-1', name: 'The Masters', sportLeague: SportLeague.GOLF } as any);
-      playerStatsService.getPlayerProjections.mockResolvedValue(projections);
-      entryRepo.insertAuditSnapshots.mockResolvedValue(undefined as any);
 
-      entryRepo.findLatestEntryForTeamPosition.mockResolvedValue(null);
-      entryRepo.createEntry.mockResolvedValue(mockTeamEntry('GOLF_PLAYER_1'));
-
-      await service.create({
+      const result = await service.create({
         leagueId: 'golf-league-1',
         userId: 'user-1',
         seasonYear: 2025,
         eventGroupId: 'eg-1',
       });
 
-      // Only one position's cases generated at creation time (GOLF_PLAYER_1)
-      expect(entryRepo.insertAuditSnapshots).toHaveBeenCalledTimes(1);
-      expect(entryRepo.createEntry).toHaveBeenCalledTimes(1);
+      expect(teamsRepo.create).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(golfTeam);
     });
   });
 
@@ -340,6 +351,7 @@ describe('TeamsService — golf shared pool exclusion', () => {
       // findOne is called multiple times (service.findOne + getExcludedPlayerIdsForPosition)
       teamsRepo.findOne.mockResolvedValue(teamWithPlayer1Selected);
 
+      mockGolfStrategy.getExcludedPlayerIds.mockResolvedValue(['player-5']);
       leaguesService.findOne.mockResolvedValue({ leagueId: 'golf-league-1', name: 'Golf League', sportLeague: SportLeague.GOLF } as any);
       leaguesService.getLatestLeagueSettingsByLeague.mockResolvedValue({ leagueSettingsId: 'ls-1', leagueId: 'golf-league-1', scoringType: 'PPR' } as any);
       leaguesService.getPositionsForLeagueSettings.mockResolvedValue(GOLF_POSITIONS);
@@ -348,19 +360,23 @@ describe('TeamsService — golf shared pool exclusion', () => {
       playerStatsService.getTeamAndOpponentForPlayer = jest.fn().mockReturnValue({ team: 'GOLF', opponent: '' });
       entryRepo.insertAuditSnapshots.mockResolvedValue(undefined as any);
       entryRepo.createEntry.mockResolvedValue(mockTeamEntry('GOLF_PLAYER_2'));
-      entryRepo.findCurrentAuditsForEntry.mockResolvedValue(
-        buildGolfProjections(10, 10).map((p, i) => ({
-          auditId: `audit-${i}`,
-          teamEntryId: 'entry-GOLF_PLAYER_2',
-          resetNumber: 0,
-          boxNumber: i + 1,
-          playerId: p.playerId,
-          playerName: p.name,
-          projectedPoints: p.projectedPoints,
-          injuryStatus: null,
-          boxStatus: 'available' as const,
-        })),
-      );
+      // First call (inside getOrCreateTeamEntryWithCases): no audits exist -> triggers lazy generation
+      // Second call (inside getDisassociatedTeamCases after generation): return the generated audits
+      entryRepo.findCurrentAuditsForEntry
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(
+          buildGolfProjections(10, 10).map((p, i) => ({
+            auditId: `audit-${i}`,
+            teamEntryId: 'entry-GOLF_PLAYER_2',
+            resetNumber: 0,
+            boxNumber: i + 1,
+            playerId: p.playerId,
+            playerName: p.name,
+            projectedPoints: p.projectedPoints,
+            injuryStatus: null,
+            boxStatus: 'available' as const,
+          })),
+        );
 
       const result = await service.getDisassociatedTeamCases(golfTeam.teamId, 'GOLF_PLAYER_2');
 

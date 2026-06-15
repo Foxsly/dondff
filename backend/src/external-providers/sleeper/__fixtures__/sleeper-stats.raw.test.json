@@ -67,6 +67,7 @@
       "injury_status": null,
       "last_name": "St. Brown",
       "metadata": {
+        "genius_id": "stats-7547",
         "channel_id": "1113708810284855296",
         "rookie_year": "2021"
       },
@@ -144,6 +145,7 @@
       "injury_status": null,
       "last_name": "Chase",
       "metadata": {
+        "genius_id": "stats-7564",
         "channel_id": "1113708809265639424",
         "rookie_year": "2021"
       },
@@ -217,6 +219,7 @@
       "injury_status": null,
       "last_name": "Hunter",
       "metadata": {
+        "genius_id": "stats-2530",
         "channel_id": "1221352995866812416",
         "rookie_year": "2025",
         "source_id": "51976030-ad40-11ec-85f7-a1aefd14d6ea"
@@ -267,6 +270,7 @@
       "injury_status": "IR",
       "last_name": "Reed",
       "metadata": {
+        "genius_id": "stats-0222",
         "channel_id": "1113708797341233152",
         "rookie_year": "2023"
       },
@@ -310,6 +314,7 @@
       "injury_status": null,
       "last_name": "Jarrett",
       "metadata": {
+        "genius_id": "stats-9495",
         "channel_id": "1113708728659505152",
         "rookie_year": "2023"
       },
@@ -377,6 +382,7 @@
       "injury_status": null,
       "last_name": "Juszczyk",
       "metadata": {
+        "genius_id": "stats-1379",
         "channel_id": "1113708876684881921",
         "rookie_year": "2013"
       },
@@ -421,6 +427,7 @@
       "injury_status": "PUP",
       "last_name": "Hill",
       "metadata": {
+        "genius_id": "stats-4381",
         "channel_id": "1113708683042254848",
         "injury_override_off_2025_0": "IR",
         "injury_override_off_2025_1": "IR",
@@ -499,6 +506,7 @@
       "injury_status": null,
       "last_name": "Goff",
       "metadata": {
+        "genius_id": "stats-3163",
         "channel_id": "1113708813946482688",
         "rookie_year": "2016"
       },
@@ -562,6 +570,7 @@
       "injury_status": null,
       "last_name": "Bates",
       "metadata": {
+        "genius_id": "stats-1539",
         "channel_id": "1113708811308265472",
         "rookie_year": "2023"
       },
