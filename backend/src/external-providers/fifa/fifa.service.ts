@@ -91,8 +91,7 @@ export class FifaService {
         position: player.position,
         price: player.price,
         status: player.status,
-        // TODO: map from player.stats.roundPoints once the structure is known
-        fantasyPoints: player.stats.totalPoints,
+        fantasyPoints: player.stats.roundPoints[roundId] ?? 0,
         team: squad.name,
         opponent,
         matchDate: match.date,
