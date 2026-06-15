@@ -1,4 +1,5 @@
 import { EventGroup } from '@/events/entities/event-group.entity';
+import { IPlayerProjection } from '@/player-stats/entities/player-stats.entity';
 import { ITeam } from '@/teams/entities/team.entity';
 
 export interface ITeamsGameStrategy {
@@ -29,6 +30,29 @@ export interface ITeamsGameStrategy {
    *          case selection board.
    */
   getExcludedPlayerIds(team: ITeam, currentPosition: string): Promise<string[]>;
+
+  /**
+   * Determine the player pool for a given position on a team.
+   *
+   * Given the full set of player projections for a position, this method
+   * returns the subset that should appear in the Deal or No Deal case
+   * selection board. The default implementation filters out excluded
+   * players and trims to the pool size; sports with specific constraints
+   * (e.g. World Cup per-country quotas) may override this with custom
+   * selection logic.
+   *
+   * @param projections All eligible player projections for the position.
+   * @param team        The team being drafted for.
+   * @param position    The roster slot position (e.g. "QB", "GK", "DEF").
+   * @param poolSize    Maximum number of players to return.
+   * @returns The player pool for the case board.
+   */
+  determinePlayerPool(
+    projections: IPlayerProjection[],
+    team: ITeam,
+    position: string,
+    poolSize: number,
+  ): Promise<IPlayerProjection[]>;
 
   /**
    * Return the number of cases on the Deal or No Deal board for the given

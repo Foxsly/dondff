@@ -1,7 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { EventGroup } from '@/events/entities/event-group.entity';
+import { IPlayerProjection } from '@/player-stats/entities/player-stats.entity';
 import { ITeam } from '@/teams/entities/team.entity';
 import { ITeamsGameStrategy } from '@/teams/strategies/teams-game-strategy.interface';
+
+const PER_COUNTRY_QUOTA: Record<string, number> = {
+  GK: 1,
+  DEF: 2,
+  MID: 2,
+  FWD: 2,
+};
 
 @Injectable()
 export class WorldCupTeamsGameStrategy implements ITeamsGameStrategy {
@@ -11,6 +19,38 @@ export class WorldCupTeamsGameStrategy implements ITeamsGameStrategy {
 
   getExcludedPlayerIds(_team: ITeam, _currentPosition: string): Promise<string[]> {
     return Promise.resolve([]);
+  }
+
+  async determinePlayerPool(
+    projections: IPlayerProjection[],
+    team: ITeam,
+    position: string,
+    poolSize: number,
+  ): Promise<IPlayerProjection[]> {
+    const excluded = await this.getExcludedPlayerIds(team, position);
+    const eligible = projections.filter(p => !excluded.includes(p.playerId));
+
+    const quota = PER_COUNTRY_QUOTA[position]!;
+    const countries = new Set(eligible.map(p => p.team));
+    const sortedPlayerProjections = eligible.sort((a, b) => b.projectedPoints - a.projectedPoints);
+
+    const pool: IPlayerProjection[] = [];
+    const takenIds = new Set<string>();
+
+    for (const country of countries) {
+      sortedPlayerProjections
+        .filter(p => p.team === country)
+        .slice(0, quota)
+        .forEach((playerProjection) => {
+          pool.push(playerProjection);
+          takenIds.add(playerProjection.playerId);
+        });
+    }
+
+    pool.push(...sortedPlayerProjections
+      .filter(p => !takenIds.has(p.playerId))
+      .slice(0, poolSize - pool.length));
+    return pool;
   }
 
   getNumberOfCases(_eventGroup: EventGroup): number {

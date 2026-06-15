@@ -1,4 +1,5 @@
 import { GolfTeamsGameStrategy } from './golf-teams-game.strategy';
+import { IPlayerProjection } from '@/player-stats/entities/player-stats.entity';
 import { ITeam } from '@/teams/entities/team.entity';
 
 describe('GolfTeamsGameStrategy', () => {
@@ -78,6 +79,80 @@ describe('GolfTeamsGameStrategy', () => {
 
       const excluded = await strategy.getExcludedPlayerIds(team, 'GOLF_PLAYER_1');
       expect(excluded).toEqual([]);
+    });
+  });
+
+  describe('determinePlayerPool', () => {
+    const makeProjection = (
+      id: string,
+      projectedPoints: number,
+    ): IPlayerProjection => ({
+      playerId: id,
+      name: `Player ${id}`,
+      position: 'GOLF_PLAYER' as IPlayerProjection['position'],
+      team: '',
+      projectedPoints,
+    });
+
+    it('excludes players from other positions and returns top N', async () => {
+      const projections = [
+        makeProjection('p1', 10),
+        makeProjection('p2', 30),
+        makeProjection('p3', 20),
+      ];
+      const team: ITeam = {
+        teamId: 'team-1',
+        leagueId: 'league-1',
+        userId: 'user-1',
+        seasonYear: 2025,
+        eventGroupId: 'eg-1',
+        players: [
+          { teamId: 'team-1', position: 'GOLF_PLAYER_2', playerId: 'p2', playerName: 'B', projectedPoints: 90 },
+        ],
+      };
+
+      const pool = await strategy.determinePlayerPool(projections, team, 'GOLF_PLAYER_1', 5);
+
+      // p2 excluded (different position), so pool = [p3 (30), p1 (10)]
+      expect(pool).toHaveLength(2);
+      expect(pool.map(p => p.playerId)).toEqual(['p3', 'p1']);
+    });
+
+    it('returns all eligible when no overlapping positions', async () => {
+      const projections = [
+        makeProjection('p1', 10),
+        makeProjection('p2', 5),
+      ];
+      const team: ITeam = {
+        teamId: 'team-2',
+        leagueId: 'league-1',
+        userId: 'user-1',
+        seasonYear: 2025,
+        eventGroupId: 'eg-1',
+        players: [],
+      };
+
+      const pool = await strategy.determinePlayerPool(projections, team, 'GOLF_PLAYER_1', 5);
+
+      expect(pool).toHaveLength(2);
+    });
+
+    it('returns empty when all projections are excluded', async () => {
+      const projections = [makeProjection('p1', 10)];
+      const team: ITeam = {
+        teamId: 'team-3',
+        leagueId: 'league-1',
+        userId: 'user-1',
+        seasonYear: 2025,
+        eventGroupId: 'eg-1',
+        players: [
+          { teamId: 'team-3', position: 'GOLF_PLAYER_2', playerId: 'p1', playerName: 'A', projectedPoints: 100 },
+        ],
+      };
+
+      const pool = await strategy.determinePlayerPool(projections, team, 'GOLF_PLAYER_1', 5);
+
+      expect(pool).toEqual([]);
     });
   });
 

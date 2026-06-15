@@ -188,6 +188,13 @@ describe('TeamsService — golf shared pool exclusion', () => {
   /** Shared mock strategy for TeamsGameStrategyRegistry. */
   const mockGolfStrategy = {
     getExcludedPlayerIds: jest.fn(),
+    determinePlayerPool: jest.fn(async (projections: IPlayerProjection[], team: ITeam, position: string, poolSize: number) => {
+      const excluded = await mockGolfStrategy.getExcludedPlayerIds(team, position);
+      return projections
+        .filter(p => !excluded.includes(p.playerId))
+        .sort((a, b) => b.projectedPoints - a.projectedPoints)
+        .slice(0, poolSize);
+    }),
     getNumberOfCases: jest.fn().mockReturnValue(10),
     normalizePlayerName: jest.fn().mockReturnValue(''),
     usesSharedPlayerPool: jest.fn().mockReturnValue(true),

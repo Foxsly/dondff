@@ -256,15 +256,11 @@ export class TeamsService {
 
     //TODO this seems like we could probably extract this logic to a "getPositionForLeagueSettings" method on LeaguesService
     const poolSize = (await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId))
-      .find((positionSettings) => positionSettings.position === position)?.poolSize;
+      .find((positionSettings) => positionSettings.position === position)?.poolSize!;
 
-    // For sports with shared player pools (e.g., GOLF), exclude players already selected for other positions
-    //TODO extract this to a 'determinePlayerPool' strategy or something, where this is the default,
-    //TODO but for WC, we do 1 GK, 2 DEF, 2 MID, 2 FWD from each country and then fill in the remaining positions by cost
-    const excludedPlayerIds = await this.teamsGameRegistry.get(sportLeague).getExcludedPlayerIds(team, position);
-    let trimmedPlayers: IPlayerProjection[] = playerProjections
-      .filter(p => !excludedPlayerIds.includes(p.playerId))
-      .slice(0, poolSize);
+    let trimmedPlayers: IPlayerProjection[] = await this.teamsGameRegistry
+      .get(sportLeague)
+      .determinePlayerPool(playerProjections, team, position, poolSize);
 
     let cases: Array<Omit<ITeamEntryAudit, 'auditId'>> = shuffle(trimmedPlayers)
       .slice(0, numberOfCases)
