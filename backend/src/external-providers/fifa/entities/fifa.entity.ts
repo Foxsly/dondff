@@ -34,7 +34,7 @@ export interface IFifaPlayer {
   oneToWatch: boolean;
   oneToWatchText: string | null;
   qualificationRoundIds: number[];
-  fifaId: string | null;
+  fifaId: string | number | null;
 }
 
 // -----------------------------
