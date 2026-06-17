@@ -8,7 +8,7 @@ import {
   UpdateEventGroupDto,
 } from './entities/event-group.entity';
 import { CreateEventDto, Event, UpdateEventDto } from './entities/event.entity';
-import { SportLeague } from '@/leagues/entities/league.entity';
+import { SportLeague } from '@/common/types/sport-league.type';
 
 export abstract class EventsRepository {
   abstract createEventGroup(dto: CreateEventGroupDto): Promise<EventGroup>;

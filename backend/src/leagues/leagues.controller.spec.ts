@@ -3,6 +3,8 @@ import { LeaguesController } from './leagues.controller';
 import { LeaguesService } from './leagues.service';
 import { NotFoundException } from '@nestjs/common';
 import { CreateLeagueDto, UpdateLeagueDto, League } from './entities/league.entity';
+import { SportLeague } from '@/common/types/sport-league.type';
+import { TeamsService } from '@/teams/teams.service';
 import { ILeagueUser, AddLeagueUserDto, UpdateLeagueUserDto } from './entities/league-user.entity';
 
 describe('LeaguesController', () => {
@@ -28,6 +30,12 @@ describe('LeaguesController', () => {
             getLeagueTeams: jest.fn(),
           },
         },
+        {
+          provide: TeamsService,
+          useValue: {
+            calculateAndPersistScores: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -41,7 +49,7 @@ describe('LeaguesController', () => {
 
   describe('create', () => {
     it('should call service.create with DTO', () => {
-      const dto: CreateLeagueDto = { name: 'Test League' };
+      const dto: CreateLeagueDto = { name: 'Test League', sportLeague: SportLeague.NFL };
       controller.create(dto);
       expect(service.create).toHaveBeenCalledWith(dto);
     });
@@ -50,8 +58,8 @@ describe('LeaguesController', () => {
   describe('findAll', () => {
     it('should return an array of leagues', async () => {
       const leagues: League[] = [
-        { leagueId: 'uuid1', name: 'L1' },
-        { leagueId: 'uuid2', name: 'L2' },
+        { leagueId: 'uuid1', name: 'L1', sportLeague: SportLeague.NFL },
+        { leagueId: 'uuid2', name: 'L2', sportLeague: SportLeague.NFL },
       ];
       service.findAll.mockResolvedValue(leagues);
       expect(await controller.findAll()).toBe(leagues);
@@ -60,7 +68,7 @@ describe('LeaguesController', () => {
 
   describe('findOne', () => {
     it('should return a league if found', async () => {
-      const league: League = { leagueId: 'uuid1', name: 'L1' };
+      const league: League = { leagueId: 'uuid1', name: 'L1', sportLeague: SportLeague.NFL };
       service.findOne.mockResolvedValue(league);
       await expect(controller.findOne('uuid1')).resolves.toEqual(league);
     });
@@ -123,10 +131,10 @@ describe('LeaguesController', () => {
   });
 
   describe('getLeagueTeams', () => {
-    it('should return league teams', () => {
+    it('should return league teams', async () => {
       const teams = [{ teamId: 'team1', leagueId: 'uuid1', name: 'T1' }] as any;
-      service.getLeagueTeams.mockReturnValue(teams);
-      expect(controller.getLeagueTeams('uuid1', 2025, 1)).toBe(teams);
+      service.getLeagueTeams.mockResolvedValue(teams);
+      await expect(controller.getLeagueTeams('uuid1', 2025, 'event-group-1')).resolves.toBe(teams);
     });
   });
 });

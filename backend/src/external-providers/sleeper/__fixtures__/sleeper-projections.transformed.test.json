@@ -18,7 +18,10 @@
       "first_name": "Puka",
       "last_name": "Nacua",
       "position": "WR",
-      "injury_status": null
+      "injury_status": null,
+      "metadata": {
+        "genius_id": "proj-9493"
+      }
     },
     "team": "LAR",
     "opponent": "IND",
@@ -46,7 +49,10 @@
       "first_name": "Jaxon",
       "last_name": "Smith-Njigba",
       "position": "WR",
-      "injury_status": null
+      "injury_status": null,
+      "metadata": {
+        "genius_id": "proj-9488"
+      }
     },
     "team": "SEA",
     "opponent": "ARI",
@@ -74,7 +80,10 @@
       "first_name": "Amon-Ra",
       "last_name": "St. Brown",
       "position": "WR",
-      "injury_status": null
+      "injury_status": null,
+      "metadata": {
+        "genius_id": "proj-7547"
+      }
     },
     "team": "DET",
     "opponent": "CLE",
@@ -102,7 +111,10 @@
       "first_name": "Nico",
       "last_name": "Collins",
       "position": "WR",
-      "injury_status": null
+      "injury_status": null,
+      "metadata": {
+        "genius_id": "proj-7569"
+      }
     },
     "team": "HOU",
     "opponent": "TEN",
@@ -130,7 +142,10 @@
       "first_name": "Ja'Marr",
       "last_name": "Chase",
       "position": "WR",
-      "injury_status": null
+      "injury_status": null,
+      "metadata": {
+        "genius_id": "proj-7564"
+      }
     },
     "team": "CIN",
     "opponent": "DEN",

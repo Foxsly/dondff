@@ -1,3 +1,4 @@
+import { shuffle } from '@/common/util';
 import { Inject, Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
@@ -31,7 +32,18 @@ export class FifaService {
   async getPlayers(): Promise<FifaPlayerResponse> {
     const response$ = this.httpService.get(`${this.BASE_URL}/players.json`);
     const response = await lastValueFrom(response$);
-    return this.assertPlayers(response.data);
+
+    // Normalize roundPoints: API returns [] when no data, but our model uses Record<string, number>
+    const raw = response.data as { stats: { roundPoints: unknown } }[];
+    const normalized = raw.map(p => ({
+      ...p,
+      stats: {
+        ...p.stats,
+        roundPoints: Array.isArray(p.stats.roundPoints) ? ({} as Record<string, number>) : p.stats.roundPoints,
+      },
+    }));
+
+    return this.assertPlayers(normalized);
   }
 
   async getSquads(): Promise<FifaSquadResponse> {
@@ -90,8 +102,7 @@ export class FifaService {
         position: player.position,
         price: player.price,
         status: player.status,
-        // TODO: map from player.stats.roundPoints once the structure is known
-        fantasyPoints: player.stats.totalPoints,
+        fantasyPoints: player.stats.roundPoints[roundId] ?? 0,
         team: squad.name,
         opponent,
         matchDate: match.date,
@@ -99,7 +110,6 @@ export class FifaService {
       });
     }
 
-    projections.sort((a, b) => b.price - a.price);
-    return projections;
+    return shuffle(projections).sort((a, b) => b.price - a.price);
   }
 }

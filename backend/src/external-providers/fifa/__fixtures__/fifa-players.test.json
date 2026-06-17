@@ -16,7 +16,9 @@
       "avgPoints": 0,
       "form": 0,
       "lastRoundPoints": 0,
-      "roundPoints": [],
+      "roundPoints": {
+        "1": 2
+      },
       "nextFixtureFromActiveRound": null,
       "nextFixtureFromScheduledRound": 8
     },
@@ -42,7 +44,9 @@
       "avgPoints": 0,
       "form": 0,
       "lastRoundPoints": 0,
-      "roundPoints": [],
+      "roundPoints": {
+        "1": 7
+      },
       "nextFixtureFromActiveRound": null,
       "nextFixtureFromScheduledRound": 8
     },

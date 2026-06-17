@@ -1,6 +1,6 @@
 import { Selectable } from 'kysely';
 import { tags } from 'typia';
-import { SportLeague } from '@/leagues/entities/league.entity';
+import { SportLeague } from '@/common/types/sport-league.type';
 
 export interface IEventGroup {
   eventGroupId: string & tags.Format<'uuid'>;

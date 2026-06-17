@@ -5,7 +5,7 @@ import {
 import { Controller, Query } from '@nestjs/common';
 import { PlayerStatsService } from './player-stats.service';
 import { TypedParam, TypedRoute } from '@nestia/core';
-import type { SportLeague } from '@/leagues/entities/league.entity';
+import type { SportLeague } from '@/common/types/sport-league.type';
 
 @Controller('players')
 export class PlayerStatsController {

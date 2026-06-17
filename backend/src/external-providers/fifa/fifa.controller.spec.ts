@@ -17,7 +17,7 @@ describe('FifaController', () => {
   let service: jest.Mocked<FifaService>;
 
   const mockRoundsResponse: FifaRoundResponse = roundsFixture;
-  const mockPlayersResponse: FifaPlayerResponse = playersFixture;
+  const mockPlayersResponse = playersFixture as unknown as FifaPlayerResponse;
   const mockSquadsResponse: FifaSquadResponse = squadsFixture;
   const mockProjectionsResponse: FifaRoundProjectionResponse = projectionsFixture;
 

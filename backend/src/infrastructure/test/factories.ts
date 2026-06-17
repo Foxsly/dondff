@@ -1,3 +1,4 @@
+import { SportLeague } from '@/common/types/sport-league.type';
 import { CreateLeagueSettingsDto } from '@/leagues/entities/league-settings.entity';
 import { CreateLeagueDto } from '@/leagues/entities/league.entity';
 import { ITeamPlayer } from '@/teams/entities/team-player.entity';
@@ -12,7 +13,7 @@ const unique = () => Math.random().toString(36).slice(2, 8);
 
 export const leagueFactory = (overrides: Partial<CreateLeagueDto> = {}): CreateLeagueDto => ({
   name: overrides.name ?? `Test League ${unique()}`,
-  sportLeague: overrides.sportLeague ?? 'NFL',
+  sportLeague: overrides.sportLeague ?? SportLeague.NFL,
 });
 
 export const userFactory = (overrides: Partial<CreateUserDto> = {}): CreateUserDto => {

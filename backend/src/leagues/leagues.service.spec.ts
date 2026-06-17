@@ -1,9 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LeaguesService } from './leagues.service';
 import { NotFoundException } from '@nestjs/common';
-import { League, SportLeague } from './entities/league.entity';
+import { League } from './entities/league.entity';
+import { SportLeague } from '@/common/types/sport-league.type';
 import { ITeam } from '@/teams/entities/team.entity';
 import { LeaguesRepository } from '@/leagues/leagues.repository';
+import { LeagueDefaultsStrategyRegistry } from './strategies/league-defaults-strategy.registry';
+import { ILeagueDefaultsStrategy } from './strategies/league-defaults-strategy.interface';
 
 describe('LeaguesService', () => {
   let service: LeaguesService;
@@ -19,7 +22,7 @@ describe('LeaguesService', () => {
   const mockLeague: League = {
     leagueId: 'uuid-1',
     name: 'Test League',
-    sportLeague: 'NFL' as SportLeague,
+    sportLeague: SportLeague.NFL,
   };
 
   // ---------------------------------------------------------------------------
@@ -55,11 +58,25 @@ describe('LeaguesService', () => {
   } as any;
 
   // ---------------------------------------------------------------------------
+  // MOCK STRATEGY
+  // ---------------------------------------------------------------------------
+  // mockStrategy is a fake ILeagueDefaultsStrategy used to decouple the test
+  // from the actual sport module implementations. Each test can override
+  // getDefaultPositions by setting mockStrategyGetDefaultPositions.mockReturnValue().
+  const mockStrategy: jest.Mocked<ILeagueDefaultsStrategy> = {
+    getDefaultPositions: jest.fn().mockReturnValue([]),
+  };
+
+  // ---------------------------------------------------------------------------
   // SETUP (runs before every test)
   // ---------------------------------------------------------------------------
   // NestJS's Test.createTestingModule compiles a lightweight DI container
   // with just the providers we specify. This is the standard way to unit-test
   // a NestJS service.
+  //
+  // We provide a mock LeagueDefaultsStrategyRegistry that always returns
+  // mockStrategy, so tests control which positions are created without
+  // importing real sport modules.
   //
   // jest.clearAllMocks() is important here: since all tests share the same
   // mockRepo object (defined at the describe level), calls from one test
@@ -70,7 +87,11 @@ describe('LeaguesService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LeaguesService,
-        { provide: LeaguesRepository, useValue: mockRepo }, // <-- match token
+        { provide: LeaguesRepository, useValue: mockRepo },
+        {
+          provide: LeagueDefaultsStrategyRegistry,
+          useValue: { get: jest.fn().mockReturnValue(mockStrategy) },
+        },
       ],
     }).compile();
 
@@ -100,9 +121,9 @@ describe('LeaguesService', () => {
     repo.createLeague.mockResolvedValue(mockLeague);
     repo.findOneLeague.mockResolvedValue(mockLeague as any);
     repo.createLeagueSettings.mockResolvedValue({ leagueSettingsId: 'settings-uuid', leagueId: 'uuid-1', scoringType: 'PPR' } as any);
-    const result = await service.create({ name: 'Test League', sportLeague: 'NFL' });
+    const result = await service.create({ name: 'Test League', sportLeague: SportLeague.NFL });
     expect(result).toEqual(mockLeague);
-    expect(repo.createLeague).toHaveBeenCalledWith({ name: 'Test League', sportLeague: 'NFL' });
+    expect(repo.createLeague).toHaveBeenCalledWith({ name: 'Test League', sportLeague: SportLeague.NFL });
   });
 
   it('should find all leagues', async () => {
@@ -247,9 +268,17 @@ describe('LeaguesService', () => {
   //    If someone accidentally adds a 5th position, toHaveBeenCalledTimes(4)
   //    will catch it
   it('should create default World Cup positions when league is WORLDCUP', async () => {
-    const leagueDto = { name: 'WC League', sportLeague: 'WORLDCUP' as SportLeague };
+    const leagueDto = { name: 'WC League', sportLeague: SportLeague.WORLDCUP };
     const createdLeague = { leagueId: 'uuid-wc', ...leagueDto };
     const createdSettings = { leagueSettingsId: 'settings-uuid', leagueId: 'uuid-wc', scoringType: 'PPR' };
+
+    const worldCupPositions = [
+      { position: 'GK', poolSize: 48 },
+      { position: 'DEF', poolSize: 168 },
+      { position: 'MID', poolSize: 240 },
+      { position: 'FWD', poolSize: 120 },
+    ];
+    mockStrategy.getDefaultPositions.mockReturnValue(worldCupPositions);
 
     repo.createLeague.mockResolvedValue(createdLeague as any);
     repo.findOneLeague.mockResolvedValue(createdLeague as any);
@@ -259,9 +288,9 @@ describe('LeaguesService', () => {
     await service.create(leagueDto);
 
     expect(repo.createLeagueSettingsPosition).toHaveBeenCalledWith('settings-uuid', { position: 'GK', poolSize: 48 });
-    expect(repo.createLeagueSettingsPosition).toHaveBeenCalledWith('settings-uuid', { position: 'DEF', poolSize: 192 });
+    expect(repo.createLeagueSettingsPosition).toHaveBeenCalledWith('settings-uuid', { position: 'DEF', poolSize: 168 });
     expect(repo.createLeagueSettingsPosition).toHaveBeenCalledWith('settings-uuid', { position: 'MID', poolSize: 240 });
-    expect(repo.createLeagueSettingsPosition).toHaveBeenCalledWith('settings-uuid', { position: 'FWD', poolSize: 144 });
+    expect(repo.createLeagueSettingsPosition).toHaveBeenCalledWith('settings-uuid', { position: 'FWD', poolSize: 120 });
     expect(repo.createLeagueSettingsPosition).toHaveBeenCalledTimes(4);
   });
 });

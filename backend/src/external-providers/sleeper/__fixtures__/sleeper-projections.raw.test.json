@@ -49,6 +49,7 @@
       "injury_status": null,
       "last_name": "Nacua",
       "metadata": {
+        "genius_id": "proj-9493",
         "channel_id": "1113708701430083584",
         "rookie_year": "2023"
       },
@@ -116,6 +117,7 @@
       "injury_status": null,
       "last_name": "Smith-Njigba",
       "metadata": {
+        "genius_id": "proj-9488",
         "channel_id": "1113708722657456128",
         "rookie_year": "2023"
       },
@@ -183,6 +185,7 @@
       "injury_status": null,
       "last_name": "St. Brown",
       "metadata": {
+        "genius_id": "proj-7547",
         "channel_id": "1113708810284855296",
         "rookie_year": "2021"
       },
@@ -249,6 +252,7 @@
       "injury_status": null,
       "last_name": "Collins",
       "metadata": {
+        "genius_id": "proj-7569",
         "channel_id": "1113708788407365632",
         "injury_override_regular_2024_10": "Out",
         "rookie_year": "2021"
@@ -317,6 +321,7 @@
       "injury_status": null,
       "last_name": "Chase",
       "metadata": {
+        "genius_id": "proj-7564",
         "channel_id": "1113708809265639424",
         "rookie_year": "2021"
       },
@@ -355,6 +360,7 @@
       "injury_status": "Questionable",
       "last_name": "Robinson",
       "metadata": {
+        "genius_id": "proj-1962",
         "channel_id": "1116852709270487040",
         "rookie_year": "2024"
       },
@@ -392,6 +398,7 @@
       "injury_status": null,
       "last_name": "Drummond",
       "metadata": {
+        "genius_id": "proj-8166",
         "channel_id": "1116853470314364928",
         "source_id": "dd41919a-307f-46e6-ad91-4d0f45eb845b"
       },
@@ -429,6 +436,7 @@
       "injury_status": null,
       "last_name": "Roland",
       "metadata": {
+        "genius_id": "proj-5638",
         "channel_id": "1116853136418406400"
       },
       "news_updated": 1529018101361,

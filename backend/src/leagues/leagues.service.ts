@@ -9,6 +9,7 @@ import { ITeam } from '@/teams/entities/team.entity';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AddLeagueUserDto, ILeagueUser, UpdateLeagueUserDto } from './entities/league-user.entity';
 import { CreateLeagueDto, ILeague, League, UpdateLeagueDto } from './entities/league.entity';
+import { LeagueDefaultsStrategyRegistry } from './strategies/league-defaults-strategy.registry';
 
 const DEFAULT_LEAGUE_SETTINGS = {
   scoringType: 'PPR' as ScoringType,
@@ -17,6 +18,7 @@ const DEFAULT_LEAGUE_SETTINGS = {
 export class LeaguesService {
   constructor(
     private readonly leaguesRepository: LeaguesRepository,
+    private readonly leagueDefaultsRegistry: LeagueDefaultsStrategyRegistry,
   ) {}
 
   async create(createLeagueDto: CreateLeagueDto): Promise<League> {
@@ -87,52 +89,13 @@ export class LeaguesService {
   ): Promise<ILeagueSettings> {
     const settings = await this.leaguesRepository.createLeagueSettings(leagueId, dto);
     const league: ILeague = await this.findOne(leagueId);
-    // Create default positions based on sport
-    if (league.sportLeague === 'NFL') {
-      await this.createDefaultNflPositions(settings.leagueSettingsId);
-    } else if (league.sportLeague === 'GOLF') {
-      await this.createDefaultGolfPositions(settings.leagueSettingsId);
-    } else if (league.sportLeague === 'WORLDCUP') {
-      await this.createDefaultWorldCupPositions(settings.leagueSettingsId);
+    const positions = this.leagueDefaultsRegistry.get(league.sportLeague).getDefaultPositions();
+
+    for (const position of positions) {
+      await this.leaguesRepository.createLeagueSettingsPosition(settings.leagueSettingsId, position);
     }
 
     return settings;
-  }
-
-  async createDefaultNflPositions(leagueSettingsId: string): Promise<void> {
-    const defaultNflPositions = [
-      { position: 'RB', poolSize: 64 },
-      { position: 'WR', poolSize: 96 },
-    ];
-
-    for (const pos of defaultNflPositions) {
-      await this.leaguesRepository.createLeagueSettingsPosition(leagueSettingsId, pos);
-    }
-  }
-
-  async createDefaultGolfPositions(leagueSettingsId: string): Promise<void> {
-    const defaultGolfPositions = [
-      { position: 'GOLF_PLAYER_1', poolSize: 150 },
-      { position: 'GOLF_PLAYER_2', poolSize: 150 },
-      { position: 'GOLF_PLAYER_3', poolSize: 150 },
-    ];
-
-    for (const pos of defaultGolfPositions) {
-      await this.leaguesRepository.createLeagueSettingsPosition(leagueSettingsId, pos);
-    }
-  }
-
-  async createDefaultWorldCupPositions(leagueSettingsId: string): Promise<void> {
-    const defaultWorldCupPositions = [
-      { position: 'GK', poolSize: 48 },
-      { position: 'DEF', poolSize: 168 },
-      { position: 'MID', poolSize: 240 },
-      { position: 'FWD', poolSize: 120 },
-    ];
-
-    for (const pos of defaultWorldCupPositions) {
-      await this.leaguesRepository.createLeagueSettingsPosition(leagueSettingsId, pos);
-    }
   }
 
   async getLatestLeagueSettingsByLeague(leagueId: string): Promise<ILeagueSettings> {

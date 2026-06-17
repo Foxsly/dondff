@@ -10,7 +10,7 @@ export interface IFifaPlayerStats {
   avgPoints: number;
   form: number;
   lastRoundPoints: number;
-  roundPoints: number[];
+  roundPoints: Record<string, number>;
   nextFixtureFromActiveRound: number | null;
   nextFixtureFromScheduledRound: number | null;
 }
@@ -99,7 +99,6 @@ export interface IFifaPlayerRoundProjection {
   position: string;
   price: number;
   status: string;
-  // TODO: map from player.stats.roundPoints once the structure is known
   fantasyPoints: number;
   team: string;
   opponent: string;

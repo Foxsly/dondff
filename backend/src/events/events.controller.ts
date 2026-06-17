@@ -1,4 +1,4 @@
-import { SportLeague } from '@/leagues/entities/league.entity';
+import { SportLeague } from '@/common/types/sport-league.type';
 import { TypedParam, TypedRoute } from '@nestia/core';
 import { Body, Controller, Query } from '@nestjs/common';
 import {
