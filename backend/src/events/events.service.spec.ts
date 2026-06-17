@@ -1,12 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { EventsService } from './events.service';
-import { EventsRepository } from './events.repository';
-import { FanduelService } from '@/external-providers/fanduel/fanduel.service';
-import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
+import { SportLeague } from '@/common/types/sport-league.type';
 import { EspnService } from '@/external-providers/espn/espn.service';
-import { FifaService } from '@/external-providers/fifa/fifa.service';
-import type { FifaRoundResponse } from '@/external-providers/fifa/entities/fifa.entity';
+import { FanduelService } from '@/external-providers/fanduel/fanduel.service';
 import roundsFixture from '@/external-providers/fifa/__fixtures__/fifa-rounds.test.json';
+import type { FifaRoundResponse } from '@/external-providers/fifa/entities/fifa.entity';
+import { FifaService } from '@/external-providers/fifa/fifa.service';
+import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { EventsRepository } from './events.repository';
+import { EventsService } from './events.service';
+import { EventSyncStrategyRegistry } from './strategies/event-sync-strategy.registry';
 
 describe('EventsService', () => {
   let service: EventsService;
@@ -66,6 +68,42 @@ describe('EventsService', () => {
           provide: FifaService,
           useValue: {
             getRounds: jest.fn(),
+          },
+        },
+        {
+          provide: EventSyncStrategyRegistry,
+          useValue: {
+            get: jest.fn().mockReturnValue({
+              fetchSyncData: jest.fn(async () => {
+                const rounds = await fifaService.getRounds();
+                const groupMap = new Map<string, { name: string; events: any[] }>();
+                for (const round of rounds) {
+                  for (const match of round.tournaments) {
+                    const externalEventId = `WC-${round.id}-${match.id}`;
+                    const groupName =
+                      round.stage === 'GROUP'
+                        ? `World Cup Group Stage – Matchday ${round.id}`
+                        : round.stage === 'R32'
+                          ? 'World Cup Knockout Stage – Round of 32'
+                          : `World Cup Stage ${round.stage}`;
+
+                    let group = groupMap.get(groupName);
+                    if (!group) {
+                      group = { name: groupName, events: [] };
+                      groupMap.set(groupName, group);
+                    }
+                    group.events.push({
+                      externalId: externalEventId,
+                      externalSource: 'FIFA',
+                      name: `${match.homeSquadName} vs ${match.awaySquadName}`,
+                      startDate: match.date,
+                      endDate: match.date,
+                    });
+                  }
+                }
+                return Array.from(groupMap.values());
+              }),
+            }),
           },
         },
       ],
@@ -155,9 +193,9 @@ describe('EventsService', () => {
       // ACT — the actual method call
       //
       // syncWorldCupEvents is a private method. We call it indirectly
-      // through the public sync method by passing 'WORLDCUP'. This matches
+      // through the public sync method by passing SportLeague.WORLDCUP. This matches
       // how it'd be called in production.
-      await service.findEventGroupsBySportLeague('WORLDCUP');
+      await service.findEventGroupsBySportLeague(SportLeague.WORLDCUP);
 
       // ASSERT — verify the results
       //
@@ -178,17 +216,21 @@ describe('EventsService', () => {
       expect(fifaService.getRounds).toHaveBeenCalled();
 
       // The service checked for existing groups by stage name
-      expect(eventsRepository.findEventGroupByName).toHaveBeenCalledWith('World Cup Group Stage – Matchday 1');
-      expect(eventsRepository.findEventGroupByName).toHaveBeenCalledWith('World Cup Group Stage – Matchday 2');
+      expect(eventsRepository.findEventGroupByName).toHaveBeenCalledWith(
+        'World Cup Group Stage – Matchday 1',
+      );
+      expect(eventsRepository.findEventGroupByName).toHaveBeenCalledWith(
+        'World Cup Group Stage – Matchday 2',
+      );
 
       // The service created groups with the right sportLeague
       expect(eventsRepository.createEventGroup).toHaveBeenCalledWith({
         name: 'World Cup Group Stage – Matchday 1',
-        sportLeague: 'WORLDCUP',
+        sportLeague: SportLeague.WORLDCUP,
       });
       expect(eventsRepository.createEventGroup).toHaveBeenCalledWith({
         name: 'World Cup Group Stage – Matchday 2',
-        sportLeague: 'WORLDCUP',
+        sportLeague: SportLeague.WORLDCUP,
       });
 
       // Each match was checked for duplicates by external ID
@@ -248,7 +290,7 @@ describe('EventsService', () => {
         'World Cup Group Stage – Matchday 1': {
           eventGroupId: 'existing-group-id',
           name: 'World Cup Group Stage – Matchday 1',
-          sportLeague: 'WORLDCUP' as const,
+          sportLeague: SportLeague.WORLDCUP as const,
         },
       };
       eventsRepository.findEventGroupByName.mockImplementation((name: string) =>
@@ -280,7 +322,7 @@ describe('EventsService', () => {
         .mockResolvedValueOnce({ eventId: mockUuid() } as any);
       eventsRepository.findEventGroupsBySportLeague.mockResolvedValue([]);
 
-      await service.findEventGroupsBySportLeague('WORLDCUP');
+      await service.findEventGroupsBySportLeague(SportLeague.WORLDCUP);
 
       // All three lookups still happen (we still check each match)
       expect(eventsRepository.findEventByExternalEvent).toHaveBeenCalledWith('WC-1-1', 'FIFA');
@@ -360,18 +402,18 @@ describe('EventsService', () => {
       eventsRepository.createEventGroup.mockResolvedValueOnce({
         eventGroupId: mockUuid(),
         name: 'World Cup Knockout Stage – Round of 32',
-        sportLeague: 'WORLDCUP',
+        sportLeague: SportLeague.WORLDCUP,
       });
       eventsRepository.findEventByExternalEvent.mockResolvedValue(null);
       eventsRepository.createEvent.mockResolvedValueOnce({ eventId: mockUuid() } as any);
       eventsRepository.findEventGroupsBySportLeague.mockResolvedValue([]);
 
-      await service.findEventGroupsBySportLeague('WORLDCUP');
+      await service.findEventGroupsBySportLeague(SportLeague.WORLDCUP);
 
       // The key assertion: R32 maps to "Knockout Stage – Round of 32"
       expect(eventsRepository.createEventGroup).toHaveBeenCalledWith({
         name: 'World Cup Knockout Stage – Round of 32',
-        sportLeague: 'WORLDCUP',
+        sportLeague: SportLeague.WORLDCUP,
       });
     });
 
@@ -430,18 +472,18 @@ describe('EventsService', () => {
       eventsRepository.createEventGroup.mockResolvedValueOnce({
         eventGroupId: mockUuid(),
         name: 'World Cup Stage THIRD',
-        sportLeague: 'WORLDCUP',
+        sportLeague: SportLeague.WORLDCUP,
       });
       eventsRepository.findEventByExternalEvent.mockResolvedValue(null);
       eventsRepository.createEvent.mockResolvedValueOnce({ eventId: mockUuid() } as any);
       eventsRepository.findEventGroupsBySportLeague.mockResolvedValue([]);
 
-      await service.findEventGroupsBySportLeague('WORLDCUP');
+      await service.findEventGroupsBySportLeague(SportLeague.WORLDCUP);
 
       // The fallback is "Stage {stage}" — here it becomes "Stage THIRD"
       expect(eventsRepository.createEventGroup).toHaveBeenCalledWith({
         name: 'World Cup Stage THIRD',
-        sportLeague: 'WORLDCUP',
+        sportLeague: SportLeague.WORLDCUP,
       });
     });
   });
