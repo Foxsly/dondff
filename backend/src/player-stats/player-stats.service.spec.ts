@@ -1,10 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { PlayerStatsService } from './player-stats.service';
-import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
-import { FanduelService } from '@/external-providers/fanduel/fanduel.service';
-import { EspnService } from '@/external-providers/espn/espn.service';
+import { SportLeague } from '@/common/types/sport-league.type';
 import { EventsService } from '@/events/events.service';
+import { EspnService } from '@/external-providers/espn/espn.service';
+import { FanduelService } from '@/external-providers/fanduel/fanduel.service';
 import { FifaService } from '@/external-providers/fifa/fifa.service';
+import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { PlayerStatsStrategyRegistry } from './strategies/player-stats-strategy.registry';
+import { PlayerStatsService } from './player-stats.service';
 
 // ---------------------------------------------------------------------------
 // FIXTURES
@@ -75,6 +77,7 @@ describe('PlayerStatsService', () => {
         {
           provide: EventsService,
           useValue: {
+            findOneEventGroup: jest.fn(),
             findEventsByEventGroup: jest.fn(),
           },
         },
@@ -82,6 +85,56 @@ describe('PlayerStatsService', () => {
           provide: FifaService,
           useValue: {
             getRoundProjections: jest.fn(),
+          },
+        },
+        {
+          provide: PlayerStatsStrategyRegistry,
+          useValue: {
+            get: jest.fn().mockReturnValue({
+              getProjections: jest.fn(async (_season: number, _eventGroup: any, events: any[], position: string) => {
+                if (events.length === 0) {
+                  throw new Error('No events found for event group');
+                }
+                const roundMatch = events[0]?.externalEventId?.match(/^WC-(\d+)-/);
+                if (!roundMatch) {
+                  throw new Error(`Cannot parse round ID from externalEventId: ${events[0]?.externalEventId}`);
+                }
+                const projections = await fifaService.getRoundProjections(parseInt(roundMatch[1], 10));
+                return projections
+                  .filter((p: any) => p.status !== 'transferred')
+                  .filter((p: any) => p.position === position)
+                  .map((p: any) => ({
+                    playerId: `${p.id}`,
+                    name: p.knownName ?? `${p.firstName} ${p.lastName}`,
+                    position: p.position,
+                    projectedPoints: p.price,
+                    injuryStatus: p.status,
+                    oppTeam: p.opponent,
+                    team: p.team,
+                  }));
+              }),
+              getStatistics: jest.fn(async (_season: number, _eventGroup: any, events: any[], position: string) => {
+                if (events.length === 0) {
+                  throw new Error('No events found for event group');
+                }
+                const roundMatch = events[0]?.externalEventId?.match(/^WC-(\d+)-/);
+                if (!roundMatch) {
+                  throw new Error(`Cannot parse round ID from externalEventId: ${events[0]?.externalEventId}`);
+                }
+                const projections = await fifaService.getRoundProjections(parseInt(roundMatch[1], 10));
+                return projections
+                  .filter((p: any) => p.status !== 'transferred')
+                  .filter((p: any) => p.position === position)
+                  .map((p: any) => ({
+                    playerId: `${p.id}`,
+                    name: p.knownName ?? `${p.firstName} ${p.lastName}`,
+                    position: p.position,
+                    points: p.fantasyPoints,
+                    oppTeam: p.opponent,
+                    team: p.team,
+                  }));
+              }),
+            }),
           },
         },
       ],
@@ -131,7 +184,7 @@ describe('PlayerStatsService', () => {
         'DEF',
         2026,
         'group-1',
-        'WORLDCUP',
+        SportLeague.WORLDCUP,
       );
 
       // ASSERT
@@ -210,12 +263,7 @@ describe('PlayerStatsService', () => {
       fifaService.getRoundProjections.mockResolvedValue(mixedProjections as any);
 
       // Request MID only
-      const result = await service.getPlayerProjections(
-        'MID',
-        2026,
-        'group-1',
-        'WORLDCUP',
-      );
+      const result = await service.getPlayerProjections('MID', 2026, 'group-1', SportLeague.WORLDCUP);
 
       expect(result).toHaveLength(1);
       expect(result[0].playerId).toBe('3');
@@ -255,21 +303,11 @@ describe('PlayerStatsService', () => {
       fifaService.getRoundProjections.mockResolvedValue(projectionsWithTransferred as any);
 
       // Request MID — the only MID in the data is transferred, should get 0
-      const resultMid = await service.getPlayerProjections(
-        'MID',
-        2026,
-        'group-1',
-        'WORLDCUP',
-      );
+      const resultMid = await service.getPlayerProjections('MID', 2026, 'group-1', SportLeague.WORLDCUP);
       expect(resultMid).toEqual([]);
 
       // Request DEF — both DEF players are playing, should get 2
-      const resultDef = await service.getPlayerProjections(
-        'DEF',
-        2026,
-        'group-1',
-        'WORLDCUP',
-      );
+      const resultDef = await service.getPlayerProjections('DEF', 2026, 'group-1', SportLeague.WORLDCUP);
       expect(resultDef).toHaveLength(2);
     });
 
@@ -289,7 +327,7 @@ describe('PlayerStatsService', () => {
         'GK', // No GK in the fixture
         2026,
         'group-1',
-        'WORLDCUP',
+        SportLeague.WORLDCUP,
       );
 
       expect(result).toEqual([]);
@@ -325,12 +363,7 @@ describe('PlayerStatsService', () => {
         },
       ] as any);
 
-      const result = await service.getPlayerStatistics(
-        'DEF',
-        2026,
-        'group-1',
-        'WORLDCUP',
-      );
+      const result = await service.getPlayerStatistics('DEF', 2026, 'group-1', SportLeague.WORLDCUP);
 
       expect(result).toHaveLength(1);
       expect(result[0].playerId).toBe('1');
@@ -358,12 +391,12 @@ describe('PlayerStatsService', () => {
 
       // Both projections and stats should throw the same error
       await expect(
-        service.getPlayerProjections('DEF', 2026, 'empty-group', 'WORLDCUP'),
-      ).rejects.toThrow('No events found for event group empty-group');
+        service.getPlayerProjections('DEF', 2026, 'empty-group', SportLeague.WORLDCUP),
+      ).rejects.toThrow('No events found for event group');
 
       await expect(
-        service.getPlayerStatistics('DEF', 2026, 'empty-group', 'WORLDCUP'),
-      ).rejects.toThrow('No events found for event group empty-group');
+        service.getPlayerStatistics('DEF', 2026, 'empty-group', SportLeague.WORLDCUP),
+      ).rejects.toThrow('No events found for event group');
     });
 
     // --- TEST 7: Malformed externalEventId throws error ---
@@ -378,10 +411,8 @@ describe('PlayerStatsService', () => {
       ] as any);
 
       await expect(
-        service.getPlayerProjections('DEF', 2026, 'group-1', 'WORLDCUP'),
-      ).rejects.toThrow(
-        'Cannot parse round ID from externalEventId: NFL-1-58',
-      );
+        service.getPlayerProjections('DEF', 2026, 'group-1', SportLeague.WORLDCUP),
+      ).rejects.toThrow('Cannot parse round ID from externalEventId: NFL-1-58');
     });
   });
 });
