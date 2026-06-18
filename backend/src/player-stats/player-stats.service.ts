@@ -44,6 +44,13 @@ export class PlayerStatsService {
     return strategy.getStatistics(season, eventGroup, events, position);
   }
 
+  /*
+  * TODO this and the following method are bad. This method being public relies on `setPlayerTeamMappings` being called
+  *   at some point, which we are not currently guaranteeing happens. There's definitely a better way, and this is ripe
+  *   for being a strange/difficult to track down cause of bugs. We should probably treat it more like a loading cache,
+  *   where we retrieve the currently saved results if we have them, otherwise we load the new ones (and expire them
+  *   after a period of time)
+  * */
   getTeamAndOpponentForPlayer(playerId: string): PlayerTeams {
     const matchup = this.playerTeams.get(playerId);
     if (!matchup) {
@@ -56,9 +63,11 @@ export class PlayerStatsService {
   }
 
   private setPlayerTeamMappings(projection: IPlayerProjection) {
-    this.playerTeams.set(projection.playerId, {
-      team: projection.team,
-      opponent: projection.oppTeam!,
-    });
+    if (projection.team && projection.oppTeam) {
+      this.playerTeams.set(projection.playerId, {
+        team: projection.team,
+        opponent: projection.oppTeam,
+      });
+    }
   }
 }
