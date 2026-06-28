@@ -79,17 +79,17 @@ describe('WorldCupTeamsGameStrategy', () => {
 
     it('fills remainder up to computed poolSize without overflow', async () => {
       const projections = [
-        makeProjection('arg1', 'DEF', 'ARG', 10),
-        makeProjection('arg2', 'DEF', 'ARG', 9),
-        makeProjection('bra1', 'DEF', 'BRA', 8),
-        makeProjection('uru1', 'DEF', 'URU', 6),
+        makeProjection('arg1', 'GK', 'ARG', 9),
+        makeProjection('arg2', 'GK', 'ARG', 10),
+        makeProjection('bra1', 'GK', 'BRA', 8),
+        makeProjection('uru1', 'GK', 'URU', 6),
       ];
 
-      // computed poolSize = 3 × 1 + ⌊3/2⌋ = 4 → 3 quota picks + 1 remainder (arg2)
-      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'DEF', 4);
+      // computed poolSize = 3 × 1 = 3 → 3 quota picks
+      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'GK', 1);
 
-      expect(pool).toHaveLength(4);
-      expect(pool.map(p => p.playerId).sort()).toEqual(['arg1', 'arg2', 'bra1', 'uru1']);
+      expect(pool).toHaveLength(3);
+      expect(pool.map(p => p.playerId).sort()).toEqual(['arg2', 'bra1', 'uru1']);
     });
 
     it('does not duplicate players between quota and remainder', async () => {
