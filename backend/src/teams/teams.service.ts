@@ -1,7 +1,7 @@
+import { SportLeague } from '@/common/types/sport-league.type';
 import { shuffle } from '@/common/util';
 import { EventsService } from '@/events/events.service';
 import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
-import { SportLeague } from '@/common/types/sport-league.type';
 import { LeaguesService } from '@/leagues/leagues.service';
 import {
   IPlayerProjection,
@@ -9,7 +9,6 @@ import {
   PlayerProjectionResponse,
 } from '@/player-stats/entities/player-stats.entity';
 import { PlayerStatsService } from '@/player-stats/player-stats.service';
-import { TeamsGameStrategyRegistry } from './strategies/teams-game-strategy.registry';
 import { ITeamPlayer, TeamPlayer } from '@/teams/entities/team-player.entity';
 import { ITeamStatus } from '@/teams/entities/team-status.entity';
 import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
@@ -30,6 +29,7 @@ import {
   TeamEntryOfferStatus,
 } from './entities/team-entry.entity';
 import { CreateTeamDto, ITeam, Team, UpdateTeamDto } from './entities/team.entity';
+import { TeamsGameStrategyRegistry } from './strategies/teams-game-strategy.registry';
 
 @Injectable()
 export class TeamsService {
@@ -347,7 +347,7 @@ export class TeamsService {
 
     const team: ITeam = await this.findOne(teamEntry.teamId);
     const league = await this.leaguesService.findOne(team.leagueId);
-    const strategy = this.teamsGameRegistry.get(league.sportLeague);
+
     const projections = await this.playerStatsService.getPlayerProjections(
       teamEntry.position,
       team.seasonYear,
@@ -363,7 +363,7 @@ export class TeamsService {
     let playerIdsInBoxes = teamEntryAudits.map((entry) => entry.playerId);
 
     const poolSize = (await this.leaguesService.getPositionForLeagueSettings(teamEntry.leagueSettingsId, teamEntry.position)).poolSize;
-    const poolProjections = await strategy.determinePlayerPool(projections, team, teamEntry.position, poolSize);
+    const poolProjections = await this.teamsGameRegistry.get(league.sportLeague).determinePlayerPool(projections, team, teamEntry.position, poolSize);
 
     let availableOffers = poolProjections.filter(
       (player) =>
