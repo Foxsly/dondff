@@ -6,8 +6,8 @@ import { ITeamsGameStrategy } from '@/teams/strategies/teams-game-strategy.inter
 
 const PER_COUNTRY_QUOTA: Record<string, number> = {
   GK: 1,
-  DEF: 2,
-  MID: 2,
+  DEF: 3,
+  MID: 3,
   FWD: 2,
 };
 
@@ -21,11 +21,14 @@ export class WorldCupTeamsGameStrategy implements ITeamsGameStrategy {
     return Promise.resolve([]);
   }
 
+  /*
+    For WC, we want to override the pool size so that it is dynamic based on the number of teams remaining
+   */
   async determinePlayerPool(
     projections: IPlayerProjection[],
     team: ITeam,
     position: string,
-    poolSize: number,
+    _poolSize: number,
   ): Promise<IPlayerProjection[]> {
     const excluded = await this.getExcludedPlayerIds(team, position);
     const eligible = projections.filter(p => !excluded.includes(p.playerId));
@@ -47,6 +50,8 @@ export class WorldCupTeamsGameStrategy implements ITeamsGameStrategy {
         });
     }
 
+    // Pool size is the per-position quota times the number of countries, plus the next top countries/2 players
+    const poolSize: number = Math.floor(countries.size * quota + (countries.size / 2));
     pool.push(...sortedPlayerProjections
       .filter(p => !takenIds.has(p.playerId))
       .slice(0, poolSize - pool.length));

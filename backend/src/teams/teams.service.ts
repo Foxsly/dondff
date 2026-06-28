@@ -254,9 +254,7 @@ export class TeamsService {
     );
     let boxNumber = 1;
 
-    //TODO this seems like we could probably extract this logic to a "getPositionForLeagueSettings" method on LeaguesService
-    const poolSize = (await this.leaguesService.getPositionsForLeagueSettings(leagueSettings.leagueSettingsId))
-      .find((positionSettings) => positionSettings.position === position)?.poolSize!;
+    const poolSize = (await this.leaguesService.getPositionForLeagueSettings(leagueSettings.leagueSettingsId, position)).poolSize;
 
     let trimmedPlayers: IPlayerProjection[] = await this.teamsGameRegistry
       .get(sportLeague)
@@ -349,6 +347,7 @@ export class TeamsService {
 
     const team: ITeam = await this.findOne(teamEntry.teamId);
     const league = await this.leaguesService.findOne(team.leagueId);
+    const strategy = this.teamsGameRegistry.get(league.sportLeague);
     const projections = await this.playerStatsService.getPlayerProjections(
       teamEntry.position,
       team.seasonYear,
@@ -360,16 +359,16 @@ export class TeamsService {
     const previousOffers = await this.getOffers(teamEntry.teamId, teamEntry.position);
     const previousOfferPlayerIds = previousOffers.map((offer) => offer.playerId);
 
-    // For sports with shared player pools (e.g., GOLF), exclude players already selected for other positions
-    const excludedPlayerIds = await this.teamsGameRegistry.get(league.sportLeague).getExcludedPlayerIds(team, teamEntry.position);
-
     // Remove players in boxes, previously offered players, and already-selected players from the projections
     let playerIdsInBoxes = teamEntryAudits.map((entry) => entry.playerId);
-    let availableOffers = projections.filter(
+
+    const poolSize = (await this.leaguesService.getPositionForLeagueSettings(teamEntry.leagueSettingsId, teamEntry.position)).poolSize;
+    const poolProjections = await strategy.determinePlayerPool(projections, team, teamEntry.position, poolSize);
+
+    let availableOffers = poolProjections.filter(
       (player) =>
         !playerIdsInBoxes.includes(player.playerId) &&
-        !previousOfferPlayerIds.includes(player.playerId) &&
-        !excludedPlayerIds.includes(player.playerId),
+        !previousOfferPlayerIds.includes(player.playerId),
     );
 
     if (availableOffers.length === 0) {

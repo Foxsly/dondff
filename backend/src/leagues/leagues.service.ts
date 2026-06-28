@@ -134,4 +134,12 @@ export class LeaguesService {
     const settings = await this.getLatestLeagueSettingsByLeague(leagueId);
     return this.getPositionsForLeagueSettings(settings.leagueSettingsId);
   }
+
+  async getPositionForLeagueSettings(leagueSettingsId: string, position: string): Promise<ILeagueSettingsPosition> {
+    const leagueSettingsPosition = (await this.getPositionsForLeagueSettings(leagueSettingsId)).find((lSP) => lSP.position === position);
+    if (!leagueSettingsPosition) {
+      throw new NotFoundException(`Position: ${position} does not exist for league settings id: ${leagueSettingsId}`);
+    }
+    return leagueSettingsPosition;
+  }
 }
