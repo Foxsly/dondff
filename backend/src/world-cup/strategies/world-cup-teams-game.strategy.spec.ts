@@ -32,14 +32,14 @@ describe('WorldCupTeamsGameStrategy', () => {
       ];
       const team = { players: [] } as unknown as ITeam;
 
-      // poolSize matches quota sum (2 countries × 1 GK each)
-      const pool = await strategy.determinePlayerPool(projections, team, 'GK', 2);
+      // computed poolSize = 2 × 1 + ⌊2/2⌋ = 3 → 2 quota picks + 1 remainder
+      const pool = await strategy.determinePlayerPool(projections, team, 'GK', 3);
 
-      expect(pool).toHaveLength(2);
-      expect(pool.map(p => p.playerId).sort()).toEqual(['arg1', 'bra1']);
+      expect(pool).toHaveLength(3);
+      expect(pool.map(p => p.playerId).sort()).toEqual(['arg1', 'arg2', 'bra1']);
     });
 
-    it('only includes 2 DEF per country (quota)', async () => {
+    it('only includes 3 DEF per country (quota)', async () => {
       const projections = [
         makeProjection('arg1', 'DEF', 'ARG', 10),
         makeProjection('arg2', 'DEF', 'ARG', 9),
@@ -48,14 +48,14 @@ describe('WorldCupTeamsGameStrategy', () => {
         makeProjection('bra2', 'DEF', 'BRA', 6),
       ];
 
-      // poolSize matches quota sum (2 countries × 2 DEF each)
-      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'DEF', 4);
+      // computed poolSize = 2 × 3 + ⌊2/2⌋ = 7 → all 5 projections fit within quota
+      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'DEF', 7);
 
-      expect(pool).toHaveLength(4);
-      expect(pool.map(p => p.playerId).sort()).toEqual(['arg1', 'arg2', 'bra1', 'bra2']);
+      expect(pool).toHaveLength(5);
+      expect(pool.map(p => p.playerId).sort()).toEqual(['arg1', 'arg2', 'arg3', 'bra1', 'bra2']);
     });
 
-    it('fills remaining slots with best unselected players up to poolSize', async () => {
+    it('fills remaining slots with best unselected players up to computed poolSize', async () => {
       const projections = [
         makeProjection('arg1', 'GK', 'ARG', 10),
         makeProjection('arg2', 'GK', 'ARG', 9),
@@ -65,16 +65,16 @@ describe('WorldCupTeamsGameStrategy', () => {
         makeProjection('uru2', 'GK', 'URU', 10),
       ];
 
-      // 3 countries × 1 GK quota = 3, poolSize 5 → remainder fills 2 slot with best (uru2, arg2)
-      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'GK', 5);
+      // computed poolSize = 3 × 1 + ⌊3/2⌋ = 4 → 3 quota picks + 1 remainder (uru2)
+      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'GK', 4);
 
-      expect(pool).toHaveLength(5);
-      expect(pool).toEqual(['arg1', 'bra1', 'uru1', 'uru2', 'arg2'].map(id =>
+      expect(pool).toHaveLength(4);
+      expect(pool).toEqual(['arg1', 'bra1', 'uru1', 'uru2'].map(id =>
         expect.objectContaining({ playerId: id }),
       ));
     });
 
-    it('does not add more players than poolSize from remainder', async () => {
+    it('fills remainder up to computed poolSize without overflow', async () => {
       const projections = [
         makeProjection('arg1', 'GK', 'ARG', 10),
         makeProjection('arg2', 'GK', 'ARG', 9),
@@ -82,11 +82,11 @@ describe('WorldCupTeamsGameStrategy', () => {
         makeProjection('uru1', 'GK', 'URU', 6),
       ];
 
-      // 3 countries × 1 GK quota = 3, poolSize 3 → no remainder fill
-      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'GK', 3);
+      // computed poolSize = 3 × 1 + ⌊3/2⌋ = 4 → 3 quota picks + 1 remainder (arg2)
+      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'GK', 4);
 
-      expect(pool).toHaveLength(3);
-      expect(pool.map(p => p.playerId).sort()).toEqual(['arg1', 'bra1', 'uru1']);
+      expect(pool).toHaveLength(4);
+      expect(pool.map(p => p.playerId).sort()).toEqual(['arg1', 'arg2', 'bra1', 'uru1']);
     });
 
     it('does not duplicate players between quota and remainder', async () => {

@@ -53,7 +53,7 @@ describe('TeamsService', () => {
       updateAuditStatus: jest.fn(),
     } as any;
 
-    const mockLeaguesService = { findOne: jest.fn(), getLatestLeagueSettingsByLeague: jest.fn(), getPositionsForLeagueSettings: jest.fn() } as any;
+    const mockLeaguesService = { findOne: jest.fn(), getLatestLeagueSettingsByLeague: jest.fn() } as any;
     const mockPlayerStatsService = { getPlayerProjections: jest.fn() } as any;
     const mockEventsService = { findOneEventGroup: jest.fn() } as any;
     const mockRegistry = { get: jest.fn().mockReturnValue({ getExcludedPlayerIds: jest.fn().mockResolvedValue([]), getNumberOfCases: jest.fn().mockReturnValue(10), normalizePlayerName: jest.fn(), usesSharedPlayerPool: jest.fn() }) };
@@ -231,7 +231,7 @@ describe('TeamsService — golf shared pool exclusion', () => {
     leaguesService = {
       findOne: jest.fn(),
       getLatestLeagueSettingsByLeague: jest.fn(),
-      getPositionsForLeagueSettings: jest.fn(),
+      getPositionForLeagueSettings: jest.fn(),
     } as any;
 
     playerStatsService = {
@@ -280,7 +280,7 @@ describe('TeamsService — golf shared pool exclusion', () => {
       playerStatsService.getPlayerProjections.mockResolvedValue(projections);
       entryRepo.findLatestEntryForTeamPosition.mockResolvedValue(null);
       entryRepo.createEntry.mockResolvedValue(mockTeamEntry('GOLF_PLAYER_1'));
-      leaguesService.getPositionsForLeagueSettings.mockResolvedValue(GOLF_POSITIONS);
+      leaguesService.getPositionForLeagueSettings.mockResolvedValue(GOLF_POSITIONS[0]);
       entryRepo.insertAuditSnapshots.mockResolvedValue(undefined as any);
 
       const leagueSettings = { leagueSettingsId: 'ls-1', leagueId: 'golf-league-1', scoringType: 'PPR' };
@@ -305,7 +305,7 @@ describe('TeamsService — golf shared pool exclusion', () => {
       playerStatsService.getPlayerProjections.mockResolvedValue(projections);
       entryRepo.findLatestEntryForTeamPosition.mockResolvedValue(null);
       entryRepo.createEntry.mockResolvedValue(mockTeamEntry('GOLF_PLAYER_1'));
-      leaguesService.getPositionsForLeagueSettings.mockResolvedValue(GOLF_POSITIONS);
+      leaguesService.getPositionForLeagueSettings.mockResolvedValue(GOLF_POSITIONS[0]);
       entryRepo.insertAuditSnapshots.mockResolvedValue(undefined as any);
 
       const leagueSettings = { leagueSettingsId: 'ls-1', leagueId: 'golf-league-1', scoringType: 'PPR' };
@@ -361,7 +361,7 @@ describe('TeamsService — golf shared pool exclusion', () => {
       mockGolfStrategy.getExcludedPlayerIds.mockResolvedValue(['player-5']);
       leaguesService.findOne.mockResolvedValue({ leagueId: 'golf-league-1', name: 'Golf League', sportLeague: SportLeague.GOLF } as any);
       leaguesService.getLatestLeagueSettingsByLeague.mockResolvedValue({ leagueSettingsId: 'ls-1', leagueId: 'golf-league-1', scoringType: 'PPR' } as any);
-      leaguesService.getPositionsForLeagueSettings.mockResolvedValue(GOLF_POSITIONS);
+      leaguesService.getPositionForLeagueSettings.mockResolvedValue(GOLF_POSITIONS[1]);
       eventsService.findOneEventGroup.mockResolvedValue({ eventGroupId: 'eg-1', name: 'The Masters', sportLeague: SportLeague.GOLF } as any);
       playerStatsService.getPlayerProjections.mockResolvedValue(projections);
       playerStatsService.getTeamAndOpponentForPlayer = jest.fn().mockReturnValue({ team: 'GOLF', opponent: '' });
@@ -415,7 +415,7 @@ describe('TeamsService — golf shared pool exclusion', () => {
       });
       leaguesService.findOne.mockResolvedValue({ leagueId: 'golf-league-1', name: 'Golf League', sportLeague: SportLeague.GOLF } as any);
       leaguesService.getLatestLeagueSettingsByLeague.mockResolvedValue({ leagueSettingsId: 'ls-1', leagueId: 'golf-league-1', scoringType: 'PPR' } as any);
-      leaguesService.getPositionsForLeagueSettings.mockResolvedValue(GOLF_POSITIONS);
+      leaguesService.getPositionForLeagueSettings.mockResolvedValue(GOLF_POSITIONS[1]);
       eventsService.findOneEventGroup.mockResolvedValue({ eventGroupId: 'eg-1', name: 'The Masters', sportLeague: SportLeague.GOLF } as any);
       playerStatsService.getPlayerProjections.mockResolvedValue(projections);
       entryRepo.insertAuditSnapshots.mockResolvedValue(undefined as any);

@@ -18,7 +18,7 @@ export class WorldCupPlayerStatsStrategy implements IPlayerStatsStrategy {
     const roundId = this.resolveWorldCupRoundId(events);
     const projections = await this.fifaService.getRoundProjections(roundId);
     return projections
-      .filter((p) => p.status !== 'transferred')
+      .filter((p) => p.status === 'playing')
       .filter((p) => p.position === position)
       .map((p) => ({
         playerId: `${p.id}`,
@@ -40,7 +40,6 @@ export class WorldCupPlayerStatsStrategy implements IPlayerStatsStrategy {
     const roundId = this.resolveWorldCupRoundId(events);
     const projections = await this.fifaService.getRoundProjections(roundId);
     return projections
-      .filter((p) => p.status !== 'transferred')
       .filter((p) => p.position === position)
       .map((p) => ({
         playerId: `${p.id}`,
