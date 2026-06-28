@@ -51,7 +51,8 @@ export class WorldCupTeamsGameStrategy implements ITeamsGameStrategy {
     }
 
     // Pool size is the per-position quota times the number of countries, plus the next top countries/2 players
-    const poolSize: number = Math.floor(countries.size * quota + (countries.size / 2));
+    // unless it's for goalkeepers, where we don't add the extra players
+    const poolSize = Math.floor(countries.size * quota + (position === 'GK' ? 0 : countries.size / 2));
     pool.push(...sortedPlayerProjections
       .filter(p => !takenIds.has(p.playerId))
       .slice(0, poolSize - pool.length));
