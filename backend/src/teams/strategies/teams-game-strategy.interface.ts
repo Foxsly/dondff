@@ -38,13 +38,15 @@ export interface ITeamsGameStrategy {
    * returns the subset that should appear in the Deal or No Deal case
    * selection board. The default implementation filters out excluded
    * players and trims to the pool size; sports with specific constraints
-   * (e.g. World Cup per-country quotas) may override this with custom
-   * selection logic.
+   * (e.g. World Cup per-country quotas, event-stage-dependent pool sizing)
+   * may override this with custom selection logic.
    *
    * @param projections All eligible player projections for the position.
    * @param team        The team being drafted for.
    * @param position    The roster slot position (e.g. "QB", "GK", "DEF").
    * @param poolSize    Maximum number of players to return.
+   * @param eventGroup  Optional event group context for tournament-stage-aware
+   *                    pool sizing (e.g. World Cup quarterfinals).
    * @returns The player pool for the case board.
    */
   determinePlayerPool(
@@ -52,6 +54,7 @@ export interface ITeamsGameStrategy {
     team: ITeam,
     position: string,
     poolSize: number,
+    eventGroup?: EventGroup,
   ): Promise<IPlayerProjection[]>;
 
   /**

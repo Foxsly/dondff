@@ -19,6 +19,7 @@ export class NflTeamsGameStrategy implements ITeamsGameStrategy {
     team: ITeam,
     position: string,
     poolSize: number,
+    _eventGroup?: EventGroup,
   ): Promise<IPlayerProjection[]> {
     const excluded = await this.getExcludedPlayerIds(team, position);
     return projections

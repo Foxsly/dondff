@@ -1,3 +1,4 @@
+import { EventGroup } from '@/events/entities/event-group.entity';
 import { WorldCupTeamsGameStrategy } from './world-cup-teams-game.strategy';
 import { ITeam } from '@/teams/entities/team.entity';
 import { IPlayerProjection } from '@/player-stats/entities/player-stats.entity';
@@ -23,6 +24,25 @@ describe('WorldCupTeamsGameStrategy', () => {
   });
 
   describe('determinePlayerPool', () => {
+    const nonQfEventGroup = { name: 'World Cup Group Stage – Matchday 1' } as EventGroup;
+
+    it('adds countries/2 extra GKs for quarterfinals', async () => {
+      const projections = [
+        makeProjection('arg1', 'GK', 'ARG', 10),
+        makeProjection('arg2', 'GK', 'ARG', 8),
+        makeProjection('bra1', 'GK', 'BRA', 9),
+        makeProjection('bra2', 'GK', 'BRA', 7),
+      ];
+      const team = { players: [], eventGroupId: 'eg-1' } as unknown as ITeam;
+      const eventGroup = { name: 'World Cup Knockout Stage – Quarter-finals' } as EventGroup;
+
+      // computed poolSize = 2 × 1 + ⌊2/2⌋ = 3 (extra factor applies for QF)
+      const pool = await strategy.determinePlayerPool(projections, team, 'GK', 3, eventGroup);
+
+      expect(pool).toHaveLength(3);
+      expect(pool.map(p => p.playerId).sort()).toEqual(['arg1', 'arg2', 'bra1']);
+    });
+
     it('only includes 1 GK per country (quota)', async () => {
       const projections = [
         makeProjection('arg1', 'GK', 'ARG', 10),
@@ -33,7 +53,7 @@ describe('WorldCupTeamsGameStrategy', () => {
       const team = { players: [] } as unknown as ITeam;
 
       // computed poolSize = 2 × 1 = 2 quota picks
-      const pool = await strategy.determinePlayerPool(projections, team, 'GK', 2);
+      const pool = await strategy.determinePlayerPool(projections, team, 'GK', 2, nonQfEventGroup);
 
       expect(pool).toHaveLength(2);
       expect(pool.map(p => p.playerId).sort()).toEqual(['arg1', 'bra1']);
@@ -49,7 +69,7 @@ describe('WorldCupTeamsGameStrategy', () => {
       ];
 
       // computed poolSize = 2 × 3 + ⌊2/2⌋ = 7 → all 5 projections fit within quota
-      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'DEF', 7);
+      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'DEF', 7, nonQfEventGroup);
 
       expect(pool).toHaveLength(5);
       expect(pool.map(p => p.playerId).sort()).toEqual(['arg1', 'arg2', 'arg3', 'bra1', 'bra2']);
@@ -69,7 +89,7 @@ describe('WorldCupTeamsGameStrategy', () => {
       ];
 
       // computed poolSize = 3 × 2 + ⌊3/2⌋ = 7 → 6 quota picks + 1 remainder (uru2)
-      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'FWD', 1);
+      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'FWD', 1, nonQfEventGroup);
 
       expect(pool).toHaveLength(7);
       expect(pool).toEqual(['arg1', 'arg2', 'bra1', 'bra2', 'uru1', 'uru2', 'uru3'].map(id =>
@@ -86,7 +106,7 @@ describe('WorldCupTeamsGameStrategy', () => {
       ];
 
       // computed poolSize = 3 × 1 = 3 → 3 quota picks
-      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'GK', 1);
+      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'GK', 1, nonQfEventGroup);
 
       expect(pool).toHaveLength(3);
       expect(pool.map(p => p.playerId).sort()).toEqual(['arg2', 'bra1', 'uru1']);
@@ -100,7 +120,7 @@ describe('WorldCupTeamsGameStrategy', () => {
         makeProjection('bra2', 'GK', 'BRA', 7),
       ];
 
-      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'GK', 10);
+      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'GK', 10, nonQfEventGroup);
 
       const ids = pool.map(p => p.playerId);
       expect(new Set(ids).size).toBe(ids.length);
@@ -114,7 +134,7 @@ describe('WorldCupTeamsGameStrategy', () => {
         makeProjection('p4', 'DEF', 'ARG', 7),
       ];
 
-      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'DEF', 3);
+      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'DEF', 3, nonQfEventGroup);
 
       expect(pool).toHaveLength(3);
       expect(pool.map(p => p.playerId)).toEqual(['p1', 'p2', 'p4']);
@@ -126,15 +146,25 @@ describe('WorldCupTeamsGameStrategy', () => {
         makeProjection('p2', 'GK', 'BRA', 8),
       ];
 
-      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'GK', 10);
+      const pool = await strategy.determinePlayerPool(projections, {} as ITeam, 'GK', 10, nonQfEventGroup);
 
       expect(pool).toHaveLength(2);
     });
 
     it('returns empty array when no projections provided', async () => {
-      const pool = await strategy.determinePlayerPool([], {} as ITeam, 'GK', 5);
+      const pool = await strategy.determinePlayerPool([], {} as ITeam, 'GK', 5, nonQfEventGroup);
 
       expect(pool).toEqual([]);
+    });
+
+    it('throws when no eventGroup is provided', async () => {
+      const projections = [
+        makeProjection('arg1', 'GK', 'ARG', 10),
+      ];
+
+      await expect(
+        strategy.determinePlayerPool(projections, {} as ITeam, 'GK', 5),
+      ).rejects.toThrow('EventGroup is required for World Cup player pool determination');
     });
   });
 });
