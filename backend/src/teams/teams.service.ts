@@ -1,5 +1,6 @@
 import { SportLeague } from '@/common/types/sport-league.type';
 import { shuffle } from '@/common/util';
+import { EventGroup } from '@/events/entities/event-group.entity';
 import { EventsService } from '@/events/events.service';
 import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
 import { LeaguesService } from '@/leagues/leagues.service';
@@ -210,7 +211,7 @@ export class TeamsService {
   async resetCases(teamId: string, position: string) {
     let teamEntry = await this.getTeamEntry(teamId, position);
     //We do not need a new entry per reset count. We should be updating, and there should generally only be one entry per team/position
-    //The only thing that doesn't have a reset_number is team_entry_offer, but you shouldn't be able to reset after getting an offer anyways
+    //The only thing that doesn't have a reset_number is team_entry_offer, but you shouldn't be able to reset after getting an offer anyway
     let updatedTeamEntry = await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, {
       status: 'pending',
       resetCount: teamEntry.resetCount + 1,
@@ -230,6 +231,7 @@ export class TeamsService {
       leagueSettings,
       league.sportLeague,
       this.teamsGameRegistry.get(league.sportLeague).getNumberOfCases(eventGroup),
+      eventGroup,
     );
   }
 
@@ -239,6 +241,7 @@ export class TeamsService {
     leagueSettings: ILeagueSettings,
     sportLeague: SportLeague,
     numberOfCases: number = 10,
+    eventGroup?: EventGroup,
   ) {
     let playerProjections: PlayerProjectionResponse =
       await this.playerStatsService.getPlayerProjections(
@@ -258,7 +261,7 @@ export class TeamsService {
 
     let trimmedPlayers: IPlayerProjection[] = await this.teamsGameRegistry
       .get(sportLeague)
-      .determinePlayerPool(playerProjections, team, position, poolSize);
+      .determinePlayerPool(playerProjections, team, position, poolSize, eventGroup);
 
     let cases: Array<Omit<ITeamEntryAudit, 'auditId'>> = shuffle(trimmedPlayers)
       .slice(0, numberOfCases)
@@ -309,14 +312,14 @@ export class TeamsService {
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(entry.teamEntryId);
     if (audits.length === 0) {
       // Generate cases - this also handles shared pool exclusion for GOLF
+      const eventGroup = await this.eventsService.findOneEventGroup(team.eventGroupId);
       await this.generateCasesForPosition(
         team,
         position,
         leagueSettings,
         league.sportLeague,
-        this.teamsGameRegistry.get(league.sportLeague).getNumberOfCases(
-          await this.eventsService.findOneEventGroup(team.eventGroupId),
-        ),
+        this.teamsGameRegistry.get(league.sportLeague).getNumberOfCases(eventGroup),
+        eventGroup,
       );
     }
 
@@ -363,7 +366,8 @@ export class TeamsService {
     let playerIdsInBoxes = teamEntryAudits.map((entry) => entry.playerId);
 
     const poolSize = (await this.leaguesService.getPositionForLeagueSettings(teamEntry.leagueSettingsId, teamEntry.position)).poolSize;
-    const poolProjections = await this.teamsGameRegistry.get(league.sportLeague).determinePlayerPool(projections, team, teamEntry.position, poolSize);
+    const eventGroup = await this.eventsService.findOneEventGroup(team.eventGroupId);
+    const poolProjections = await this.teamsGameRegistry.get(league.sportLeague).determinePlayerPool(projections, team, teamEntry.position, poolSize, eventGroup);
 
     let availableOffers = poolProjections.filter(
       (player) =>

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { FifaService } from '@/external-providers/fifa/fifa.service';
 import { IEventSyncStrategy, EventSyncGroup } from '@/events/strategies/event-sync-strategy.interface';
 
-const WORLD_CUP_STAGE_NAMES: Record<string, string> = {
+export const WORLD_CUP_STAGE_NAMES: Record<string, string> = {
   R32: 'Round of 32',
   R16: 'Round of 16',
   QF: 'Quarter-finals',

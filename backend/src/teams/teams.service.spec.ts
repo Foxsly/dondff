@@ -7,6 +7,7 @@ import { ITeam, Team, CreateTeamDto, UpdateTeamDto } from './entities/team.entit
 import { TeamsRepository } from '@/teams/teams.repository';
 import { LeaguesService } from '@/leagues/leagues.service';
 import { PlayerStatsService } from '@/player-stats/player-stats.service';
+import { EventGroup } from '@/events/entities/event-group.entity';
 import { EventsService } from '@/events/events.service';
 import { IPlayerProjection } from '@/player-stats/entities/player-stats.entity';
 import { TeamsGameStrategyRegistry } from '@/teams/strategies/teams-game-strategy.registry';
@@ -188,7 +189,7 @@ describe('TeamsService — golf shared pool exclusion', () => {
   /** Shared mock strategy for TeamsGameStrategyRegistry. */
   const mockGolfStrategy = {
     getExcludedPlayerIds: jest.fn(),
-    determinePlayerPool: jest.fn(async (projections: IPlayerProjection[], team: ITeam, position: string, poolSize: number) => {
+    determinePlayerPool: jest.fn(async (projections: IPlayerProjection[], team: ITeam, position: string, poolSize: number, _eventGroup?: EventGroup) => {
       const excluded = await mockGolfStrategy.getExcludedPlayerIds(team, position);
       return projections
         .filter(p => !excluded.includes(p.playerId))
