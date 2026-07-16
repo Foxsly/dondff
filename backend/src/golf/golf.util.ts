@@ -146,3 +146,18 @@ export function normalizeName(name: string): string {
 export function normalizeEventName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
 }
+
+/**
+ * Maps normalised FanDuel event names to their ESPN equivalents.
+ * Keys and values must be in normalised form (lowercase, no punctuation).
+ */
+export const GOLF_EVENT_NAME_ALIASES: Record<string, string> = {
+  'the open championship': 'the open',
+};
+
+export function matchesEvent(fanduelName: string, espnName: string): boolean {
+  const fdNormalised = normalizeEventName(fanduelName);
+  const espnNormalised = normalizeEventName(espnName);
+  const fdMatch = GOLF_EVENT_NAME_ALIASES[fdNormalised] ?? fdNormalised;
+  return espnNormalised.includes(fdMatch) || fdMatch.includes(espnNormalised);
+}

@@ -1,6 +1,6 @@
 import { FanduelNflProjectionsResponse } from '@/external-providers/fanduel/entities/fanduel-nfl.entity';
 import { FanduelSport } from '@/external-providers/fanduel/entities/fanduel.entity';
-import { normalizeEventName } from '@/golf/golf-scoring.util';
+import { matchesEvent } from '@/golf/golf.util';
 import { PlayerPosition } from '@/player-stats/entities/player-stats.entity';
 import { TypedParam, TypedRoute } from '@nestia/core';
 import { Controller, Query } from '@nestjs/common';
@@ -30,7 +30,7 @@ export class FanduelController {
 
     return fanduelEvents.map((fdEvent) => {
       const espnMatch = espnSchedule.find((espn) =>
-        normalizeEventName(espn.name).includes(normalizeEventName(fdEvent.name)),
+        matchesEvent(fdEvent.name, espn.name),
       );
       return {
         id: fdEvent.id,

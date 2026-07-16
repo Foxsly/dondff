@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EventGroup } from '@/events/entities/event-group.entity';
 import { IPlayerProjection } from '@/player-stats/entities/player-stats.entity';
 import { ITeam } from '@/teams/entities/team.entity';
-import { normalizeName } from '@/golf/golf-scoring.util';
+import { normalizeName } from '@/golf/golf.util';
 import { ITeamsGameStrategy } from '@/teams/strategies/teams-game-strategy.interface';
 
 @Injectable()

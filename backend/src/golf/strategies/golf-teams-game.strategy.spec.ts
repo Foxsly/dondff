@@ -157,8 +157,8 @@ describe('GolfTeamsGameStrategy', () => {
   });
 
   describe('normalizePlayerName', () => {
-    it('delegates to normalizeName from golf-scoring.util', () => {
-      // Delegating to golf-scoring.util centralises all name-matching logic
+    it('delegates to normalizeName from golf.util', () => {
+      // Delegating to golf.util centralises all name-matching logic
       // (strip suffixes, handle accents) so providers (FanDuel, ESPN) can
       // be matched by player name even when formatting differs.
       expect(strategy.normalizePlayerName('Rory McIlroy Jr')).toBe('rory mcilroy');
