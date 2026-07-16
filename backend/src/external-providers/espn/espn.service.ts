@@ -6,7 +6,7 @@ import {
   EspnHoleScore,
   EspnRoundScore,
   normalizeName,
-} from '@/golf/golf-scoring.util';
+} from '@/golf/golf.util';
 
 export interface EspnTournament {
   name: string;

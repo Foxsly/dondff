@@ -6,7 +6,7 @@ import {
   normalizeName,
   EspnCompetitor,
   EspnHoleScore,
-} from './golf-scoring.util';
+} from './golf.util';
 
 describe('scoreHole', () => {
   // Hole scoring mirrors standard golf DFS scoring. Key design decisions:
