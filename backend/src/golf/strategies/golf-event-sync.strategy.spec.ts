@@ -103,5 +103,53 @@ describe('GolfEventSyncStrategy', () => {
       expect(result).toHaveLength(2);
       expect(result.map((g) => g.name)).toEqual(['Event One', 'Event Two']);
     });
+
+    it('matches via name alias when normalised names differ', async () => {
+      fanduelService.getGolfEvents.mockResolvedValue([
+        { id: 'event-open', name: 'The Open Championship' },
+      ]);
+      espnService.getPgaSchedule.mockResolvedValue([
+        { name: 'The Open', startDate: '2025-07-17', endDate: '2025-07-20', state: 'pre' },
+      ]);
+
+      const result = await strategy.fetchSyncData();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('The Open Championship');
+      expect(result[0].events[0]).toEqual({
+        externalId: 'event-open',
+        externalSource: 'FANDUEL',
+        name: 'The Open Championship',
+        startDate: '2025-07-17',
+        endDate: '2025-07-20',
+      });
+    });
+
+    it('matches when ESPN name is shorter and contained in FanDuel name', async () => {
+      fanduelService.getGolfEvents.mockResolvedValue([
+        { id: 'e-us', name: 'U.S. Open' },
+      ]);
+      espnService.getPgaSchedule.mockResolvedValue([
+        { name: 'US Open', startDate: '2025-06-12', endDate: '2025-06-15', state: 'pre' },
+      ]);
+
+      const result = await strategy.fetchSyncData();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].events[0].externalId).toBe('e-us');
+    });
+
+    it('does not match unrelated events', async () => {
+      fanduelService.getGolfEvents.mockResolvedValue([
+        { id: 'e-pga', name: 'PGA Championship' },
+      ]);
+      espnService.getPgaSchedule.mockResolvedValue([
+        { name: 'The Masters', startDate: '2025-04-10', endDate: '2025-04-13', state: 'pre' },
+      ]);
+
+      const result = await strategy.fetchSyncData();
+
+      expect(result).toEqual([]);
+    });
   });
 });

@@ -142,3 +142,7 @@ export function normalizeName(name: string): string {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+export function normalizeEventName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+}
