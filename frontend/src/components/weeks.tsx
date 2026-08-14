@@ -150,7 +150,7 @@ const Weeks: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
+      <div className="mx-auto max-w-5xl p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
         <Breadcrumbs items={breadcrumbs} />
         <LoadingSpinner message="Loading event groups..." />
       </div>
@@ -159,7 +159,7 @@ const Weeks: React.FC = () => {
 
   if (displayError) {
     return (
-      <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
+      <div className="mx-auto max-w-5xl p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
         <Breadcrumbs items={breadcrumbs} />
         <ErrorDisplay message={displayError} />
       </div>
@@ -167,7 +167,7 @@ const Weeks: React.FC = () => {
   }
 
   return (
-    <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
+    <div className="mx-auto max-w-5xl p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
       <Breadcrumbs items={breadcrumbs} />
       <div className="space-y-4 max-w-[90%] mx-auto">
         {eventGroups.map((group) => (

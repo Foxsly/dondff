@@ -126,7 +126,7 @@ const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
+      <div className="mx-auto max-w-5xl p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
         <Breadcrumbs items={[{ label: "Dashboard" }]} />
         <LoadingSpinner message="Loading your dashboard..." />
       </div>
@@ -135,7 +135,7 @@ const Dashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
+      <div className="mx-auto max-w-5xl p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
         <Breadcrumbs items={[{ label: "Dashboard" }]} />
         <ErrorDisplay message={error} action={{ label: "Return to Sign In", onClick: () => navigate("/") }} />
       </div>
@@ -143,7 +143,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
+    <div className="mx-auto max-w-5xl p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
       <Breadcrumbs items={[{ label: "Dashboard" }]} />
       <h2 className="text-2xl font-bold">Welcome to Your Dashboard</h2>
       <h3 className="text-xl">{user?.email ?? ""}</h3>

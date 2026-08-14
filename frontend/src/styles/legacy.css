@@ -16,33 +16,9 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 @layer components {
-  /* ── Removed in Phase 3 (app shell) ─────────────────────────────────────── */
-
-  .App {
-    /* Global centring the pages then fight with `text-left`. Phase 3 removes it
-       and lets each page own its own alignment. */
-    text-align: center;
-  }
-
-  .content-container {
-    width: 100%;
-  }
-
-  @media only screen and (min-width: 1200px) {
-    .content-container {
-      margin-left: auto;
-      margin-right: auto;
-      width: 80%;
-    }
-  }
-
-  .navbar-link-text {
-    font-weight: 700;
-  }
-
-  .navbar-link-text:hover {
-    color: rgb(var(--color-brand));
-  }
+  /* Phase 3 removed .App, .content-container and .navbar-link-text along with
+     the shell that used them. The global `text-align: center` is gone, so
+     pages no longer have to undo it with `text-left`. */
 
   /* ── Removed in Phase 2 (Button primitive) ──────────────────────────────── */
 

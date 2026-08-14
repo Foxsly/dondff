@@ -45,6 +45,12 @@ export type { InputProps } from './Input';
 export { LoadingSpinner } from './LoadingSpinner';
 export type { LoadingSpinnerProps } from './LoadingSpinner';
 
+export { Logo } from './Logo';
+export type { LogoProps } from './Logo';
+
+export { Menu, MenuDivider, MenuItem, MenuLabel } from './Menu';
+export type { MenuItemProps, MenuProps } from './Menu';
+
 export { Modal } from './Modal';
 export type { ModalProps, ModalSize } from './Modal';
 

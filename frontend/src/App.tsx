@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useParams } from 'react-router-dom';
 import Home from './components/home';
 import SignUp from './components/signIn';
-import Error from './components/error';
+import NotFound from './components/error';
 import Dashboard from './components/dashboard';
 import League from './components/league';
 import Game from './components/game/Game';
@@ -27,12 +27,25 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
 
   return (
-    <div className="App flex flex-col min-h-screen">
+    <div className="flex min-h-screen flex-col bg-bg">
       <AuthContext.Provider value={{ user, setUser }}>
         <ToastProvider>
           <Router>
+            {/* First thing in the tab order: lets keyboard and screen-reader
+                users jump the navigation instead of tabbing through it on
+                every page. Visible only while focused. */}
+            <a
+              href="#main"
+              className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-brand focus:px-4 focus:py-2 focus:font-semibold focus:text-brand-contrast"
+            >
+              Skip to content
+            </a>
+
             <Navbar />
-            <div className="flex-grow content-container">
+
+            {/* `min-w-0` stops a wide child (a score table, the case board)
+                from forcing the whole column wider than the viewport. */}
+            <main id="main" className="min-w-0 flex-1">
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<SignUp />} />
@@ -46,9 +59,10 @@ function App() {
                 {process.env.NODE_ENV === 'development' && (
                   <Route path="/ui" element={<Styleguide />} />
                 )}
-                <Route path="*" element={<Error />} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
-            </div>
+            </main>
+
             <Footer />
           </Router>
         </ToastProvider>
