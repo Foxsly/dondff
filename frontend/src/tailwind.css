@@ -1,15 +1,23 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Stylesheet entry point.
+
+   Built by `npm run build:css` into src/index.css, which is what index.tsx
+   imports. Edit this file (and src/styles/*), never src/index.css.
+
+   All `@import`s must sit above the `@tailwind` directives: postcss-import only
+   inlines imports that precede other rules, and silently drops any that follow.
+   Cascade order is therefore controlled by the `@layer` each file declares
+   internally, not by its import position —
+     tokens.css / fonts.css  unlayered (custom properties + @font-face)
+     base.css                @layer base       — element defaults, utilities win
+     legacy.css              @layer components — pre-overhaul shim, deleted by Phase 7
+   ────────────────────────────────────────────────────────────────────────── */
+
+@import './styles/tokens.css';
+@import './styles/fonts.css';
+@import './styles/base.css';
+@import './styles/legacy.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Custom form styling for dark theme */
-input, select, textarea {
-  background-color: #020617;
-  color: #ffffff;
-  border-color: #374151;
-}
-
-body {
-  background-color: #102131;
-  color: #fff;
-}

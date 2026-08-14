@@ -1,0 +1,89 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Design tokens
+   ─────────────────────────────────────────────────────────────────────────────
+   Single source of truth for colour, radius, shadow and type in the app.
+
+   Colours are stored as raw `R G B` channel triplets rather than hex so that
+   Tailwind can compose them with an alpha channel — `rgb(var(--x) / <alpha-value>)`.
+   That is what makes `bg-surface/50` work the same way `bg-[#182030]/50` used to.
+   Never write a literal hex in a component; add a token here instead.
+
+   The surface/text ramps below are lifted verbatim from the standings EntryCard,
+   which was the one piece of the old UI with a deliberate palette. The rest of
+   the app is being moved onto it rather than the other way round.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Surfaces ───────────────────────────────────────────────────────────── */
+  --color-bg: 13 22 34; /* #0d1622 — page ground */
+  --color-surface-sunken: 19 28 41; /* #131c29 — wells, inset rows */
+  --color-surface: 24 32 48; /* #182030 — cards (EntryCard body) */
+  --color-surface-raised: 30 42 60; /* #1e2a3c — card headers (EntryCard header) */
+  --color-surface-overlay: 34 48 70; /* #223046 — modals, dropdowns, popovers */
+
+  /* ── Borders ────────────────────────────────────────────────────────────── */
+  --color-border: 45 61 82; /* #2d3d52 — default card/control border */
+  --color-border-strong: 58 70 91; /* #3a465b — emphasis, dividers between blocks */
+
+  /* ── Text ramp (strongest → faintest) ───────────────────────────────────── */
+  --color-text-strong: 255 255 255; /* #ffffff — headings, member names */
+  --color-text: 229 231 235; /* #e5e7eb — body, player names */
+  --color-text-muted: 156 163 175; /* #9ca3af — secondary figures (proj) */
+  --color-text-subtle: 107 114 128; /* #6b7280 — uppercase micro-labels */
+  --color-text-faint: 75 85 99; /* #4b5563 — placeholders, empty slots */
+
+  /* ── Brand ──────────────────────────────────────────────────────────────── */
+  --color-brand: 0 206 184; /* #00ceb8 */
+  --color-brand-hover: 46 224 205; /* #2ee0cd */
+  --color-brand-active: 0 179 160; /* #00b3a0 */
+  --color-brand-contrast: 13 22 34; /* text/icons sitting on a brand fill */
+
+  /* ── Gold — reserved for briefcases and first place. Nothing else. ──────── */
+  --color-gold: 251 191 36; /* #fbbf24 */
+  --color-gold-bg: 68 55 10; /* #44370a */
+  --color-gold-border: 146 112 12; /* #92700c */
+
+  /* ── Status ─────────────────────────────────────────────────────────────── */
+  --color-success: 52 211 153; /* #34d399 — final scores, confirmations */
+  --color-danger: 248 113 113; /* #f87171 */
+  --color-warn: 251 191 36; /* #fbbf24 */
+  --color-info: 58 180 204; /* #3ab4cc */
+
+  /* ── Podium — rank chips on the standings card ──────────────────────────── */
+  --color-rank-1-bg: 68 55 10;
+  --color-rank-1-text: 251 191 36;
+  --color-rank-1-border: 146 112 12;
+  --color-rank-2-bg: 42 45 48;
+  --color-rank-2-text: 156 163 175;
+  --color-rank-2-border: 75 85 99;
+  --color-rank-3-bg: 59 36 16;
+  --color-rank-3-text: 251 146 60;
+  --color-rank-3-border: 154 52 18;
+
+  /* ── Radius ─────────────────────────────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius: 8px; /* data density: tables, controls, badges */
+  --radius-lg: 12px; /* stage density: cards (EntryCard) */
+  --radius-xl: 16px; /* hero panels, modals */
+  --radius-full: 9999px; /* pills, avatars, rank chips */
+
+  /* ── Elevation ──────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-card: 0 4px 20px rgb(0 0 0 / 0.3); /* EntryCard */
+  --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.4);
+  --shadow-overlay: 0 24px 64px rgb(0 0 0 / 0.55);
+
+  /* ── Focus ──────────────────────────────────────────────────────────────── */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* ── Type ───────────────────────────────────────────────────────────────── */
+  --font-display: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Archivo is a variable font with a width axis. Display type runs condensed;
+     this is what gives headings the broadcast feel without a second font file. */
+  --display-stretch: 88%;
+  --display-stretch-tight: 78%;
+}

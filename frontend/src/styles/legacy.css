@@ -1,0 +1,284 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   LEGACY — transitional shim. Do not add to this file.
+   ─────────────────────────────────────────────────────────────────────────────
+   These are the class names from the old App.css, kept alive so the app keeps
+   working while the UI overhaul lands phase by phase. Layout and spacing are
+   preserved exactly; only the hard-coded colours have been repointed at the
+   tokens, which is what collapses the old emerald / teal / slate palettes into
+   one.
+
+   Each block is tagged with the phase that deletes it. When a phase rebuilds
+   its screens on the `ui/` primitives, its block here goes away with it. This
+   file should be empty — and deleted — by the end of Phase 7.
+
+   Already dropped as dead code: .options, .edge, .about, .main-image
+   (no remaining references anywhere in src/).
+   ────────────────────────────────────────────────────────────────────────── */
+
+@layer components {
+  /* ── Removed in Phase 3 (app shell) ─────────────────────────────────────── */
+
+  .App {
+    /* Global centring the pages then fight with `text-left`. Phase 3 removes it
+       and lets each page own its own alignment. */
+    text-align: center;
+  }
+
+  .content-container {
+    width: 100%;
+  }
+
+  @media only screen and (min-width: 1200px) {
+    .content-container {
+      margin-left: auto;
+      margin-right: auto;
+      width: 80%;
+    }
+  }
+
+  .navbar-link-text {
+    font-weight: 700;
+  }
+
+  .navbar-link-text:hover {
+    color: rgb(var(--color-brand));
+  }
+
+  /* ── Removed in Phase 2 (Button primitive) ──────────────────────────────── */
+
+  /* Three separate button systems collapsed onto the brand token. `.btn-primary`
+     and `.btn-outline-primary` were emerald, `.btn` was teal; they are now the
+     same colour, which is the first visible sign of the palette unifying. */
+  .btn {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    border: 1px solid rgb(var(--color-brand));
+    background-color: rgb(var(--color-brand) / 0.1);
+    color: rgb(var(--color-brand));
+    font-weight: 700;
+    text-transform: uppercase;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+
+  .btn:hover {
+    background-color: rgb(var(--color-brand));
+    color: rgb(var(--color-brand-contrast));
+    cursor: pointer;
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn:disabled:hover {
+    background-color: rgb(var(--color-brand) / 0.1);
+    color: rgb(var(--color-brand));
+  }
+
+  .btn-primary {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius);
+    background-color: rgb(var(--color-brand));
+    color: rgb(var(--color-brand-contrast));
+    font-weight: 700;
+    border: none;
+    transition: background-color 150ms ease;
+  }
+
+  .btn-primary:hover {
+    background-color: rgb(var(--color-brand-hover));
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-outline-primary {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius);
+    border: 2px solid rgb(var(--color-brand));
+    background-color: transparent;
+    color: rgb(var(--color-brand));
+    font-weight: 700;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+
+  .btn-outline-primary:hover {
+    background-color: rgb(var(--color-brand));
+    color: rgb(var(--color-brand-contrast));
+  }
+
+  /* Was previously unstyled — the class was referenced on four pages but never
+     defined anywhere. Minimal treatment until the Breadcrumbs primitive lands. */
+  .breadcrumbs {
+    font-size: 0.875rem;
+    color: rgb(var(--color-text-subtle));
+  }
+
+  .breadcrumbs a {
+    color: rgb(var(--color-text-muted));
+    text-decoration: none;
+  }
+
+  .breadcrumbs a:hover {
+    color: rgb(var(--color-brand));
+    text-decoration: underline;
+  }
+
+  /* ── Removed in Phase 6 (weeks, standings, lineup card) ─────────────────── */
+
+  .accordion-title {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    cursor: pointer;
+    background-color: rgb(var(--color-surface-raised));
+    padding: 1rem;
+  }
+
+  .accordion-title:hover {
+    background-color: rgb(var(--color-info));
+  }
+
+  .accordion-content {
+    padding: 1rem;
+    background-color: rgb(var(--color-brand) / 0.1);
+  }
+
+  .contestant-flexbox {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    justify-content: space-around;
+    background-color: rgb(var(--color-border-strong) / 0.5);
+    padding: 10px;
+    margin-bottom: 16px;
+  }
+
+  .contestant-card {
+    width: 30%;
+    border: 2px solid rgb(var(--color-info));
+    padding: 6px;
+  }
+
+  /* ── Removed in Phase 7 (game screen) ───────────────────────────────────── */
+
+  .game {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    margin-bottom: 16px;
+  }
+
+  .board {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    justify-content: space-around;
+    background-color: rgb(var(--color-border-strong) / 0.5);
+    padding: 10px;
+    width: 70%;
+  }
+
+  .side {
+    padding: 10px;
+    width: 25%;
+    text-align: left;
+    background-color: rgb(var(--color-border-strong) / 0.5);
+    overflow: hidden;
+  }
+
+  @media only screen and (max-width: 1000px) {
+    .game {
+      flex-direction: column;
+    }
+
+    .board,
+    .side {
+      width: 100%;
+    }
+  }
+
+  .box {
+    width: 200px;
+    height: 180px;
+    border: 2px solid rgb(var(--color-border-strong));
+    background-color: rgb(var(--color-bg));
+    /* Was inheriting centring from `.App`; made explicit so Phase 3 can drop it. */
+    text-align: center;
+  }
+
+  .box:hover {
+    border-color: rgb(var(--color-brand));
+    cursor: pointer;
+  }
+
+  .box.opened {
+    border-color: rgb(var(--color-danger));
+  }
+
+  .num {
+    font-weight: 700;
+    font-size: 4rem;
+  }
+
+  .action-box {
+    margin-top: 8px;
+    border: 2px dashed rgb(var(--color-brand));
+    text-align: center;
+    padding: 8px;
+    font-size: 1.3rem;
+  }
+
+  .offer-box {
+    margin-bottom: 8px;
+  }
+
+  .action-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .action-buttons .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 8px;
+    font-size: 0.9rem;
+  }
+
+  .list-player {
+    background-color: rgb(var(--color-text-muted) / 0.05);
+    margin-bottom: 4px;
+    padding: 4px;
+    border: 1px solid rgb(var(--color-border));
+    font-weight: 700;
+  }
+
+  .list-player.eliminated {
+    background-color: rgb(var(--color-danger) / 0.25);
+  }
+
+  .proj {
+    font-size: 0.9rem;
+    font-weight: 400;
+  }
+
+  .status {
+    font-size: 0.75rem;
+    font-weight: 400;
+  }
+
+  .case-selected-text {
+    font-size: 1.3rem;
+    margin-bottom: 4px;
+  }
+}

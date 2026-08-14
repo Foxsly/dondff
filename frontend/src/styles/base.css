@@ -1,0 +1,123 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Base element styling — loaded into Tailwind's `base` layer, so every
+   utility class still wins over anything declared here.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: rgb(var(--color-bg));
+    color: rgb(var(--color-text));
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings run on the condensed display face by default. Individual components
+     opt out with `font-sans` where a heading is really a UI label. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    font-stretch: var(--display-stretch);
+    color: rgb(var(--color-text-strong));
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  /* Numbers that sit in a column — scores, projections, totals — must not jitter
+     between renders. Components mark these with `.tnum` or `font-mono`. */
+  .tnum,
+  code,
+  kbd,
+  pre,
+  samp {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Focus ────────────────────────────────────────────────────────────────
+     One visible focus treatment for the whole app. Keyboard-only (`:focus-visible`)
+     so pointer users never see a ring, but nothing is ever unreachable by keyboard.
+     The old UI had no focus styling at all. */
+  :focus-visible {
+    outline: var(--focus-ring-width) solid rgb(var(--color-brand));
+    outline-offset: var(--focus-ring-offset);
+    border-radius: var(--radius-sm);
+  }
+
+  /* Form controls inherit the surface palette rather than the UA's white. */
+  input,
+  select,
+  textarea {
+    background-color: rgb(var(--color-surface-sunken));
+    color: rgb(var(--color-text));
+    border-color: rgb(var(--color-border));
+    font-family: inherit;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: rgb(var(--color-text-faint));
+  }
+
+  /* Native select dropdowns render their option list with the OS palette on some
+     platforms; force the dark surface so the list doesn't flash white. */
+  select option {
+    background-color: rgb(var(--color-surface-raised));
+    color: rgb(var(--color-text));
+  }
+
+  ::selection {
+    background-color: rgb(var(--color-brand) / 0.3);
+    color: rgb(var(--color-text-strong));
+  }
+
+  /* ── Scrollbars ─────────────────────────────────────────────────────────── */
+  * {
+    scrollbar-color: rgb(var(--color-border-strong)) transparent;
+    scrollbar-width: thin;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--color-border-strong));
+    border: 2px solid transparent;
+    background-clip: content-box;
+    border-radius: var(--radius-full, 9999px);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--color-text-faint));
+  }
+
+  /* ── Motion ───────────────────────────────────────────────────────────────
+     The game board runs several looping animations (case glow, spotlight, lid
+     open). Honour a reduced-motion preference globally so no single component
+     has to remember to. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
