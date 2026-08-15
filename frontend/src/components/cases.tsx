@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { generateCases } from './util';
-import type { PoolPlayer, GameCase } from '../types';
+import type { PoolPlayer, GameCase, GameBox } from '../types';
+import Briefcase from './game/Briefcase';
+import { Button, PageContainer } from './ui';
 
 interface DisplayGameProps {
   pool: PoolPlayer[];
@@ -218,145 +220,242 @@ const DisplayGame: React.FC<DisplayGameProps> = ({ pool }) => {
     }
   }, [reset]);
 
-  const render = () => {
-    if (cases && caseSelected) {
-      return (
-        <>
-          {cases.map((box, index) =>
-            box.opened === true ? (
-              <div className="box opened" key={index}>
-                {box.number}<br />
-                {box.name}({box.points})
-              </div>
-            ) : (
-              <div className="box" key={index}>
-                <span className="num">{box.number}</span>
-              </div>
-            )
-          )}
-        </>
-      );
-    } else if (cases) {
-      return (
-        <>
-          {cases.map((box, index) =>
-            <div className="box" key={index} onClick={() => selectCase(cases[index])}>
-              <span className="num">{box.number}</span>
-            </div>
-          )}
-        </>
-      );
-    }
-  };
+  // ── Presentation only below this line ──────────────────────────────────
+  // The game logic above is the original, untouched. Everything here was
+  // rebuilt in Phase 7 so quick-play matches the league game screen instead of
+  // dropping an anonymous visitor onto the pre-overhaul board.
 
-  const renderCaseDisplay = () => {
-    if (displayCases) {
-      return (
-        <div className="display-cases">
-          Players in cases:
-          {displayCases.map((item, index) =>
-            item.opened ? (
-              <div className="list-player eliminated" key={index}>
-                {item.name} <span className="status">{item.team} {item.status}</span><br />
-                <span className="proj">Proj: {item.points} Opp: {item.opponent}</span>
-              </div>
-            ) : (
-              <div className="list-player" key={index}>
-                {item.name} <span className="status">{item.team} {item.status}</span><br />
-                <span className="proj">Proj: {item.points} Opp: {item.opponent}</span>
-              </div>
-            )
-          )}
+  /** The quick-play board keeps its own case shape; Briefcase speaks GameBox. */
+  const toGameBox = (box: GameCase): GameBox => ({
+    boxNumber: box.number,
+    boxStatus: box.opened ? 'eliminated' : 'available',
+    playerName: box.name,
+    projectedPoints: box.points,
+  });
+
+  const renderBoard = () => (
+    <div
+      className="grid grid-cols-2 justify-items-center gap-5 rounded-xl border border-border bg-surface/40 p-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:p-6"
+      role="group"
+      aria-label="Case board"
+    >
+      {(cases ?? []).map((box, index) => {
+        const isClickable = !caseSelected && !box.opened;
+        const isUserSelected = !!caseSelected && caseSelected.number === box.number;
+
+        return (
+          <button
+            key={index}
+            type="button"
+            disabled={!isClickable}
+            onClick={isClickable ? () => selectCase(cases![index]) : undefined}
+            aria-label={
+              box.opened
+                ? `Case ${box.number}, opened: ${box.name}, ${box.points} points`
+                : `Case ${box.number}`
+            }
+            className="rounded-md disabled:cursor-default"
+          >
+            <Briefcase
+              box={toGameBox(box)}
+              isUserSelected={isUserSelected}
+              // round 5 is the reveal — light up the case that was yours.
+              isFinalWinner={isUserSelected && round === 5}
+              isClickable={isClickable}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const renderPool = () => {
+    if (!displayCases) return null;
+
+    const remaining = displayCases.filter((item) => !item.opened);
+    const opened = displayCases.filter((item) => item.opened);
+
+    // Best still-available first, opened ones sunk to the bottom — the same
+    // ordering the league game's rail uses. Safe for game integrity: the pool
+    // list is already shuffled away from case order, and sorting by points
+    // reveals nothing about which case holds whom.
+    const byPoints = (a: GameCase, b: GameCase) => b.points - a.points;
+    const sortedPool = [...remaining].sort(byPoints).concat([...opened].sort(byPoints));
+
+    return (
+      <div>
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-text-strong">
+            In play
+          </h2>
+          <span className="tnum font-mono text-sm text-text-muted">
+            {remaining.length}/{displayCases.length}
+          </span>
         </div>
-      );
-    }
-  };
 
-  const renderInfo = () => {
-    if (!caseSelected) {
-      return (
-        <>
-          <div>To begin select a case.</div>
-          {renderCaseDisplay()}
-        </>
-      );
-    }
-    if (caseSelected) {
-      return (
-        <>
-          <div className="case-selected-text">You have selected case #{caseSelected.number}</div>
-          {thinking ? <div>Eliminating Cases...</div> : <div></div>}
-          {!thinking && displayCases ? <>{renderCaseDisplay()}</> : null}
-        </>
-      );
-    }
+        <ul className="space-y-1.5">
+          {sortedPool.map((item, index) => (
+            <li
+              key={index}
+              className={`flex items-center gap-3 rounded border px-3 py-2 ${
+                item.opened
+                  ? 'border-transparent bg-surface-sunken/40'
+                  : 'border-border bg-surface-sunken'
+              }`}
+            >
+              <div className="min-w-0 flex-1">
+                <p
+                  className={`truncate text-sm font-medium ${
+                    item.opened ? 'text-text-faint line-through' : 'text-text'
+                  }`}
+                >
+                  {item.name}
+                </p>
+                <p className="truncate text-xs text-text-subtle">
+                  {item.team} {item.status} · Opp {item.opponent}
+                </p>
+              </div>
+              <span
+                className={`tnum shrink-0 font-mono text-sm ${
+                  item.opened ? 'text-text-faint' : 'text-text-muted'
+                }`}
+              >
+                {item.points}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
   };
 
   const renderActions = () => {
     if (offer && round <= 3) {
       return (
-        <div className="action-box">
-          <div className="offer-box">The Banker offers you:
-            <div className="list-player">
-              {offer.name} <span className="status">{offer.team} {offer.status}</span><br />
-              <span className="proj">Proj: {offer.points} Opp: {offer.opponent}</span>
-            </div>
+        <section
+          aria-label="Banker's offer"
+          className="overflow-hidden rounded-xl border border-gold/40 bg-gradient-to-b from-gold-bg/60 to-surface shadow-lg"
+        >
+          <div className="border-b border-gold/25 bg-gold/10 px-5 py-2.5 text-center">
+            <h2 className="font-display text-xs font-bold uppercase tracking-[0.2em] text-gold">
+              The banker offers
+            </h2>
           </div>
-          <div className="action-buttons">
-            <button className="btn" onClick={acceptOffer}>Accept</button>
-            <button className="btn" onClick={declineOffer}>Decline</button>
-            <button className="btn" onClick={resetGame}>Reset</button>
+
+          <div className="px-5 py-6 text-center">
+            <p className="font-display text-2xl font-bold leading-tight text-text-strong sm:text-3xl">
+              {offer.name}
+            </p>
+            <p className="mt-2 text-sm text-text-muted">
+              {offer.team} {offer.status} · Proj {offer.points} · Opp {offer.opponent}
+            </p>
           </div>
-        </div>
-      );
-    } else if (offer && round === 4) {
-      return (
-        <div className="action-box">
-          <div className="offer-box">
-            <p>You have rejected all offers and there is one more case remaining: {gameCases![0].number}.</p>
-            <p>Would you like to keep your original case or swap with the last remaining?</p>
+
+          <div className="flex flex-col gap-3 border-t border-border px-5 py-4 sm:flex-row">
+            <Button size="lg" fullWidth onClick={acceptOffer}>
+              Deal
+            </Button>
+            <Button size="lg" variant="outline" fullWidth onClick={declineOffer}>
+              No deal
+            </Button>
           </div>
-          <div className="action-buttons">
-            <button className="btn" onClick={keep}>Keep</button>
-            <button className="btn" onClick={swap}>Swap</button>
-            <button className="btn" onClick={resetGame}>Reset</button>
-          </div>
-        </div>
-      );
-    } else if (offer && round === 5) {
-      return (
-        <div className="action-box">
-          <div className="offer-box">
-            {caseSelected?.number
-              ? <p>Your Final case is case#{caseSelected.number}</p>
-              : <p>You accepted the Banker's offer.</p>
-            }
-            <p>Congratulations!! Your player is {caseSelected?.name}. Their projected points are {caseSelected?.points}</p>
-          </div>
-          <div className="action-buttons">
-            <button className="btn" onClick={resetGame}>Reset</button>
-          </div>
-        </div>
-      );
-    } else {
-      return (
-        <div className="action-buttons">
-          <button className="btn" onClick={resetGame}>Reset</button>
-        </div>
+        </section>
       );
     }
+
+    if (offer && round === 4) {
+      return (
+        <section
+          aria-label="Final decision"
+          className="overflow-hidden rounded-xl border border-brand/40 bg-surface shadow-lg"
+        >
+          <div className="border-b border-brand/25 bg-brand/10 px-5 py-2.5 text-center">
+            <h2 className="font-display text-xs font-bold uppercase tracking-[0.2em] text-brand">
+              Two cases left
+            </h2>
+          </div>
+
+          <div className="grid gap-3 px-5 py-5 sm:grid-cols-2">
+            <div className="rounded-lg border border-border bg-surface-sunken p-4 text-center">
+              <p className="text-label uppercase text-text-subtle">Your case</p>
+              <p className="mt-1 font-display text-3xl font-bold text-text-strong">
+                #{caseSelected?.number}
+              </p>
+              <Button className="mt-4" fullWidth onClick={keep}>
+                Keep it
+              </Button>
+            </div>
+
+            <div className="rounded-lg border border-border bg-surface-sunken p-4 text-center">
+              <p className="text-label uppercase text-text-subtle">Last case</p>
+              <p className="mt-1 font-display text-3xl font-bold text-text-strong">
+                #{gameCases![0].number}
+              </p>
+              <Button className="mt-4" variant="outline" fullWidth onClick={swap}>
+                Swap for it
+              </Button>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    if (offer && round === 5) {
+      return (
+        <section className="overflow-hidden rounded-xl border border-success/40 bg-surface shadow-lg">
+          <div className="px-5 py-6 text-center">
+            <p className="font-display text-xs font-bold uppercase tracking-[0.2em] text-success">
+              {caseSelected?.number ? `Case #${caseSelected.number} was yours` : 'Deal — you took the offer'}
+            </p>
+            <p className="mt-3 font-display text-2xl font-bold leading-tight text-text-strong sm:text-3xl">
+              {caseSelected?.name}
+            </p>
+            <p className="tnum mt-1 font-mono text-sm text-text-muted">
+              {caseSelected?.points} projected points
+            </p>
+          </div>
+          <div className="border-t border-border px-5 py-4">
+            <Button size="lg" fullWidth onClick={resetGame}>
+              Play another board
+            </Button>
+          </div>
+        </section>
+      );
+    }
+
+    return (
+      <Button variant="secondary" size="lg" fullWidth onClick={resetGame}>
+        Reset board
+      </Button>
+    );
   };
 
   return (
-    <>
-      <div className="game">
-        <div className="board">{render()}</div>
-        <div className="side">
-          {renderInfo()}
+    <PageContainer width="wide">
+      <header className="mb-6 border-b border-border pb-5">
+        <p className="text-label uppercase text-text-subtle">Quick play</p>
+        <h1 className="mt-1 font-display text-2xl font-bold text-text-strong">
+          Ten cases, one player
+        </h1>
+      </header>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="min-w-0 space-y-5">
+          <p className="text-center text-sm text-text-muted" role="status" aria-live="polite">
+            {thinking
+              ? 'Opening cases...'
+              : caseSelected
+                ? `You're holding case #${caseSelected.number}`
+                : 'Pick a case to start.'}
+          </p>
+
+          {renderBoard()}
           {renderActions()}
         </div>
+
+        <aside className="lg:sticky lg:top-20 lg:self-start">{renderPool()}</aside>
       </div>
-    </>
+    </PageContainer>
   );
 };
 

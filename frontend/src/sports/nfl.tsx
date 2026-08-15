@@ -57,15 +57,15 @@ export const nflConfig: SportConfig = {
 
   renderPlayerDetails: (player: GamePlayer) => (
     <>
-      <span className="status">{player.matchup?.team} {player.injuryStatus}</span><br />
-      <span className="proj">Proj: {player.projectedPoints} Opp: {player.matchup?.opponent}</span>
+      {player.matchup?.team} {player.injuryStatus} · Proj {player.projectedPoints} · Opp{' '}
+      {player.matchup?.opponent}
     </>
   ),
 
   renderOfferDetails: (offer: GameOffer) => (
     <>
-      <span className="status"> {offer.matchup?.team} {offer.injuryStatus}</span><br />
-      <span className="proj">Proj: {offer.projectedPoints} Opp: {offer.matchup?.opponent}</span>
+      {offer.matchup?.team} {offer.injuryStatus} · Proj {offer.projectedPoints} · Opp{' '}
+      {offer.matchup?.opponent}
     </>
   ),
 

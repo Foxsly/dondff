@@ -10,13 +10,11 @@
    internally, not by its import position —
      tokens.css / fonts.css  unlayered (custom properties + @font-face)
      base.css                @layer base       — element defaults, utilities win
-     legacy.css              @layer components — pre-overhaul shim, deleted by Phase 7
    ────────────────────────────────────────────────────────────────────────── */
 
 @import './styles/tokens.css';
 @import './styles/fonts.css';
 @import './styles/base.css';
-@import './styles/legacy.css';
 
 @tailwind base;
 @tailwind components;

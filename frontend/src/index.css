@@ -10,7 +10,6 @@
    internally, not by its import position —
      tokens.css / fonts.css  unlayered (custom properties + @font-face)
      base.css                @layer base       — element defaults, utilities win
-     legacy.css              @layer components — pre-overhaul shim, deleted by Phase 7
    ────────────────────────────────────────────────────────────────────────── */
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -209,23 +208,6 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    Base element styling — loaded into Tailwind's `base` layer, so every
    utility class still wins over anything declared here.
-   ────────────────────────────────────────────────────────────────────────── */
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   LEGACY — transitional shim. Do not add to this file.
-   ─────────────────────────────────────────────────────────────────────────────
-   These are the class names from the old App.css, kept alive so the app keeps
-   working while the UI overhaul lands phase by phase. Layout and spacing are
-   preserved exactly; only the hard-coded colours have been repointed at the
-   tokens, which is what collapses the old emerald / teal / slate palettes into
-   one.
-
-   Each block is tagged with the phase that deletes it. When a phase rebuilds
-   its screens on the `ui/` primitives, its block here goes away with it. This
-   file should be empty — and deleted — by the end of Phase 7.
-
-   Already dropped as dead code: .options, .edge, .about, .main-image
-   (no remaining references anywhere in src/).
    ────────────────────────────────────────────────────────────────────────── */
 
 *, ::before, ::after {
@@ -931,180 +913,6 @@ select option {
   }
 }
 
-/* Phase 3 removed .App, .content-container and .navbar-link-text along with
-     the shell that used them. The global `text-align: center` is gone, so
-     pages no longer have to undo it with `text-left`. */
-
-/* ── Removed in Phase 2 (Button primitive) ──────────────────────────────── */
-
-/* Three separate button systems collapsed onto the brand token. `.btn-primary`
-     and `.btn-outline-primary` were emerald, `.btn` was teal; they are now the
-     same colour, which is the first visible sign of the palette unifying. */
-
-.btn {
-  padding: 12px 16px;
-  border-radius: var(--radius);
-  border: 1px solid rgb(var(--color-brand));
-  background-color: rgb(var(--color-brand) / 0.1);
-  color: rgb(var(--color-brand));
-  font-weight: 700;
-  text-transform: uppercase;
-  transition: background-color 150ms ease, color 150ms ease;
-}
-
-.btn:hover {
-  background-color: rgb(var(--color-brand));
-  color: rgb(var(--color-brand-contrast));
-  cursor: pointer;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn:disabled:hover {
-  background-color: rgb(var(--color-brand) / 0.1);
-  color: rgb(var(--color-brand));
-}
-
-/* Was previously unstyled — the class was referenced on four pages but never
-     defined anywhere. Minimal treatment until the Breadcrumbs primitive lands. */
-
-.breadcrumbs {
-  font-size: 0.875rem;
-  color: rgb(var(--color-text-subtle));
-}
-
-.breadcrumbs a {
-  color: rgb(var(--color-text-muted));
-  text-decoration: none;
-}
-
-.breadcrumbs a:hover {
-  color: rgb(var(--color-brand));
-  text-decoration: underline;
-}
-
-/* ── Removed in Phase 6 (weeks, standings, lineup card) ─────────────────── */
-
-/* ── Removed in Phase 7 (game screen) ───────────────────────────────────── */
-
-.game {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-  margin-bottom: 16px;
-}
-
-.board {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 16px;
-  justify-content: space-around;
-  background-color: rgb(var(--color-border-strong) / 0.5);
-  padding: 10px;
-  width: 70%;
-}
-
-.side {
-  padding: 10px;
-  width: 25%;
-  text-align: left;
-  background-color: rgb(var(--color-border-strong) / 0.5);
-  overflow: hidden;
-}
-
-@media only screen and (max-width: 1000px) {
-  .game {
-    flex-direction: column;
-  }
-
-  .board,
-    .side {
-    width: 100%;
-  }
-}
-
-.box {
-  width: 200px;
-  height: 180px;
-  border: 2px solid rgb(var(--color-border-strong));
-  background-color: rgb(var(--color-bg));
-  /* Was inheriting centring from `.App`; made explicit so Phase 3 can drop it. */
-  text-align: center;
-}
-
-.box:hover {
-  border-color: rgb(var(--color-brand));
-  cursor: pointer;
-}
-
-.box.opened {
-  border-color: rgb(var(--color-danger));
-}
-
-.num {
-  font-weight: 700;
-  font-size: 4rem;
-}
-
-.action-box {
-  margin-top: 8px;
-  border: 2px dashed rgb(var(--color-brand));
-  text-align: center;
-  padding: 8px;
-  font-size: 1.3rem;
-}
-
-.offer-box {
-  margin-bottom: 8px;
-}
-
-.action-buttons {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.action-buttons .btn {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 10px 8px;
-  font-size: 0.9rem;
-}
-
-.list-player {
-  background-color: rgb(var(--color-text-muted) / 0.05);
-  margin-bottom: 4px;
-  padding: 4px;
-  border: 1px solid rgb(var(--color-border));
-  font-weight: 700;
-}
-
-.list-player.eliminated {
-  background-color: rgb(var(--color-danger) / 0.25);
-}
-
-.proj {
-  font-size: 0.9rem;
-  font-weight: 400;
-}
-
-.status {
-  font-size: 0.75rem;
-  font-weight: 400;
-}
-
-.case-selected-text {
-  font-size: 1.3rem;
-  margin-bottom: 4px;
-}
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -1470,8 +1278,8 @@ select option {
   max-height: calc(100vh - 2rem);
 }
 
-.min-h-\[200px\] {
-  min-height: 200px;
+.min-h-\[16rem\] {
+  min-height: 16rem;
 }
 
 .min-h-screen {
@@ -1592,6 +1400,10 @@ select option {
 
 .max-w-7xl {
   max-width: 80rem;
+}
+
+.max-w-\[10rem\] {
+  max-width: 10rem;
 }
 
 .max-w-\[12rem\] {
@@ -1815,6 +1627,10 @@ select option {
   align-items: center;
 }
 
+.items-baseline {
+  align-items: baseline;
+}
+
 .items-stretch {
   align-items: stretch;
 }
@@ -1833,6 +1649,10 @@ select option {
 
 .justify-between {
   justify-content: space-between;
+}
+
+.justify-items-center {
+  justify-items: center;
 }
 
 .gap-1 {
@@ -1871,10 +1691,24 @@ select option {
   gap: 2rem;
 }
 
+.gap-x-2 {
+  column-gap: 0.5rem;
+}
+
+.gap-y-2 {
+  row-gap: 0.5rem;
+}
+
 .space-y-1 > :not([hidden]) ~ :not([hidden]) {
   --tw-space-y-reverse: 0;
   margin-top: calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(0.25rem * var(--tw-space-y-reverse));
+}
+
+.space-y-1\.5 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(0.375rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(0.375rem * var(--tw-space-y-reverse));
 }
 
 .space-y-2 > :not([hidden]) ~ :not([hidden]) {
@@ -2037,8 +1871,16 @@ select option {
   border-color: rgb(var(--color-brand) / var(--tw-border-opacity, 1));
 }
 
+.border-brand\/25 {
+  border-color: rgb(var(--color-brand) / 0.25);
+}
+
 .border-brand\/30 {
   border-color: rgb(var(--color-brand) / 0.3);
+}
+
+.border-brand\/40 {
+  border-color: rgb(var(--color-brand) / 0.4);
 }
 
 .border-brand\/50 {
@@ -2065,6 +1907,14 @@ select option {
 .border-gold-border {
   --tw-border-opacity: 1;
   border-color: rgb(var(--color-gold-border) / var(--tw-border-opacity, 1));
+}
+
+.border-gold\/25 {
+  border-color: rgb(var(--color-gold) / 0.25);
+}
+
+.border-gold\/40 {
+  border-color: rgb(var(--color-gold) / 0.4);
 }
 
 .border-info\/30 {
@@ -2211,6 +2061,10 @@ select option {
   background-color: rgb(var(--color-gold-bg) / var(--tw-bg-opacity, 1));
 }
 
+.bg-gold\/10 {
+  background-color: rgb(var(--color-gold) / 0.1);
+}
+
 .bg-info\/10 {
   background-color: rgb(var(--color-info) / 0.1);
 }
@@ -2234,10 +2088,6 @@ select option {
   background-color: rgb(var(--color-rank-3-bg) / var(--tw-bg-opacity, 1));
 }
 
-.bg-slate\/50 {
-  background-color: rgb(58 70 91 / 0.5);
-}
-
 .bg-success {
   --tw-bg-opacity: 1;
   background-color: rgb(var(--color-success) / var(--tw-bg-opacity, 1));
@@ -2249,6 +2099,14 @@ select option {
 
 .bg-success\/15 {
   background-color: rgb(var(--color-success) / 0.15);
+}
+
+.bg-success\/20 {
+  background-color: rgb(var(--color-success) / 0.2);
+}
+
+.bg-success\/5 {
+  background-color: rgb(var(--color-success) / 0.05);
 }
 
 .bg-surface {
@@ -2269,6 +2127,14 @@ select option {
 .bg-surface-sunken {
   --tw-bg-opacity: 1;
   background-color: rgb(var(--color-surface-sunken) / var(--tw-bg-opacity, 1));
+}
+
+.bg-surface-sunken\/40 {
+  background-color: rgb(var(--color-surface-sunken) / 0.4);
+}
+
+.bg-surface\/40 {
+  background-color: rgb(var(--color-surface) / 0.4);
 }
 
 .bg-teal {
@@ -2335,6 +2201,12 @@ select option {
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 
+.from-gold-bg\/60 {
+  --tw-gradient-from: rgb(var(--color-gold-bg) / 0.6) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(var(--color-gold-bg) / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
 .via-bg\/85 {
   --tw-gradient-to: rgb(var(--color-bg) / 0)  var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--color-bg) / 0.85) var(--tw-gradient-via-position), var(--tw-gradient-to);
@@ -2350,6 +2222,10 @@ select option {
 
 .to-bg {
   --tw-gradient-to: rgb(var(--color-bg) / 1) var(--tw-gradient-to-position);
+}
+
+.to-surface {
+  --tw-gradient-to: rgb(var(--color-surface) / 1) var(--tw-gradient-to-position);
 }
 
 .fill-bg {
@@ -2514,6 +2390,10 @@ select option {
   padding-bottom: 0.75rem;
 }
 
+.pb-5 {
+  padding-bottom: 1.25rem;
+}
+
 .pl-1\.5 {
   padding-left: 0.375rem;
 }
@@ -2540,6 +2420,10 @@ select option {
 
 .pt-5 {
   padding-top: 1.25rem;
+}
+
+.pt-6 {
+  padding-top: 1.5rem;
 }
 
 .text-left {
@@ -2597,6 +2481,10 @@ select option {
 
 .text-\[10px\] {
   font-size: 10px;
+}
+
+.text-\[11px\] {
+  font-size: 11px;
 }
 
 .text-\[13px\] {
@@ -2787,6 +2675,10 @@ select option {
   color: rgb(var(--color-warn) / var(--tw-text-opacity, 1));
 }
 
+.line-through {
+  text-decoration-line: line-through;
+}
+
 .opacity-0 {
   opacity: 0;
 }
@@ -2812,6 +2704,12 @@ select option {
 .shadow-inner {
   --tw-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
   --tw-shadow-colored: inset 0 2px 4px 0 var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.shadow-lg {
+  --tw-shadow: var(--shadow-lg);
+  --tw-shadow-colored: var(--shadow-lg);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
@@ -3051,6 +2949,10 @@ select option {
   pointer-events: none;
 }
 
+.disabled\:cursor-default:disabled {
+  cursor: default;
+}
+
 .disabled\:cursor-not-allowed:disabled {
   cursor: not-allowed;
 }
@@ -3126,6 +3028,10 @@ select option {
     justify-content: space-between;
   }
 
+  .sm\:p-6 {
+    padding: 1.5rem;
+  }
+
   .sm\:px-6 {
     padding-left: 1.5rem;
     padding-right: 1.5rem;
@@ -3168,13 +3074,17 @@ select option {
   .md\:hidden {
     display: none;
   }
-
-  .md\:grid-cols-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
 }
 
 @media (min-width: 1024px) {
+  .lg\:sticky {
+    position: sticky;
+  }
+
+  .lg\:top-20 {
+    top: 5rem;
+  }
+
   .lg\:col-span-2 {
     grid-column: span 2 / span 2;
   }
@@ -3183,12 +3093,20 @@ select option {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .lg\:grid-cols-5 {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+  .lg\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .lg\:grid-cols-6 {
     grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .lg\:grid-cols-\[minmax\(0\2c 1fr\)_20rem\] {
+    grid-template-columns: minmax(0,1fr) 20rem;
+  }
+
+  .lg\:self-start {
+    align-self: flex-start;
   }
 
   .lg\:py-28 {
@@ -3204,6 +3122,12 @@ select option {
   .lg\:text-7xl {
     font-size: 4.5rem;
     line-height: 1;
+  }
+}
+
+@media (min-width: 1280px) {
+  .xl\:grid-cols-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 

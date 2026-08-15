@@ -33,15 +33,9 @@ export const golfConfig: SportConfig = {
   sharedProjectionPool: true,
   supportsScoring: true,
 
-  renderPlayerDetails: (player: GamePlayer) => (
-    <span className="proj">Proj: {player.projectedPoints}</span>
-  ),
+  renderPlayerDetails: (player: GamePlayer) => <>Proj {player.projectedPoints}</>,
 
-  renderOfferDetails: (offer: GameOffer) => (
-    <>
-      <span className="proj">Proj: {offer.projectedPoints}</span>
-    </>
-  ),
+  renderOfferDetails: (offer: GameOffer) => <>Proj {offer.projectedPoints}</>,
 
   getPositionDisplayName: (position: string) => {
     if (position.startsWith('GOLF_PLAYER')) {
