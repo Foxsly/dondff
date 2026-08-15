@@ -15,6 +15,7 @@ import {
   ErrorDisplay,
   Field,
   Input,
+  LineupCard,
   LoadingSpinner,
   Modal,
   PageContainer,
@@ -377,6 +378,59 @@ const Styleguide: React.FC = () => {
             message="Failed to load league: request failed with status 500"
             action={{ label: 'Return to dashboard', onClick: () => undefined }}
           />
+        </div>
+      </Section>
+
+      <Section
+        title="LineupCard"
+        description="Preserved from the pre-overhaul standings card — same 340px width, podium chips and tabular score columns, now on tokens. Compact drops the columns and totals for use under the game board."
+      >
+        <div className="flex flex-wrap items-start gap-5">
+          <LineupCard
+            title="Josh Nosewicz"
+            rank={1}
+            showFinal
+            isCurrentUser
+            projectedTotal={32.6}
+            finalScore={40.7}
+            slots={[
+              { position: 'RB', positionLabel: 'RB', playerName: 'Bijan Robinson', projected: 17.4, actual: 22.1 },
+              { position: 'WR', positionLabel: 'WR', playerName: "Ja'Marr Chase", projected: 15.2, actual: 18.6 },
+            ]}
+          />
+
+          <LineupCard
+            title="Someone Else"
+            rank={2}
+            showFinal
+            projectedTotal={28.1}
+            finalScore={31.4}
+            slots={[
+              { position: 'RB', positionLabel: 'RB', playerName: 'Saquon Barkley', projected: 16.9, actual: 19.2 },
+              { position: 'WR', positionLabel: 'WR', playerName: null, projected: 11.2, actual: 12.2 },
+            ]}
+          />
+
+          <LineupCard
+            title="Pending Results"
+            projectedTotal={30.0}
+            slots={[
+              { position: 'RB', positionLabel: 'RB', playerName: 'De’Von Achane', projected: 14.8 },
+              { position: 'WR', positionLabel: 'WR', playerName: 'Puka Nacua', projected: 15.2 },
+            ]}
+          />
+
+          <div className="w-full max-w-md">
+            <LineupCard
+              variant="compact"
+              title="In-game lineup"
+              projectedTotal={0}
+              slots={[
+                { position: 'RB', positionLabel: 'RB', playerName: 'Bijan Robinson', projected: null },
+                { position: 'WR', positionLabel: 'WR', playerName: null, projected: null },
+              ]}
+            />
+          </div>
         </div>
       </Section>
 

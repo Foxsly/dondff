@@ -45,6 +45,9 @@ export type { FieldProps, FieldRenderProps } from './Field';
 export { Input } from './Input';
 export type { InputProps } from './Input';
 
+export { LineupCard } from './LineupCard';
+export type { LineupCardProps, LineupSlot } from './LineupCard';
+
 export { LoadingSpinner } from './LoadingSpinner';
 export type { LoadingSpinnerProps } from './LoadingSpinner';
 
