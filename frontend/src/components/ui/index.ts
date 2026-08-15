@@ -57,6 +57,9 @@ export type { ModalProps, ModalSize } from './Modal';
 export { PageContainer, PageHeader } from './Page';
 export type { PageContainerProps, PageHeaderProps, PageWidth } from './Page';
 
+export { SegmentedControl } from './SegmentedControl';
+export type { SegmentedControlProps, SegmentedOption } from './SegmentedControl';
+
 export { Select } from './Select';
 export type { SelectProps } from './Select';
 

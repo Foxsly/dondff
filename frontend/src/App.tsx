@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useParams } from 'react-router-dom';
 import Home from './components/home';
-import SignUp from './components/signIn';
+import SignIn from './components/signIn';
 import NotFound from './components/error';
 import Dashboard from './components/dashboard';
 import League from './components/league';
@@ -48,7 +48,7 @@ function App() {
             <main id="main" className="min-w-0 flex-1">
               <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/login" element={<SignUp />} />
+                <Route path="/login" element={<SignIn />} />
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/league/:leagueId" element={<ProtectedRoute><LeagueRoute><League /></LeagueRoute></ProtectedRoute>} />
                 <Route path="/league/:leagueId/season/:season" element={<ProtectedRoute><LeagueRoute><Weeks /></LeagueRoute></ProtectedRoute>} />

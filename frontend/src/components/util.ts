@@ -1,34 +1,34 @@
 import { request } from '../api/client';
 import type { PoolPlayer, GameCase } from '../types';
 
-export const getPlayers = async (
+/**
+ * Fetch a pool of projected players for a quick-play board.
+ *
+ * Returns the pool and lets errors propagate. The previous version took a
+ * callback and swallowed failures with a console.error, so a failed request or
+ * an empty response left the caller with no way to tell the difference between
+ * "still loading" and "this will never work" — the UI just sat there.
+ */
+export const fetchPlayerPool = async (
   eventGroupId: string,
   position: string,
   seasonYear: string | number,
   playerLimit: number,
-  callback: (players: PoolPlayer[]) => void,
-): Promise<void> => {
-  const players: PoolPlayer[] = [];
-  try {
-    const json = await request<any[]>(`/players/projections/${seasonYear}/${eventGroupId}/${position}`);
-    if (Array.isArray(json)) {
-      for (let i = 0; i < playerLimit; i++) {
-        const playerJson = json[i];
-        if (!playerJson) continue;
-        players.push({
-          name: playerJson.name,
-          points: playerJson.projectedPoints,
-          status: playerJson.injuryStatus,
-          opponent: playerJson.oppTeam,
-          team: playerJson.team,
-          playerId: playerJson.playerId,
-        });
-      }
-    }
-    callback(players);
-  } catch (error) {
-    console.error(error);
-  }
+): Promise<PoolPlayer[]> => {
+  const json = await request<any[]>(
+    `/players/projections/${seasonYear}/${eventGroupId}/${position}`,
+  );
+
+  if (!Array.isArray(json)) return [];
+
+  return json.slice(0, playerLimit).map((playerJson) => ({
+    name: playerJson.name,
+    points: playerJson.projectedPoints,
+    status: playerJson.injuryStatus,
+    opponent: playerJson.oppTeam,
+    team: playerJson.team,
+    playerId: playerJson.playerId,
+  }));
 };
 
 export const generateCases = (poolArray: PoolPlayer[], numberOfCasesToChoose: number): GameCase[] => {
