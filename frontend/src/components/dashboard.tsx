@@ -1,27 +1,54 @@
-import React, {useEffect, useState} from "react";
-import {useNavigate} from "react-router-dom";
-import {getCurrentUser} from "../api/auth";
-import {addLeagueUser, createLeague} from "../api/leagues";
-import {getUserLeagues} from "../api/users";
-import {getAllSports} from "../sports/registry";
-import type {League, SportLeague, User} from "../types";
-import Breadcrumbs from "./breadcrumbs";
-import ErrorDisplay from "./ui/ErrorDisplay";
-import LoadingSpinner from "./ui/LoadingSpinner";
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { getCurrentUser } from '../api/auth';
+import { addLeagueUser, createLeague } from '../api/leagues';
+import { getUserLeagues } from '../api/users';
+import { getAllSports } from '../sports/registry';
+import type { League, SportLeague, User } from '../types';
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  EmptyState,
+  ErrorDisplay,
+  Field,
+  Input,
+  LoadingSpinner,
+  Modal,
+  PageContainer,
+  PageHeader,
+  Select,
+  buttonVariants,
+  useToast,
+} from './ui';
+
+const roleBadge = (role?: string) =>
+  role === 'admin' ? <Badge variant="brand">Admin</Badge> : <Badge>{role ?? 'Player'}</Badge>;
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const { success } = useToast();
+  const sports = getAllSports();
+
   const [user, setUser] = useState<User | null>(null);
   const [leagues, setLeagues] = useState<League[]>([]);
-  const [newLeague, setNewLeague] = useState("");
-  const [joinCode, setJoinCode] = useState("");
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [sportLeague, setSportLeague] = useState<SportLeague>("NFL");
-  const [showJoinForm, setShowJoinForm] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
-  const navigate = useNavigate();
-  const sports = getAllSports();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [newLeagueName, setNewLeagueName] = useState('');
+  const [sportLeague, setSportLeague] = useState<SportLeague>('NFL');
+  const [joinCode, setJoinCode] = useState('');
+  const [formError, setFormError] = useState('');
+
+  const refreshLeagues = async (userId: string) => {
+    const data = await getUserLeagues(userId);
+    setLeagues(Array.isArray(data) ? data : []);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -30,13 +57,9 @@ const Dashboard: React.FC = () => {
       try {
         const current = await getCurrentUser();
         const userId = current?.userId;
-        if (!userId) {
-          if (!cancelled) navigate("/");
-          return;
-        }
 
-        if (!current) {
-          if (!cancelled) navigate("/");
+        if (!current || !userId) {
+          if (!cancelled) navigate('/');
           return;
         }
 
@@ -44,191 +67,269 @@ const Dashboard: React.FC = () => {
         setUser({ ...current, id: current.userId });
 
         const data = await getUserLeagues(userId);
-        if (!cancelled) {
-          setLeagues(Array.isArray(data) ? data : []);
-        }
+        if (!cancelled) setLeagues(Array.isArray(data) ? data : []);
       } catch (err: any) {
-        console.error("Failed to load dashboard data", err);
-        if (!cancelled) {
-          setError(err?.message ?? "Failed to load dashboard");
-        }
+        console.error('Failed to load dashboard data', err);
+        if (!cancelled) setError(err?.message ?? 'Failed to load dashboard');
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 
     load();
-
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
-  const addLeagueHandler = async () => {
-    const name = newLeague.trim();
-    if (!name) return;
+  const closeCreate = () => {
+    setCreateOpen(false);
+    setNewLeagueName('');
+    setSportLeague('NFL');
+    setFormError('');
+  };
+
+  const closeJoin = () => {
+    setJoinOpen(false);
+    setJoinCode('');
+    setFormError('');
+  };
+
+  const handleCreate = async () => {
+    const name = newLeagueName.trim();
     const userId = user?.userId;
     if (!userId) return;
 
+    if (!name) {
+      setFormError('Give your league a name.');
+      return;
+    }
+
+    setSubmitting(true);
+    setFormError('');
+
     try {
-      setError("");
+      const created = await createLeague({ name, sportLeague });
 
-      const createdLeague = await createLeague({ name, sportLeague });
-
+      // Creating a league does not make you a member of it, so the creator is
+      // added as its admin immediately afterwards. If that second call fails
+      // the league exists with nobody in it, which the user has to know about —
+      // the previous version only logged it to the console.
       try {
-        await addLeagueUser(createdLeague.leagueId!, { userId, role: "admin" });
+        await addLeagueUser(created.leagueId!, { userId, role: 'admin' });
       } catch (err) {
-        console.error("Error while adding user to league", err);
+        console.error('Error while adding user to league', err);
+        setFormError(
+          'The league was created, but adding you to it failed. Try joining it with its access code.',
+        );
+        return;
       }
 
-      try {
-        const data = await getUserLeagues(userId);
-        setLeagues(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error("Failed to refresh leagues list", err);
-      }
-
-      setNewLeague("");
-      setSportLeague("NFL");
-      setShowCreateForm(false);
+      await refreshLeagues(userId);
+      success(`Created ${name}`);
+      closeCreate();
     } catch (err: any) {
-      console.error("Failed to create league", err);
-      setError(err?.message ?? "Failed to create league");
+      console.error('Failed to create league', err);
+      setFormError(err?.message ?? 'Failed to create league');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const joinLeague = async () => {
+  const handleJoin = async () => {
     const code = joinCode.trim();
-    if (!code) return;
-
     const userId = user?.userId;
     if (!userId) return;
 
+    if (!code) {
+      setFormError('Enter the access code you were given.');
+      return;
+    }
+
+    setSubmitting(true);
+    setFormError('');
+
     try {
-      setError("");
-
-      await addLeagueUser(code, { userId, role: "player" });
-
-      try {
-        const data = await getUserLeagues(userId);
-        setLeagues(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error("Failed to refresh leagues list after join", err);
-      }
-
-      setJoinCode("");
-      setShowJoinForm(false);
+      await addLeagueUser(code, { userId, role: 'player' });
+      await refreshLeagues(userId);
+      success('Joined league');
+      closeJoin();
     } catch (err: any) {
-      console.error("Failed to join league", err);
-      setError(err?.message ?? "Failed to join league");
+      console.error('Failed to join league', err);
+      setFormError(
+        err?.status === 404
+          ? "That access code doesn't match any league."
+          : (err?.message ?? 'Failed to join league'),
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-5xl p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
-        <Breadcrumbs items={[{ label: "Dashboard" }]} />
-        <LoadingSpinner message="Loading your dashboard..." />
-      </div>
+      <PageContainer>
+        <PageHeader title="Dashboard" breadcrumbs={[{ label: 'Dashboard' }]} />
+        <LoadingSpinner message="Loading your leagues..." />
+      </PageContainer>
     );
   }
 
   if (error) {
     return (
-      <div className="mx-auto max-w-5xl p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
-        <Breadcrumbs items={[{ label: "Dashboard" }]} />
-        <ErrorDisplay message={error} action={{ label: "Return to Sign In", onClick: () => navigate("/") }} />
-      </div>
+      <PageContainer>
+        <PageHeader title="Dashboard" breadcrumbs={[{ label: 'Dashboard' }]} />
+        <ErrorDisplay
+          message={error}
+          action={{ label: 'Return to sign in', onClick: () => navigate('/') }}
+        />
+      </PageContainer>
     );
   }
 
   return (
-    <div className="mx-auto max-w-5xl p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
-      <Breadcrumbs items={[{ label: "Dashboard" }]} />
-      <h2 className="text-2xl font-bold">Welcome to Your Dashboard</h2>
-      <h3 className="text-xl">{user?.email ?? ""}</h3>
+    <PageContainer>
+      <PageHeader
+        title="Your leagues"
+        description={user?.email ?? undefined}
+        breadcrumbs={[{ label: 'Dashboard' }]}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setJoinOpen(true)}>
+              Join league
+            </Button>
+            <Button onClick={() => setCreateOpen(true)}>Create league</Button>
+          </>
+        }
+      />
 
-      <h4 className="text-lg font-semibold mt-4">Leagues:</h4>
-      {leagues.length === 0 && (
-        <p className="text-sm text-gray-300">
-          You are not a member of any leagues yet.
-        </p>
+      {leagues.length === 0 ? (
+        <EmptyState
+          title="No leagues yet"
+          description="Create a league and invite your friends with its access code, or join one you've already been given a code for."
+          action={
+            <>
+              <Button onClick={() => setCreateOpen(true)}>Create league</Button>
+              <Button variant="secondary" onClick={() => setJoinOpen(true)}>
+                Join league
+              </Button>
+            </>
+          }
+        />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {leagues.map((league) => (
+            <Card key={league.leagueId} className="flex flex-col">
+              <CardBody className="flex flex-1 flex-col">
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="min-w-0 break-words text-base font-semibold text-text-strong">
+                    {league.name || 'Unnamed league'}
+                  </h2>
+                  {roleBadge(league.role)}
+                </div>
+
+                {league.sportLeague && (
+                  <div className="mt-2">
+                    <Badge variant="neutral" size="sm">
+                      {league.sportLeague}
+                    </Badge>
+                  </div>
+                )}
+
+                <div className="mt-5 flex-1" />
+
+                <Link
+                  to={`/league/${league.leagueId}`}
+                  className={buttonVariants({ variant: 'secondary', fullWidth: true })}
+                >
+                  Open league
+                </Link>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
       )}
-      {leagues.map((league) => {
-          return (
-          <div
-            key={league.leagueId}
-            className="flex items-center justify-between p-4 mb-2 rounded bg-[#3a465b]/50"
-          >
-            <div className="flex items-center gap-2">
-              <p className="font-semibold">
-                {league.name || "Unnamed League"}
-              </p>
-              {league.sportLeague && (
-                <span className="text-xs px-2 py-0.5 rounded bg-[#00ceb8]/20 text-[#00ceb8]">
-                  {league.sportLeague}
-                </span>
-              )}
-            </div>
-            <p>{league.role === "admin" ? "Admin" : league.role}</p>
-            <button
-              className="px-3 py-1 font-bold text-[#102131] bg-[#00ceb8] rounded hover:bg-[#00ceb8]/80"
-              onClick={() => navigate(`/league/${league.leagueId}`)}
-            >
-              View
-            </button>
-          </div>
-        );
-      })}
 
-      <div className="flex gap-4 mt-4">
-        <button className="btn-primary" onClick={() => setShowCreateForm(!showCreateForm)}>
-          Create League
-        </button>
-        <button className="btn-primary" onClick={() => setShowJoinForm(!showJoinForm)}>
-          Join League
-        </button>
-      </div>
+      {/* ── Create ───────────────────────────────────────────────────────── */}
+      <Modal
+        open={createOpen}
+        onClose={closeCreate}
+        title="Create a league"
+        description="You'll be its admin, and can invite players with the access code afterwards."
+        footer={
+          <>
+            <Button variant="ghost" onClick={closeCreate}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreate} loading={submitting}>
+              Create league
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Field label="League name" required>
+            {(field) => (
+              <Input
+                {...field}
+                value={newLeagueName}
+                onChange={(event) => setNewLeagueName(event.target.value)}
+                placeholder="Sunday Money League"
+              />
+            )}
+          </Field>
 
-      {showCreateForm && (
-        <div className="mt-4 space-y-2">
-          <div className="flex space-x-2">
-            <input
-              className="flex-1 p-2 bg-transparent border rounded border-[#3a465b]"
-              placeholder="Enter League Name..."
-              value={newLeague}
-              onChange={(e) => setNewLeague(e.target.value)}
+          <Field label="Sport" hint="This decides the positions your lineup is drafted from.">
+            {(field) => (
+              <Select
+                {...field}
+                value={sportLeague}
+                onChange={(event) => setSportLeague(event.target.value as SportLeague)}
+              >
+                {sports.map((sport) => (
+                  <option key={sport.key} value={sport.key}>
+                    {sport.displayName}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+
+          {formError && <p className="text-sm text-danger">{formError}</p>}
+        </div>
+      </Modal>
+
+      {/* ── Join ─────────────────────────────────────────────────────────── */}
+      <Modal
+        open={joinOpen}
+        onClose={closeJoin}
+        title="Join a league"
+        description="Ask the league admin for its access code."
+        footer={
+          <>
+            <Button variant="ghost" onClick={closeJoin}>
+              Cancel
+            </Button>
+            <Button onClick={handleJoin} loading={submitting}>
+              Join league
+            </Button>
+          </>
+        }
+      >
+        <Field label="Access code" required>
+          {(field) => (
+            <Input
+              {...field}
+              value={joinCode}
+              onChange={(event) => setJoinCode(event.target.value)}
+              placeholder="Paste the code you were given"
             />
-            <select
-              className="p-2 bg-[#102131] border rounded border-[#3a465b] text-white"
-              value={sportLeague}
-              onChange={(e) => setSportLeague(e.target.value as SportLeague)}
-            >
-              {sports.map((sport) => (
-                <option key={sport.key} value={sport.key}>{sport.displayName}</option>
-              ))}
-            </select>
-            <button className="btn-primary" onClick={addLeagueHandler}>
-              Submit
-            </button>
-          </div>
-        </div>
-      )}
+          )}
+        </Field>
 
-      {showJoinForm && (
-        <div className="flex mt-4 space-x-2">
-          <input
-            className="flex-1 p-2 bg-transparent border rounded border-[#3a465b]"
-            placeholder="Enter Access Code..."
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value)}
-          />
-          <button className="btn-primary" onClick={joinLeague}>
-            Submit
-          </button>
-        </div>
-      )}
-    </div>
+        {formError && <p className="mt-3 text-sm text-danger">{formError}</p>}
+      </Modal>
+    </PageContainer>
   );
 };
 

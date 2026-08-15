@@ -30,6 +30,9 @@ export type { CardHeaderProps, CardProps, CardTitleProps } from './Card';
 export { Checkbox } from './Checkbox';
 export type { CheckboxProps } from './Checkbox';
 
+export { CopyField } from './CopyField';
+export type { CopyFieldProps } from './CopyField';
+
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
 

@@ -1,9 +1,22 @@
 import React from 'react';
 import { cn } from '../../lib/cn';
 
+/**
+ * Card tone.
+ *
+ * Exposed as a prop rather than left to `className`, because a passed-in
+ * `border-danger` cannot beat the base `border-border`: they have equal CSS
+ * specificity, so which one wins depends on their order in the compiled
+ * stylesheet, not on the order they appear in the class string. Anything a
+ * caller genuinely needs to vary gets a prop; `className` is for layout and
+ * spacing, not for overriding baked-in colour.
+ */
+export type CardTone = 'default' | 'danger';
+
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Adds hover feedback. Only use when the whole card is clickable. */
   interactive?: boolean;
+  tone?: CardTone;
   children?: React.ReactNode;
 }
 
@@ -15,10 +28,17 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
  * `overflow-hidden` lets the header's background meet the rounded corner
  * cleanly without the header needing its own radius.
  */
-export const Card: React.FC<CardProps> = ({ interactive, className, children, ...rest }) => (
+export const Card: React.FC<CardProps> = ({
+  interactive,
+  tone = 'default',
+  className,
+  children,
+  ...rest
+}) => (
   <div
     className={cn(
-      'overflow-hidden rounded-lg border border-border bg-surface shadow-card',
+      'overflow-hidden rounded-lg border bg-surface shadow-card',
+      tone === 'danger' ? 'border-danger/40' : 'border-border',
       interactive &&
         'cursor-pointer transition-colors duration-150 hover:border-border-strong hover:bg-surface-raised',
       className,
@@ -32,18 +52,21 @@ export const Card: React.FC<CardProps> = ({ interactive, className, children, ..
 export interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Rendered at the right edge — actions, badges, a menu. */
   actions?: React.ReactNode;
+  tone?: CardTone;
   children?: React.ReactNode;
 }
 
 export const CardHeader: React.FC<CardHeaderProps> = ({
   actions,
+  tone = 'default',
   className,
   children,
   ...rest
 }) => (
   <div
     className={cn(
-      'flex items-center gap-3 border-b border-border bg-surface-raised px-5 py-3.5',
+      'flex items-center gap-3 border-b px-5 py-3.5',
+      tone === 'danger' ? 'border-danger/40 bg-danger/5' : 'border-border bg-surface-raised',
       className,
     )}
     {...rest}
@@ -55,16 +78,25 @@ export const CardHeader: React.FC<CardHeaderProps> = ({
 
 export interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
   as?: 'h2' | 'h3' | 'h4';
+  tone?: CardTone;
   children?: React.ReactNode;
 }
 
 export const CardTitle: React.FC<CardTitleProps> = ({
   as: Tag = 'h3',
+  tone = 'default',
   className,
   children,
   ...rest
 }) => (
-  <Tag className={cn('truncate text-base font-semibold text-text-strong', className)} {...rest}>
+  <Tag
+    className={cn(
+      'truncate text-base font-semibold',
+      tone === 'danger' ? 'text-danger' : 'text-text-strong',
+      className,
+    )}
+    {...rest}
+  >
     {children}
   </Tag>
 );

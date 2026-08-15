@@ -1,4 +1,4 @@
-import React, {createContext, useContext, useEffect, useState} from 'react';
+import React, {createContext, useCallback, useContext, useEffect, useState} from 'react';
 import {getLeague, getLeaguePositions} from '../api/leagues';
 import {getSportConfig} from '../sports/registry';
 import type {SportConfig} from '../sports/types';
@@ -10,6 +10,12 @@ interface LeagueContextValue {
   sportConfig: SportConfig | null;
   loading: boolean;
   error: string;
+  /**
+   * Re-fetch the league and its positions. Needed after an admin edits the
+   * league, so the name in the header, breadcrumb and tabs updates without a
+   * full page reload.
+   */
+  refresh: () => Promise<void>;
 }
 
 const LeagueContext = createContext<LeagueContextValue>({
@@ -18,6 +24,7 @@ const LeagueContext = createContext<LeagueContextValue>({
   sportConfig: null,
   loading: true,
   error: '',
+  refresh: async () => {},
 });
 
 export const useLeague = () => useContext(LeagueContext);
@@ -34,52 +41,54 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ leagueId, childr
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(async (signal?: { cancelled: boolean }) => {
+    try {
+      setError('');
+      setLoading(true);
 
-    async function load() {
-      try {
-        setError('');
-        setLoading(true);
+      const [leagueData, positionsData] = await Promise.all([
+        getLeague(leagueId),
+        getLeaguePositions(leagueId),
+      ]);
 
-        const [leagueData, positionsData] = await Promise.all([
-          getLeague(leagueId),
-          getLeaguePositions(leagueId),
-        ]);
+      if (signal?.cancelled) return;
 
-        if (cancelled) return;
+      setLeague(leagueData);
 
-        setLeague(leagueData);
-
-        if (leagueData.sportLeague) {
-          const config = getSportConfig(leagueData.sportLeague);
-          if (config.positionOrder) {
-            positionsData.sort(
-              (a, b) => config.positionOrder!.indexOf(a.position) - config.positionOrder!.indexOf(b.position)
-            );
-          }
-          setSportConfig(config);
+      if (leagueData.sportLeague) {
+        const config = getSportConfig(leagueData.sportLeague);
+        if (config.positionOrder) {
+          positionsData.sort(
+            (a, b) => config.positionOrder!.indexOf(a.position) - config.positionOrder!.indexOf(b.position)
+          );
         }
-
-        setPositions(positionsData);
-      } catch (err: any) {
-        if (!cancelled) setError(err?.message ?? 'Failed to load league');
-      } finally {
-        if (!cancelled) setLoading(false);
+        setSportConfig(config);
       }
+
+      setPositions(positionsData);
+    } catch (err: any) {
+      if (!signal?.cancelled) setError(err?.message ?? 'Failed to load league');
+    } finally {
+      if (!signal?.cancelled) setLoading(false);
     }
+  }, [leagueId]);
+
+  useEffect(() => {
+    const signal = { cancelled: false };
 
     if (leagueId) {
-      load();
+      load(signal);
     } else {
       setLoading(false);
     }
 
-    return () => { cancelled = true; };
-  }, [leagueId]);
+    return () => { signal.cancelled = true; };
+  }, [leagueId, load]);
+
+  const refresh = useCallback(() => load(), [load]);
 
   return (
-    <LeagueContext.Provider value={{ league, positions, sportConfig, loading, error }}>
+    <LeagueContext.Provider value={{ league, positions, sportConfig, loading, error, refresh }}>
       {children}
     </LeagueContext.Provider>
   );
