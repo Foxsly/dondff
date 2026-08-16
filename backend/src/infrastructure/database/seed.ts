@@ -10,6 +10,8 @@ import { SportLeague } from '@/common/types/sport-league.type';
  *   - 3 league members in each league
  *   - Teams for all 3 users × weeks 1–18 of season 2025 (NFL, empty lineups)
  *   - 1 event group (The Masters) for the golf league
+ *   - An event for every seeded event group (a group with none breaks the
+ *     date-range lookup; see the events block at the end)
  *
  * Usage:
  *   npm run seed
@@ -195,6 +197,65 @@ async function seed() {
       .onConflict((oc) => oc.column('eventGroupId').doNothing())
       .execute();
     console.log('  golf event group ok');
+
+    // ── Events for every seeded event group ──────────────────────────
+    //
+    // An event group with no events is not a state the app can render: the
+    // date range for a group is derived from min(event.startDate) /
+    // max(event.endDate), so an empty group produces an Invalid Date and
+    // GET /event-groups/:sport/with-dates fails for the whole sport.
+    //
+    // This never happens in a deployed environment, where groups are created
+    // by the weekly sync strategies, which always write a group and its event
+    // together. It was only reachable here, because the seed created bare
+    // groups. Backfilling is done by name lookup rather than from the ids
+    // generated above, so re-running the seed repairs a database that was
+    // already seeded without events.
+    const groupsMissingEvents = await db
+      .selectFrom('eventGroup')
+      .leftJoin('event', 'event.eventGroupId', 'eventGroup.eventGroupId')
+      .select(['eventGroup.eventGroupId', 'eventGroup.name', 'eventGroup.sportLeague'])
+      .where('event.eventId', 'is', null)
+      .execute();
+
+    if (groupsMissingEvents.length === 0) {
+      console.log('  events ok (nothing missing)');
+    } else {
+      // NFL 2025 regular season: week 1 opened Thu 4 Sep, each week a Thu–Mon
+      // window seven days after the last.
+      const NFL_WEEK_ONE_START = new Date(Date.UTC(2025, 8, 4));
+      const isoDate = (d: Date) => d.toISOString().slice(0, 10);
+
+      const eventRows = groupsMissingEvents.map((group) => {
+        const week = Number(/NFL Week (\d+)/.exec(group.name)?.[1]);
+
+        let startDate: Date;
+        let endDate: Date;
+
+        if (Number.isFinite(week)) {
+          startDate = new Date(NFL_WEEK_ONE_START);
+          startDate.setUTCDate(startDate.getUTCDate() + (week - 1) * 7);
+          endDate = new Date(startDate);
+          endDate.setUTCDate(endDate.getUTCDate() + 4);
+        } else {
+          // Non-NFL seeded groups (The Masters) get a fixed historical window;
+          // they exist to have something to display, not to be played.
+          startDate = new Date(Date.UTC(2025, 3, 10));
+          endDate = new Date(Date.UTC(2025, 3, 13));
+        }
+
+        return {
+          eventId: crypto.randomUUID() as string,
+          eventGroupId: group.eventGroupId,
+          name: group.name,
+          startDate: isoDate(startDate),
+          endDate: isoDate(endDate),
+        };
+      });
+
+      await db.insertInto('event').values(eventRows).execute();
+      console.log(`  events ok (${eventRows.length} backfilled)`);
+    }
 
     console.log('\nSeed complete.');
     console.log(`NFL League ID : ${LEAGUE_ID}`);
