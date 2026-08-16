@@ -29,8 +29,13 @@
   --color-text-strong: 255 255 255; /* #ffffff — headings, member names */
   --color-text: 229 231 235; /* #e5e7eb — body, player names */
   --color-text-muted: 156 163 175; /* #9ca3af — secondary figures (proj) */
-  --color-text-subtle: 107 114 128; /* #6b7280 — uppercase micro-labels */
-  --color-text-faint: 75 85 99; /* #4b5563 — placeholders, empty slots */
+  /* The bottom two steps were lifted in Phase 8 for contrast. At their original
+     values (#6b7280 and #4b5563) they failed WCAG AA against every surface —
+     3.37 and 2.16 on `surface` against a 4.5 requirement — and micro-labels are
+     the single most repeated text in the app. Lifted only as far as AA needs,
+     to keep the ramp's steps distinguishable from --color-text-muted. */
+  --color-text-subtle: 139 146 158; /* #8b929e — uppercase micro-labels */
+  --color-text-faint: 113 121 132; /* #717984 — placeholders, empty slots */
 
   /* ── Brand ──────────────────────────────────────────────────────────────── */
   --color-brand: 0 206 184; /* #00ceb8 */

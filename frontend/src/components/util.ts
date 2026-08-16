@@ -1,4 +1,4 @@
-import { request } from '../api/client';
+import { getProjections } from '../api/players';
 import type { PoolPlayer, GameCase } from '../types';
 
 /**
@@ -15,9 +15,9 @@ export const fetchPlayerPool = async (
   seasonYear: string | number,
   playerLimit: number,
 ): Promise<PoolPlayer[]> => {
-  const json = await request<any[]>(
-    `/players/projections/${seasonYear}/${eventGroupId}/${position}`,
-  );
+  // Goes through the api/players binding rather than hand-building the same
+  // URL a second time.
+  const json = await getProjections(seasonYear, eventGroupId, position);
 
   if (!Array.isArray(json)) return [];
 

@@ -30,6 +30,11 @@ export interface MenuProps {
  */
 export const Menu: React.FC<MenuProps> = ({ trigger, align = 'right', className, children }) => {
   const [open, setOpen] = useState(false);
+  // Set when the menu is opened from the keyboard, which should land focus on
+  // the first item. Handled by an effect rather than a setTimeout after
+  // setOpen: the list is not in the DOM until React commits, and a timer that
+  // happens to win that race on a fast machine is not a guarantee.
+  const [focusFirstItem, setFocusFirstItem] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -57,12 +62,19 @@ export const Menu: React.FC<MenuProps> = ({ trigger, align = 'right', className,
   const items = () =>
     Array.from(listRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
 
+  useEffect(() => {
+    if (!open || !focusFirstItem) return;
+    items()[0]?.focus();
+    setFocusFirstItem(false);
+    // `items` reads a ref, so it is stable enough to leave out of the deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, focusFirstItem]);
+
   const handleTriggerKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       setOpen(true);
-      // Wait for the list to mount before reaching into it.
-      window.setTimeout(() => items()[0]?.focus(), 0);
+      setFocusFirstItem(true);
     }
   };
 
@@ -157,7 +169,9 @@ export const MenuDivider: React.FC = () => (
 );
 
 export const MenuLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="px-3.5 py-2 text-label uppercase text-text-subtle">{children}</div>
+  // text-muted rather than text-subtle: this is the one place a micro-label
+  // sits on surface-overlay, where subtle lands at 4.24 — under AA for text.
+  <div className="px-3.5 py-2 text-label uppercase text-text-muted">{children}</div>
 );
 
 export default Menu;
