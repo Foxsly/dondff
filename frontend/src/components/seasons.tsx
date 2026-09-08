@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { getCurrentUser } from "../api/auth";
-import { getLeagueTeams } from "../api/leagues";
-import { useLeague } from "../contexts/LeagueContext";
-import LoadingSpinner from "./ui/LoadingSpinner";
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { getCurrentUser } from '../api/auth';
+import { getLeagueTeams } from '../api/leagues';
+import { useLeague } from '../contexts/LeagueContext';
+import { ChevronRightIcon, Skeleton } from './ui';
 
 interface SeasonsProps {
   leagueId: string;
@@ -14,51 +14,51 @@ const Seasons: React.FC<SeasonsProps> = ({ leagueId }) => {
   const { sportConfig } = useLeague();
 
   const [seasons, setSeasons] = useState<string[]>([]);
+  const [currentSeason, setCurrentSeason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
-        setError("");
+        setError('');
         setLoading(true);
 
         const current = await getCurrentUser();
-        if (!current) {
-          if (!cancelled) navigate("/");
-          return;
-        }
-
-        const userId = current.id || current.userId;
-        if (!userId) {
-          if (!cancelled) navigate("/");
+        const userId = current?.id || current?.userId;
+        if (!current || !userId) {
+          if (!cancelled) navigate('/');
           return;
         }
 
         const teams = await getLeagueTeams(leagueId);
-
         if (cancelled) return;
 
         const seasonSet = new Set<string>();
 
         if (Array.isArray(teams)) {
-          const leagueTeams = teams.filter((team: any) => team.leagueId === leagueId);
-          leagueTeams.forEach((team: any) => seasonSet.add(String(team.seasonYear)));
+          teams
+            .filter((team: any) => team.leagueId === leagueId)
+            .forEach((team: any) => seasonSet.add(String(team.seasonYear)));
         }
 
         if (sportConfig) {
-          const currentSeason = await sportConfig.fetchCurrentSeason();
-          if (currentSeason != null) seasonSet.add(currentSeason);
+          const fetched = await sportConfig.fetchCurrentSeason();
+          if (fetched != null) {
+            seasonSet.add(fetched);
+            if (!cancelled) setCurrentSeason(fetched);
+          }
         }
 
-        const derivedSeasons = Array.from(seasonSet);
-        derivedSeasons.sort();
-        setSeasons(derivedSeasons);
+        // Most recent first — the season someone wants is almost always the
+        // newest, and the old ascending sort buried it at the bottom.
+        const derived = Array.from(seasonSet).sort((a, b) => b.localeCompare(a));
+        if (!cancelled) setSeasons(derived);
       } catch (err: any) {
-        console.error("Failed to load seasons", err);
-        if (!cancelled) setError(err?.message ?? "Failed to load seasons");
+        console.error('Failed to load seasons', err);
+        if (!cancelled) setError(err?.message ?? 'Failed to load seasons');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -70,39 +70,53 @@ const Seasons: React.FC<SeasonsProps> = ({ leagueId }) => {
       setLoading(false);
     }
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [leagueId, navigate, sportConfig]);
 
   if (loading) {
     return (
-      <div className="mx-auto p-4 space-y-4">
-        <LoadingSpinner message="Loading seasons..." />
+      <div className="space-y-2" aria-busy="true">
+        <Skeleton className="h-12" />
+        <Skeleton className="h-12" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="mx-auto p-4 space-y-4">
-        <p className="text-red-500">{error}</p>
-      </div>
+      <p role="alert" className="text-sm text-danger">
+        {error}
+      </p>
     );
   }
 
+  if (seasons.length === 0) {
+    return <p className="text-sm text-text-subtle">No seasons yet.</p>;
+  }
+
   return (
-    <div className="mx-auto p-4 space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {seasons.map((season) => (
+    <ul className="space-y-2">
+      {seasons.map((season) => (
+        <li key={season}>
           <Link
-            key={season}
             to={`/league/${leagueId}/season/${season}`}
-            className="px-3 py-1 rounded bg-[#3a465b] hover:bg-[#3ab4cc]"
+            className="flex items-center gap-3 rounded border border-border bg-surface-sunken px-4 py-3 transition-colors hover:border-border-strong hover:bg-surface-raised"
           >
-            {season}
+            <span className="flex-1 font-display text-base font-semibold text-text-strong">
+              {season}
+            </span>
+
+            {season === currentSeason && (
+              <span className="text-label uppercase text-brand">Current</span>
+            )}
+
+            <ChevronRightIcon className="h-4 w-4 text-text-subtle" />
           </Link>
-        ))}
-      </div>
-    </div>
+        </li>
+      ))}
+    </ul>
   );
 };
 

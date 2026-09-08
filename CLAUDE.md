@@ -96,6 +96,26 @@ Full game flow and state machine: `ai/docs/GAME_FLOW.md`
 - Early returns preferred for readability
 - API base URL via `window.RUNTIME_CONFIG?.API_BASE_URL` — never hardcoded
 
+### Design system
+
+- **Never write a literal colour.** Every colour, radius, shadow and font is a token in
+  `src/styles/tokens.css`, exposed as Tailwind utilities (`bg-surface`, `text-text-muted`,
+  `border-strong`, `shadow-card`). Colours are stored as `R G B` triplets so opacity
+  modifiers compose: `bg-surface/50`.
+- **Build from the primitives in `src/components/ui/`** — import from the barrel
+  (`import { Button, Card, Field } from '../ui'`). Run the dev-only styleguide at
+  **`/ui`** to see every variant and state.
+- **A primitive exposes a prop for anything a caller needs to vary; `className` is for
+  layout and spacing only.** Passing a colour class to a primitive silently loses to its
+  base class — equal CSS specificity means the compiled stylesheet's order decides, not
+  the order in the class string. Add a variant/tone prop instead.
+- Scores and any number in a column get `tnum` (or `font-mono`) so they don't jitter
+  between renders.
+- Interactive elements must be real `<button>`/`<a>`. The global `:focus-visible` ring in
+  `styles/base.css` covers focus; don't remove outlines.
+- Text colours: `text-subtle` and above pass WCAG AA on all app surfaces. `text-faint` is
+  for placeholders and disabled states only.
+
 Auth context lives in `AuthContext.tsx`. Auth is currently email-based localStorage only (no real auth yet).
 
 ---
@@ -119,6 +139,15 @@ npm run test:unit    # unit tests only
 npm run test:e2e     # E2E tests only
 npm run test         # both
 ```
+
+### Frontend tests
+
+`cd frontend && CI=true npm test`
+
+Component tests live beside what they cover (`src/components/ui/__tests__/`). They target
+the behaviour that is invisible when it works and silently broken when it doesn't — label
+association and `aria-describedby`, focus trapping and restoration, roving tabindex — since
+that is exactly what reviewing a screenshot will never catch.
 
 ---
 

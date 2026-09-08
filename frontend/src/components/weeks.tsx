@@ -1,22 +1,24 @@
-import React, {useEffect, useState} from "react";
-import {useNavigate, useParams} from "react-router-dom";
-import {getCurrentUser} from "../api/auth";
-import {getEventGroupsBySportLeagueWithDates} from "../api/events";
-import {getLeagueTeams} from "../api/leagues";
-import {useLeague} from "../contexts/LeagueContext";
-import type {EventOption} from "../sports/types";
-import Accordion from "./accordion";
-import Breadcrumbs from "./breadcrumbs";
-import ErrorDisplay from "./ui/ErrorDisplay";
-import LoadingSpinner from "./ui/LoadingSpinner";
-
-interface EventGroupInfo {
-  eventGroupId: string;
-  label: string;
-  startDate?: string | Date | null;
-  endDate?: string | Date | null;
-  status?: 'PENDING' | 'PLAYING' | 'FINISHED';
-}
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { getCurrentUser } from '../api/auth';
+import { getEventGroupsBySportLeagueWithDates } from '../api/events';
+import { getLeagueTeams } from '../api/leagues';
+import { useLeague } from '../contexts/LeagueContext';
+import type { EventOption } from '../sports/types';
+import EventAccordion, { type EventGroupInfo } from './accordion';
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  ErrorDisplay,
+  LoadingSpinner,
+  PageContainer,
+  PageHeader,
+} from './ui';
 
 const Weeks: React.FC = () => {
   const { leagueId, season } = useParams<{ leagueId: string; season: string }>();
@@ -27,7 +29,7 @@ const Weeks: React.FC = () => {
   const [currentEventGroupId, setCurrentEventGroupId] = useState<string | null>(null);
   const [availableEvents, setAvailableEvents] = useState<EventOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -36,61 +38,51 @@ const Weeks: React.FC = () => {
       if (!sportConfig) return;
 
       try {
-        setError("");
+        setError('');
         setLoading(true);
 
         const current = await getCurrentUser();
-        if (!current) {
-          if (!cancelled) navigate("/");
+        const userId = current?.id || current?.userId;
+        if (!current || !userId) {
+          if (!cancelled) navigate('/');
           return;
         }
 
-        const userId = current.id || current.userId;
-        if (!userId) {
-          if (!cancelled) navigate("/");
-          return;
-        }
-
-        const sport = sportConfig?.key;
         const [teams, allEventGroups] = await Promise.all([
           getLeagueTeams(leagueId!),
-          getEventGroupsBySportLeagueWithDates(sport),
+          getEventGroupsBySportLeagueWithDates(sportConfig.key),
         ]);
 
         if (cancelled) return;
 
-        // Build a lookup map from backend event groups (which include dates)
-        const eventGroupLookup = new Map(
-          allEventGroups.map((eg) => [eg.eventGroupId, eg]),
-        );
-
+        const lookup = new Map(allEventGroups.map((eg) => [eg.eventGroupId, eg]));
         const eventGroupMap = new Map<string, EventGroupInfo>();
 
         if (Array.isArray(teams)) {
-          const leagueTeams = teams.filter((team: any) => {
-              return !season || (team.seasonYear && String(team.seasonYear) === String(season));
-          });
-
-          leagueTeams.forEach((team: any) => {
-            if (team.eventGroupId != null && !eventGroupMap.has(team.eventGroupId)) {
-              const eg = eventGroupLookup.get(team.eventGroupId);
-              eventGroupMap.set(team.eventGroupId, {
-                eventGroupId: team.eventGroupId,
-                label: eg?.name ?? team.eventGroupName ?? team.eventGroupId,
-                startDate: eg?.startDate ?? null,
-                endDate: eg?.endDate ?? null,
-                status: eg?.status,
-              });
-            }
-          });
+          teams
+            .filter(
+              (team: any) =>
+                !season || (team.seasonYear && String(team.seasonYear) === String(season)),
+            )
+            .forEach((team: any) => {
+              if (team.eventGroupId != null && !eventGroupMap.has(team.eventGroupId)) {
+                const eg = lookup.get(team.eventGroupId);
+                eventGroupMap.set(team.eventGroupId, {
+                  eventGroupId: team.eventGroupId,
+                  label: eg?.name ?? team.eventGroupName ?? team.eventGroupId,
+                  startDate: eg?.startDate ?? null,
+                  endDate: eg?.endDate ?? null,
+                  status: eg?.status,
+                });
+              }
+            });
         }
 
-        // Fetch current event group from sport config
         const currentEventGroup = await sportConfig.fetchCurrentEventGroup();
         if (currentEventGroup != null) {
           if (!cancelled) setCurrentEventGroupId(currentEventGroup.eventGroupId);
           if (!eventGroupMap.has(currentEventGroup.eventGroupId)) {
-            const eg = eventGroupLookup.get(currentEventGroup.eventGroupId);
+            const eg = lookup.get(currentEventGroup.eventGroupId);
             eventGroupMap.set(currentEventGroup.eventGroupId, {
               eventGroupId: currentEventGroup.eventGroupId,
               label: currentEventGroup.label,
@@ -101,21 +93,22 @@ const Weeks: React.FC = () => {
           }
         }
 
-        // Compute available events (event groups not yet used by teams)
         const available = allEventGroups.filter((eg) => !eventGroupMap.has(eg.eventGroupId));
-        if (!cancelled) setAvailableEvents(available.map((eg) => ({
-          value: eg.eventGroupId,
-          label: eg.name,
-          startDate: eg.startDate,
-          endDate: eg.endDate,
-          status: eg.status,
-        })));
-
-        const derivedEventGroups = Array.from(eventGroupMap.values());
-        if (!cancelled) setEventGroups(derivedEventGroups);
+        if (!cancelled) {
+          setAvailableEvents(
+            available.map((eg) => ({
+              value: eg.eventGroupId,
+              label: eg.name,
+              startDate: eg.startDate,
+              endDate: eg.endDate,
+              status: eg.status,
+            })),
+          );
+          setEventGroups(Array.from(eventGroupMap.values()));
+        }
       } catch (err: any) {
-        console.error("Failed to load event groups", err);
-        if (!cancelled) setError(err?.message ?? "Failed to load event groups");
+        console.error('Failed to load event groups', err);
+        if (!cancelled) setError(err?.message ?? 'Failed to load event groups');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -127,21 +120,21 @@ const Weeks: React.FC = () => {
       setLoading(false);
     }
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [leagueId, season, navigate, sportConfig, leagueLoading]);
 
   const handleAddEventGroup = (event: EventOption) => {
-    const newGroup: EventGroupInfo = {
-      eventGroupId: event.value,
-      ...event
-    };
-    setEventGroups((prev) => [...prev, newGroup]);
+    setEventGroups((prev) => [...prev, { eventGroupId: event.value, ...event }]);
     setAvailableEvents((prev) => prev.filter((e) => e.value !== event.value));
   };
 
+  const eventLabel = sportConfig?.eventLabel ?? 'Week';
+
   const breadcrumbs = [
-    { label: "Dashboard", to: "/dashboard" },
-    { label: league?.name || "League", to: `/league/${leagueId}` },
+    { label: 'Dashboard', to: '/dashboard' },
+    { label: league?.name || 'League', to: `/league/${leagueId}` },
     { label: `Season ${season}` },
   ];
 
@@ -150,54 +143,83 @@ const Weeks: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
-        <Breadcrumbs items={breadcrumbs} />
-        <LoadingSpinner message="Loading event groups..." />
-      </div>
+      <PageContainer width="wide">
+        <PageHeader title={`Season ${season}`} breadcrumbs={breadcrumbs} />
+        <LoadingSpinner message={`Loading ${eventLabel.toLowerCase()}s...`} />
+      </PageContainer>
     );
   }
 
   if (displayError) {
     return (
-      <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
-        <Breadcrumbs items={breadcrumbs} />
+      <PageContainer width="wide">
+        <PageHeader title={`Season ${season}`} breadcrumbs={breadcrumbs} />
         <ErrorDisplay message={displayError} />
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="mx-auto p-4 space-y-4 text-left bg-[#3a465b]/50 rounded">
-      <Breadcrumbs items={breadcrumbs} />
-      <div className="space-y-4 max-w-[90%] mx-auto">
-        {eventGroups.map((group) => (
-          <Accordion
-            key={group.eventGroupId}
-            eventGroup={group}
-            leagueId={leagueId!}
-            season={season!}
-            currentEventGroupId={currentEventGroupId}
-          />
-        ))}
-      </div>
-      {availableEvents.length > 0 && (
-        <div className="space-y-2 mt-4">
-          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
-            Available {sportConfig?.eventLabel}s
-          </h3>
-          {availableEvents.map((event) => (
-            <button
-              key={event.value}
-              onClick={() => handleAddEventGroup(event)}
-              className="w-full text-left px-4 py-3 rounded bg-[#2a3447] hover:bg-[#344054] border border-[#3a465b] transition-colors"
-            >
-              <span className="text-white font-medium">{event.label}</span>
-              <span className="text-gray-400 text-sm ml-2">— Add {sportConfig?.eventLabel?.toLowerCase()}</span>
-            </button>
+    <PageContainer width="wide">
+      <PageHeader
+        title={`Season ${season}`}
+        description={`${eventLabel}s played in this league.`}
+        breadcrumbs={breadcrumbs}
+        meta={sportConfig && <Badge variant="brand">{sportConfig.displayName}</Badge>}
+      />
+
+      {eventGroups.length === 0 ? (
+        <EmptyState
+          title={`No ${eventLabel.toLowerCase()}s yet`}
+          description={`Add one below to start tracking entries for this season.`}
+        />
+      ) : (
+        <div className="space-y-3">
+          {eventGroups.map((group, index) => (
+            <EventAccordion
+              key={group.eventGroupId}
+              eventGroup={group}
+              leagueId={leagueId!}
+              season={season!}
+              currentEventGroupId={currentEventGroupId}
+              // Open the live event by default, or the first one if none is
+              // live — otherwise the page is a wall of closed rows.
+              defaultOpen={
+                currentEventGroupId
+                  ? group.eventGroupId === currentEventGroupId
+                  : index === 0
+              }
+            />
           ))}
         </div>
       )}
-    </div>
+
+      {availableEvents.length > 0 && (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>Available {eventLabel.toLowerCase()}s</CardTitle>
+          </CardHeader>
+          <CardBody className="space-y-2">
+            <p className="mb-3 text-sm text-text-muted">
+              Add a {eventLabel.toLowerCase()} to this season to draft lineups for it.
+            </p>
+            {availableEvents.map((event) => (
+              <div
+                key={event.value}
+                className="flex items-center justify-between gap-3 rounded border border-border bg-surface-sunken px-4 py-3"
+              >
+                <span className="min-w-0 truncate text-sm font-medium text-text">
+                  {event.label}
+                </span>
+                <Button size="sm" variant="secondary" onClick={() => handleAddEventGroup(event)}>
+                  Add
+                </Button>
+              </div>
+            ))}
+          </CardBody>
+        </Card>
+      )}
+    </PageContainer>
   );
 };
 
