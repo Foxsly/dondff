@@ -65,29 +65,7 @@ export interface BreadcrumbItem {
   to?: string;
 }
 
-// ─── Legacy standalone game types (cases.tsx) ────────────────────────────────
-
-export interface PoolPlayer {
-  name: string;
-  points: number;
-  status?: string;
-  opponent?: string;
-  team?: string;
-  playerId?: string;
-}
-
-export interface GameCase {
-  number: number;
-  name: string;
-  points: number;
-  opened: boolean;
-  status?: string;
-  opponent?: string;
-  team?: string;
-  playerId?: string;
-}
-
-// ─── Backend-backed game types (game.tsx) ────────────────────────────────────
+// ─── Game types ──────────────────────────────────────────────────────────────
 
 export interface Matchup {
   team?: string;

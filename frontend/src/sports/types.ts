@@ -55,5 +55,9 @@ export interface SportConfig {
   /** Quick-play config for the home page */
   supportsQuickPlay: boolean;
   quickPlayPositions?: string[];
-  quickPlayWeekCount?: number;
+  /**
+   * Players to draw the demo board's pool from, per position. Kept in step with
+   * the league defaults so the quick-play board is the same shape as a real one.
+   */
+  quickPlayPoolSizes?: Record<string, number>;
 }

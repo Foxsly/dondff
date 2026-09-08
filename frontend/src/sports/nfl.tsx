@@ -75,5 +75,5 @@ export const nflConfig: SportConfig = {
 
   supportsQuickPlay: true,
   quickPlayPositions: ['WR', 'RB'],
-  quickPlayWeekCount: 21,
+  quickPlayPoolSizes: { WR: 96, RB: 64 },
 };

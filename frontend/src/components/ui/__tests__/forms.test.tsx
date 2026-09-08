@@ -57,9 +57,10 @@ describe('Field', () => {
 
     const withHint = screen.getByLabelText('Email');
     expect(withHint).not.toHaveAttribute('aria-invalid');
-    expect(
-      document.getElementById(withHint.getAttribute('aria-describedby')!),
-    ).toHaveTextContent('We never share it.');
+    expect(screen.getByText('We never share it.')).toHaveAttribute(
+      'id',
+      withHint.getAttribute('aria-describedby'),
+    );
 
     rerender(
       <Field label="Email" hint="We never share it." error="That isn't an email.">
@@ -71,9 +72,10 @@ describe('Field', () => {
     expect(withError).toHaveAttribute('aria-invalid', 'true');
     // The error replaces the hint as the description rather than being
     // appended, so a screen reader is not read stale guidance.
-    expect(
-      document.getElementById(withError.getAttribute('aria-describedby')!),
-    ).toHaveTextContent("That isn't an email.");
+    expect(screen.getByText("That isn't an email.")).toHaveAttribute(
+      'id',
+      withError.getAttribute('aria-describedby'),
+    );
     expect(screen.getByRole('alert')).toHaveTextContent("That isn't an email.");
   });
 });

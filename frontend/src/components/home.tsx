@@ -1,23 +1,10 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getEventGroupsBySportLeague } from '../api/events';
 import { AuthContext } from '../contexts/AuthContext';
 import { nflConfig } from '../sports/nfl';
-import type { PoolPlayer } from '../types';
-import DisplayGame from './cases';
-import {
-  Alert,
-  Button,
-  Field,
-  SegmentedControl,
-  Select,
-  buttonVariants,
-} from './ui';
-import { fetchPlayerPool } from './util';
+import QuickPlayGame from './game/QuickPlayGame';
+import { Alert, Button, Skeleton, buttonVariants } from './ui';
 import hero from './images/DOND.jpg';
-
-/** Pool size per position for a quick-play board. */
-const POOL_SIZES: Record<string, number> = { WR: 95, RB: 65 };
 
 const STEPS = [
   {
@@ -34,63 +21,107 @@ const STEPS = [
   },
 ];
 
+/** The week a quick-play board is dealt from, and how we arrived at it. */
+interface QuickPlayWeek {
+  eventGroupId: string;
+  label: string;
+  /** False once we have fallen back to the last published week — the off-season. */
+  isCurrent: boolean;
+}
+
 const Home: React.FC = () => {
   const { user } = useContext(AuthContext);
 
-  const [week, setWeek] = useState('');
-  const [position, setPosition] = useState('');
-  const [pool, setPool] = useState<PoolPlayer[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [week, setWeek] = useState<QuickPlayWeek | null>(null);
+  const [season, setSeason] = useState<string | null>(null);
+  const [weekError, setWeekError] = useState('');
+  const [resolving, setResolving] = useState(true);
+  const [position, setPosition] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   const positions = nflConfig.quickPlayPositions ?? [];
-  const weekCount = nflConfig.quickPlayWeekCount ?? 21;
 
-  const handleStart = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!week || !position) return;
+  /**
+   * Work out which week the demo board plays.
+   *
+   * In season that is simply the live NFL week, so a visitor never has to know
+   * or care which one it is. The form this replaced asked them to choose from
+   * twenty-one weeks, nearly all of which have no projections published and
+   * produced a board that refused to build with no explanation of why.
+   *
+   * Out of season there is no live week, so fall back to the most recent one
+   * that has an event group and label it as such rather than pretending.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    setResolving(true);
+    setWeekError('');
 
-    setError('');
-    setLoading(true);
+    (async () => {
+      try {
+        const [resolvedSeason, current] = await Promise.all([
+          nflConfig.fetchCurrentSeason(),
+          nflConfig.fetchCurrentEventGroup(),
+        ]);
+        if (cancelled) return;
 
-    try {
-      // The season used to be hard-coded to '2025', which silently went stale
-      // at the turn of the year. Ask the sport config instead.
-      const season = (await nflConfig.fetchCurrentSeason()) ?? String(new Date().getFullYear());
+        // The season used to be hard-coded to '2025', which silently went stale
+        // at the turn of the year. Ask the sport config, then the calendar.
+        const seasonYear = resolvedSeason ?? String(new Date().getFullYear());
+        setSeason(seasonYear);
 
-      const eventGroups = await getEventGroupsBySportLeague('NFL');
-      const eventGroup = eventGroups.find((group) => group.name === `NFL Week ${week}`);
+        if (current) {
+          setWeek({
+            eventGroupId: current.eventGroupId,
+            label: `Week ${current.label}`,
+            isCurrent: true,
+          });
+          return;
+        }
 
-      if (!eventGroup) {
-        // Previously this failed silently — the button simply did nothing.
-        setError(`No projections are available for NFL week ${week} yet.`);
-        return;
+        const groups = await nflConfig.fetchAvailableEventGroups(seasonYear);
+        if (cancelled) return;
+
+        const latest = groups
+          .filter((group) => Number.isFinite(Number(group.label)))
+          .sort((a, b) => Number(b.label) - Number(a.label))[0];
+
+        if (!latest) {
+          setWeekError('No NFL projections are published yet.');
+          return;
+        }
+
+        setWeek({
+          eventGroupId: latest.value,
+          label: `Week ${latest.label}`,
+          isCurrent: false,
+        });
+      } catch (err: any) {
+        console.error('Failed to resolve the quick-play week', err);
+        if (!cancelled) {
+          setWeekError(err?.message ?? 'Could not work out which NFL week to play.');
+        }
+      } finally {
+        if (!cancelled) setResolving(false);
       }
+    })();
 
-      const players = await fetchPlayerPool(
-        eventGroup.eventGroupId,
-        position,
-        season,
-        POOL_SIZES[position] ?? 65,
-      );
+    return () => {
+      cancelled = true;
+    };
+  }, [attempt]);
 
-      // The board deals ten cases, so anything less can't produce a game.
-      if (players.length < 10) {
-        setError(`Not enough ${position} projections published for week ${week} yet.`);
-        return;
-      }
-
-      setPool(players);
-    } catch (err: any) {
-      console.error('Failed to build quick-play board', err);
-      setError(err?.message ?? 'Something went wrong building the board.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (pool.length > 0) {
-    return <DisplayGame pool={pool} />;
+  if (position && week && season) {
+    return (
+      <QuickPlayGame
+        sportConfig={nflConfig}
+        position={position}
+        season={season}
+        eventGroupId={week.eventGroupId}
+        weekLabel={week.label}
+        onExit={() => setPosition(null)}
+      />
+    );
   }
 
   return (
@@ -173,57 +204,50 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* ── Quick play ───────────────────────────────────────────────────── */}
+      {/* ── Quick play ─────────────────────────────────────── */}
       <section id="quick-play" className="border-t border-border">
         <div className="mx-auto max-w-xl px-4 py-16 sm:px-6">
           <div className="text-center">
             <h2 className="text-2xl font-bold sm:text-3xl">Play a quick board</h2>
             <p className="mt-2 text-sm text-text-muted">
-              No account needed. Pick a week and a position group to generate ten cases.
+              No account needed. Pick a position group and we&apos;ll deal ten cases from this
+              week&apos;s projections.
             </p>
           </div>
 
-          <form onSubmit={handleStart} className="mt-8 space-y-5">
-            <Field label="NFL week">
-              {(field) => (
-                <Select
-                  {...field}
-                  value={week}
-                  onChange={(event) => setWeek(event.target.value)}
-                  placeholder="Choose a week"
-                >
-                  {Array.from({ length: weekCount }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>
-                      Week {i + 1}
-                    </option>
+          <div className="mt-8">
+            {resolving && <Skeleton className="h-28" />}
+
+            {!resolving && weekError && (
+              <Alert variant="warn" title="Quick play is unavailable">
+                {weekError}
+                <div className="mt-3">
+                  <Button size="sm" variant="secondary" onClick={() => setAttempt((n) => n + 1)}>
+                    Try again
+                  </Button>
+                </div>
+              </Alert>
+            )}
+
+            {!resolving && !weekError && week && (
+              <>
+                <p className="text-center text-sm text-text-muted">
+                  <span className="font-display font-semibold uppercase tracking-wide text-text-strong">
+                    {week.label}
+                  </span>
+                  {!week.isCurrent && ' — the most recent week with projections'}
+                </p>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {positions.map((pos) => (
+                    <Button key={pos} size="lg" fullWidth onClick={() => setPosition(pos)}>
+                      Deal ten {nflConfig.getPositionDisplayName(pos)} cases
+                    </Button>
                   ))}
-                </Select>
-              )}
-            </Field>
-
-            <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-text-muted">Player group</span>
-              <SegmentedControl
-                label="Player group"
-                options={positions.map((pos) => ({ value: pos, label: pos }))}
-                value={position}
-                onChange={setPosition}
-                fullWidth
-              />
-            </div>
-
-            {error && <Alert variant="danger">{error}</Alert>}
-
-            <Button
-              type="submit"
-              size="lg"
-              fullWidth
-              loading={loading}
-              disabled={!week || !position}
-            >
-              {loading ? 'Building board' : 'Build board'}
-            </Button>
-          </form>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </section>
     </>
