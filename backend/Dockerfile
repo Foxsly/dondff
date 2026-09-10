@@ -3,7 +3,6 @@
 # ==========================================================
 #  Multi-stage build for NestJS backend (distroless, rootless, tsc build)
 #  Default DB: Postgres
-#  Optional override: SQLite (via compose profile)
 # ==========================================================
 
 # ---------- Stage 1: Builder ----------
