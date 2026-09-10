@@ -164,35 +164,16 @@ npm run migrate down 3
 
 ---
 
-### 🧪 Running Migrations for a Specific Database Engine
+### 🧪 Running Migrations
 
-Set the database engine via environment variables:
-
-#### SQLite (local + E2E default)
+Migrations run against Postgres. Provide the connection via `DATABASE_URL` (e.g. in `backend/.env`):
 
 ```bash
-export DB_ENGINE=sqlite
-npm run migrate
-```
-
-#### Postgres (production-ready)
-
-```bash
-export DB_ENGINE=postgres
 export DATABASE_URL="postgres://user:pass@host:5432/db"
 npm run migrate
 ```
 
 ---
-
-### 🧹 Reset the Database (SQLite Only)
-
-If using SQLite locally, delete the `.data` directory:
-
-```bash
-rm -rf .data
-npm run migrate
-```
 
 ## Local Development with Docker
 
@@ -307,78 +288,3 @@ This repository does not enforce a specific proxy setup, but you should ensure t
 - External traffic hits the reverse proxy, not the container directly.
 - TLS certificates are managed by the proxy or a platform service.
 - Only necessary ports are exposed from the host.
-
-## RANDOM THINGS
-SQLITE3
-```sqlite
--- USER table
-CREATE TABLE user (
-                      userId     INTEGER PRIMARY KEY,
-                      name       TEXT NOT NULL,
-                      email      TEXT NOT NULL UNIQUE
-);
-
--- LEAGUE table
-CREATE TABLE league (
-                        leagueId   INTEGER PRIMARY KEY,
-                        name       TEXT NOT NULL
-);
-
--- TEAM table
-CREATE TABLE team (
-                      teamId     INTEGER PRIMARY KEY AUTOINCREMENT,
-                      leagueId   INTEGER NOT NULL,
-                      userId     INTEGER NOT NULL,
-                      seasonYear INTEGER NOT NULL,
-                      week       INTEGER NOT NULL,
-                      position   TEXT NOT NULL,
-                      playerId   INTEGER NOT NULL,
-                      playerName TEXT NOT NULL,
-                      FOREIGN KEY (leagueId) REFERENCES league(leagueId) ON DELETE CASCADE,
-                      FOREIGN KEY (userId) REFERENCES user(userId) ON DELETE CASCADE
-);
-
--- LEAGUEUSER (junction table for memberships)
-CREATE TABLE leagueUser (
-                            userId   INTEGER NOT NULL,
-                            leagueId INTEGER NOT NULL,
-                            role     TEXT NOT NULL,
-                            PRIMARY KEY (userId, leagueId),
-                            FOREIGN KEY (userId) REFERENCES user(userId) ON DELETE CASCADE,
-                            FOREIGN KEY (leagueId) REFERENCES league(leagueId) ON DELETE CASCADE
-);
-```
-```
--- Insert sample users
-INSERT INTO user (userId, name, email) VALUES
-  (1, 'Alice', 'alice@example.com'),
-  (2, 'Bob', 'bob@example.com'),
-  (3, 'Charlie', 'charlie@example.com');
-
--- Insert sample leagues
-INSERT INTO league (leagueId, name) VALUES
-  (1, 'Premier League'),
-  (2, 'Champions League');
-
--- Insert league memberships
-INSERT INTO leagueUser (userId, leagueId, role) VALUES
-  (1, 1, 'admin'),  -- Alice runs Premier League
-  (2, 1, 'member'),       -- Bob is a member
-  (3, 1, 'member'),       -- Charlie is a member
-  (1, 2, 'member'),       -- Alice plays in Champions League
-  (2, 2, 'admin'); -- Bob runs Champions League
-
--- Insert teams (simplified example: 1 team per user per league)
-INSERT INTO team (leagueId, userId, seasonYear, week, position, playerId, playerName) VALUES
-  (1, 1, 2025, 1, 'RB', 101, 'Jahmyr Gibbs'),
-  (1, 1, 2025, 1, 'WR', 103, 'Jamar Chase'),
-  (1, 2, 2025, 1, 'RB', 102, 'Derrick Henry'),
-  (1, 2, 2025, 1, 'WR', 104, 'Justin Jefferson'),
-  (1, 3, 2025, 1, 'RB', 107, 'Aaron Jones'),
-  (1, 3, 2025, 1, 'WR', 108, 'Rome Odunze'),
-  (2, 1, 2025, 1, 'RB', 106, 'Christian McCaffrey'),
-  (2, 1, 2025, 1, 'WR', 109, 'Emeka Egbuka'),
-  (2, 2, 2025, 1, 'RB', 102, 'Derrick Henry'),
-  (2, 2, 2025, 1, 'WR', 110, 'Khalil Shakir');
-```
-Then run kysely-codegen to generate Kysely types corresponding to the DB

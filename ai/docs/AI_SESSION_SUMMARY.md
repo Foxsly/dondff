@@ -6,7 +6,7 @@
 - **NestJS** with:
   - `@nestia/core` + `typia` for typed routes and runtime validation
   - **Kysely** as the database abstraction
-- Supports **Postgres (default / prod)** and **SQLite (exception / local / test)**
+- Supports **Postgres** with **PGlite** for E2E tests
 - Strong preference for:
   - Domain-driven modules
   - Type-safe DTOs derived from entities
@@ -21,7 +21,6 @@
   - `teamEntryEvent`
 - All table names and columns moved to **camelCase**
 - Used `Generated<T>` for `createdAt` / `updatedAt` fields to avoid optional-field complexity in inserts
-- SQLite caveat: `ON DELETE CASCADE` requires `PRAGMA foreign_keys = ON`
 - Postgres issues around `json_object` required **engine-aware query logic**
 
 ### Repository Patterns
@@ -104,7 +103,6 @@
 
 ### docker-compose
 - Postgres as default DB
-- SQLite supported for tests/local
 - Environment config:
   - `.env` file
   - Shared values for `POSTGRES_PASSWORD` and `DATABASE_URL`
@@ -185,8 +183,5 @@
 - **Distroless Images (Minimal production containers)**  
   https://github.com/11notes/RTFM
 
-- **PostgreSQL (Primary production database)**  
+- **PostgreSQL (Production database)**  
   https://www.postgresql.org/docs/
-
-- **SQLite (Local/test database engine)**  
-  https://www.sqlite.org/docs.html

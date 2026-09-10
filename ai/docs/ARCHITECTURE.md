@@ -7,7 +7,7 @@ This document describes the backend layering, invariants, and cross-cutting conv
 - Maintain a clear separation of responsibilities across controller/service/repository layers.
 - Keep business logic server-side and testable.
 - Preserve a stable, typed API contract using `@nestia/core` typed routes.
-- Support multiple database engines (Postgres as default; SQLite as exception) without leaking engine concerns into higher layers.
+- Use Postgres as the single database engine.
 
 ## Tech stack
 
@@ -15,8 +15,7 @@ This document describes the backend layering, invariants, and cross-cutting conv
 - **@nestia/core** `@TypedRoute` for API routing and runtime validation
 - **typia** for DTO validation and type-driven serialization
 - **Kysely** for database access (type-safe SQL builder)
-- **Postgres** as primary production DB
-- **SQLite** for local/testing and lightweight environments
+- **Postgres** for all database needs
 
 ## Layering
 
@@ -43,7 +42,6 @@ Service invariants:
 
 - All fairness-critical game logic lives in services.
 - Services may depend on multiple repositories.
-- Services may apply engine-aware logic only through repository abstractions.
 
 ### Repositories
 - Are the only layer allowed to execute SQL.
@@ -55,7 +53,6 @@ Repository invariants:
 
 - Do not contain business logic; only persistence and retrieval.
 - Prefer returning domain types (`ITeam`, `ITeamEntry`, etc.) and keep casting/local variables explicit.
-- Where engine differences exist, implement them in repository helpers (not in services/controllers).
 
 ### Entities and DTOs
 
@@ -69,28 +66,11 @@ Type invariants:
 - Prefer `camelCase` for table and column names.
 - Use `Generated<T>` for DB-managed timestamp columns (`createdAt`, `updatedAt`) in table types.
 
-## Database engine support
+## Database
 
-### Postgres (default)
-
-- Treated as the production baseline.
-- Prefer Postgres-native JSON helpers where appropriate.
-- Avoid Postgres-only SQL when the same behavior is needed on SQLite; if unavoidable, implement engine-aware repository branches.
-
-### SQLite (exception)
-
-- Used for local development and some test flows.
-- Requires explicit foreign key enforcement:
-  - `PRAGMA foreign_keys = ON` on each connection.
-- JSON handling may require result parsing configuration depending on dialect setup.
-
-### Engine-aware repository patterns
-
-When a query must behave differently per engine:
-
-- Implement a small helper inside the repository that branches by engine.
-- Keep the service signature identical across engines.
-- Unit test the query logic per engine where feasible; always include E2E coverage for API behavior.
+- **Postgres** is the sole database engine.
+- E2E tests run against **PGlite** (in-process Postgres 16).
+- Use Postgres-native JSON helpers where appropriate.
 
 ## Game integrity invariants
 
@@ -104,7 +84,6 @@ When a query must behave differently per engine:
 - Migrations are append-only.
 - New tables/columns must be introduced via migration.
 - Migrations must be runnable in containerized environments.
-- If migration behavior must vary by engine, branch within migration logic in a controlled, explicit way.
 
 ## Testing strategy
 
@@ -141,8 +120,6 @@ When a query must behave differently per engine:
 - Prefer a single domain entity definition over duplicating entities per layer (controller/service/repository).
 - Prefer services owning workflows over controllers orchestrating logic.
 - Prefer repositories encapsulating all SQL over inline queries or query construction in services.
-- Prefer explicit engine-aware branching in repositories over leaking DB differences into services.
-- Prefer Postgres-first implementations with SQLite as an explicitly supported exception.
 - Prefer append-only migrations over in-place schema changes.
 - Prefer backend-generated randomness and game state over client-generated logic.
 - Prefer returning domain-safe objects over raw database rows.
@@ -159,7 +136,6 @@ When a query must behave differently per engine:
 - Never execute SQL or touch Kysely directly from controllers or services.
 - Never duplicate domain entities across layers; there must be a single source of truth.
 - Never create ad-hoc DTOs when a derived utility type (`Pick`, `Omit`, etc.) suffices.
-- Never branch on database engine in controllers or services; engine differences belong in repositories only.
 - Never mutate persisted game state without recording an audit/event record.
 - Never rely on client-provided values for fairness-critical decisions.
 - Never introduce breaking schema changes without an explicit migration.
@@ -167,7 +143,6 @@ When a query must behave differently per engine:
 - Never allow silent failure of invalid state transitions; always return explicit errors.
 - Never introduce new endpoints without E2E coverage.
 - Never hardcode environment-specific values into application logic.
-- Never optimize for SQLite at the expense of Postgres correctness.
 - Never accept unclear abstractions that obscure ownership of state or logic.
 
 ## Red flags during code review
@@ -176,7 +151,6 @@ When a query must behave differently per engine:
 - Any client-visible response that could allow inference of unrevealed game state.
 - Direct use of Kysely or raw SQL outside a repository.
 - DTOs or request/response types that duplicate existing entities instead of deriving from them.
-- Conditional logic in services/controllers based on database engine.
 - Missing audit/event persistence for state-changing operations.
 - New endpoints without corresponding E2E tests.
 - E2E tests that do not follow established patterns in existing specs.
