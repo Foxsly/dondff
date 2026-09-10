@@ -83,3 +83,17 @@ export interface ISleeperPlayerEntry<TStats> {
 export type SleeperStatResponse = ISleeperPlayerEntry<ISleeperPlayerStats>[];
 export type SleeperProjectionResponse = ISleeperPlayerEntry<ISleeperPlayerProjectionStats>[];
 export type SleeperStatRequest = Pick<ISleeperPlayer, 'position'>;
+
+// -----------------------------
+// NFL week schedule (GraphQL: batch_scores)
+// -----------------------------
+export interface ISleeperScore {
+  date: string & tags.MinLength<10>;
+  status: string & tags.MinLength<1>;
+}
+
+export interface SleeperScoresResponse {
+  data: {
+    scores: ISleeperScore[];
+  };
+}

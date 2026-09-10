@@ -36,7 +36,10 @@ describe('SleeperService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SleeperService, { provide: HttpService, useValue: { get: jest.fn() } }],
+      providers: [
+        SleeperService,
+        { provide: HttpService, useValue: { get: jest.fn(), post: jest.fn() } },
+      ],
     }).compile();
 
     service = module.get<SleeperService>(SleeperService);
@@ -75,5 +78,28 @@ describe('SleeperService', () => {
         updated_at: e.updated_at.toISOString(),
       })),
     ).toEqual(expectedStatsResponse);
+  });
+
+  it('should return NFL week game dates from the GraphQL scores endpoint', async () => {
+    httpService.post.mockReturnValueOnce(
+      of(
+        mockAxiosResponse({
+          data: {
+            scores: [
+              { date: '2025-09-04', status: 'pre_game' },
+              { date: '2025-09-07', status: 'pre_game' },
+              { date: '2025-09-08', status: 'pre_game' },
+            ],
+          },
+        }),
+      ),
+    );
+
+    const result = await service.getNflWeekGameDates(2025, 1, 'regular');
+
+    expect(result).toEqual(['2025-09-04', '2025-09-07', '2025-09-08']);
+    expect(httpService.post).toHaveBeenCalledWith('https://sleeper.com/graphql', {
+      query: expect.stringContaining('batch_scores'),
+    });
   });
 });

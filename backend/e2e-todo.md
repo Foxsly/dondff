@@ -102,15 +102,17 @@ This document tracks remaining and current **end-to-end (E2E)** coverage across 
 > Covers the `EventSyncGroup` strategies (NFL/Golf/World Cup) via `GET /event-groups/:sportLeague` (each GET re-syncs, so Sleeper/FIFA/FanDuel/ESPN upstreams are re-mocked per request).
 
 ### ✅ Covered
-- [x] `GET /event-groups/NFL` — happy path: syncs NFL from Sleeper (state + projections mocked).
+- [x] `GET /event-groups/NFL` — happy path: syncs NFL from Sleeper (state + scores mocked), persists min/max game dates from `batch_scores` as `event.startDate`/`endDate`.
 - [x] `GET /event-groups/NFL` — idempotency: second call does not duplicate event groups/events.
 - [x] `GET /event-groups/NFL` — multiple weeks in the same season merge into one event group.
+- [x] `GET /event-groups/NFL` — empty scores (no games scheduled) → no event group created.
+- [x] `GET /event-groups/NFL/with-dates` — future-week dates → `status: 'PENDING'`.
 - [x] `GET /event-groups/GOLF` — sync from FanDuel (post events) + ESPN (start/end dates), verify merged event group.
 - [x] `GET /event-groups/WORLDCUP` — sync events from FIFA (start/end dates from fixture).
 - [x] `GET /event-groups/NBA` — unknown `sportLeague` → 500 (strategy registry miss).
 
 ### ⏭️ Remaining / Next Up
-- [ ] Verify `status` (PENDING/PLAYING/FINISHED) transitions across date ranges.
+- [ ] Verify `status` (PENDING/PLAYING/FINISHED) transitions across date ranges (only PENDING for future dates covered so far).
 - [ ] Upstream errors (Sleeper/FIFA timeouts or 4xx/5xx) propagate cleanly.
 
 ---
