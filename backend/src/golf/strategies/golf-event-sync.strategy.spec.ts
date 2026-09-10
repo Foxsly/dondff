@@ -43,6 +43,7 @@ describe('GolfEventSyncStrategy', () => {
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
         name: 'Genesis Scottish Open',
+        seasonYear: new Date().getFullYear(),
         events: [
           {
             externalId: 'event-1',

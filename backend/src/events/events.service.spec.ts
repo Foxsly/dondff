@@ -76,7 +76,7 @@ describe('EventsService', () => {
             get: jest.fn().mockReturnValue({
               fetchSyncData: jest.fn(async () => {
                 const rounds = await fifaService.getRounds();
-                const groupMap = new Map<string, { name: string; events: any[] }>();
+                const groupMap = new Map<string, { name: string; seasonYear: number; events: any[] }>();
                 for (const round of rounds) {
                   for (const match of round.tournaments) {
                     const externalEventId = `WC-${round.id}-${match.id}`;
@@ -89,7 +89,7 @@ describe('EventsService', () => {
 
                     let group = groupMap.get(groupName);
                     if (!group) {
-                      group = { name: groupName, events: [] };
+                      group = { name: groupName, seasonYear: 2026, events: [] };
                       groupMap.set(groupName, group);
                     }
                     group.events.push({
@@ -227,10 +227,12 @@ describe('EventsService', () => {
       expect(eventsRepository.createEventGroup).toHaveBeenCalledWith({
         name: 'World Cup Group Stage – Matchday 1',
         sportLeague: SportLeague.WORLDCUP,
+        seasonYear: 2026,
       });
       expect(eventsRepository.createEventGroup).toHaveBeenCalledWith({
         name: 'World Cup Group Stage – Matchday 2',
         sportLeague: SportLeague.WORLDCUP,
+        seasonYear: 2026,
       });
 
       // Each match was checked for duplicates by external ID
@@ -291,6 +293,7 @@ describe('EventsService', () => {
           eventGroupId: 'existing-group-id',
           name: 'World Cup Group Stage – Matchday 1',
           sportLeague: SportLeague.WORLDCUP as const,
+          seasonYear: 2026,
         },
       };
       eventsRepository.findEventGroupByName.mockImplementation((name: string) =>
@@ -403,6 +406,7 @@ describe('EventsService', () => {
         eventGroupId: mockUuid(),
         name: 'World Cup Knockout Stage – Round of 32',
         sportLeague: SportLeague.WORLDCUP,
+        seasonYear: 2026,
       });
       eventsRepository.findEventByExternalEvent.mockResolvedValue(null);
       eventsRepository.createEvent.mockResolvedValueOnce({ eventId: mockUuid() } as any);
@@ -414,6 +418,7 @@ describe('EventsService', () => {
       expect(eventsRepository.createEventGroup).toHaveBeenCalledWith({
         name: 'World Cup Knockout Stage – Round of 32',
         sportLeague: SportLeague.WORLDCUP,
+        seasonYear: 2026,
       });
     });
 
@@ -473,6 +478,7 @@ describe('EventsService', () => {
         eventGroupId: mockUuid(),
         name: 'World Cup Stage THIRD',
         sportLeague: SportLeague.WORLDCUP,
+        seasonYear: 2026,
       });
       eventsRepository.findEventByExternalEvent.mockResolvedValue(null);
       eventsRepository.createEvent.mockResolvedValueOnce({ eventId: mockUuid() } as any);
@@ -484,6 +490,7 @@ describe('EventsService', () => {
       expect(eventsRepository.createEventGroup).toHaveBeenCalledWith({
         name: 'World Cup Stage THIRD',
         sportLeague: SportLeague.WORLDCUP,
+        seasonYear: 2026,
       });
     });
   });

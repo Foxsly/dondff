@@ -17,6 +17,7 @@ describe('GolfPlayerStatsStrategy', () => {
     eventGroupId: 'eg-1',
     name: 'The Masters',
     sportLeague: SportLeague.GOLF,
+    seasonYear: 2025,
   };
 
   beforeEach(async () => {
