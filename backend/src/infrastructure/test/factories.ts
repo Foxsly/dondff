@@ -1,9 +1,11 @@
 import { SportLeague } from '@/common/types/sport-league.type';
+import { CreateEventGroupDto, EventGroup } from '@/events/entities/event-group.entity';
 import { CreateLeagueSettingsDto } from '@/leagues/entities/league-settings.entity';
 import { CreateLeagueDto } from '@/leagues/entities/league.entity';
 import { ITeamPlayer } from '@/teams/entities/team-player.entity';
 import { CreateTeamDto } from '@/teams/entities/team.entity';
 import { CreateUserDto } from '@/users/entities/user.entity';
+import * as Events from '../test/sdk/functional/events';
 import * as Leagues from '../test/sdk/functional/leagues';
 import * as Teams from '../test/sdk/functional/teams';
 import * as Users from '../test/sdk/functional/users';
@@ -73,6 +75,20 @@ export async function ensureLeague(conn: any, overrides: Partial<CreateLeagueDto
   return created;
 }
 
+export async function ensureEventGroup(
+  conn: any,
+  overrides: Partial<CreateEventGroupDto> = {},
+): Promise<EventGroup> {
+  const dto: CreateEventGroupDto = {
+    name: overrides.name ?? `Test Event Group ${unique()}`,
+    sportLeague: overrides.sportLeague ?? SportLeague.NFL,
+    seasonYear: overrides.seasonYear ?? new Date().getFullYear(),
+  };
+  const created = await Events.create(conn, dto);
+  if (!created?.eventGroupId) throw new Error('ensureEventGroup: failed to create event group');
+  return created;
+}
+
 export async function ensureTeamWithFKs(
   conn: any,
   teamOverrides: Partial<CreateTeamDto> = {},
@@ -86,6 +102,13 @@ export async function ensureTeamWithFKs(
     leagueId: league.leagueId,
     ...teamOverrides,
   });
+  if (teamOverrides.eventGroupId === undefined) {
+    const eventGroup = await ensureEventGroup(conn, {
+      sportLeague: league.sportLeague,
+      seasonYear: dto.seasonYear,
+    });
+    dto.eventGroupId = eventGroup.eventGroupId;
+  }
   const created = await Teams.create(conn, dto);
   if (!created?.teamId) throw new Error('ensureTeamWithFKs: failed to create team');
   return { created, dto, user, league };

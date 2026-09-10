@@ -61,10 +61,13 @@ All timestamps are stored and represented as **ISO strings** for consistency.
 
 
 ### 6. Testing Philosophy
-- **Unit tests** mock repositories and validate logic in isolation.
-- **E2E tests** verify controller + service integration using real Nest modules.
-- External dependencies (e.g., Sleeper API) are **mocked via `nock`** in E2E tests.
-- SQLite is used for local integration tests to mirror production behavior with minimal setup.
+- **Unit tests** mock repositories and validate logic in isolation (SQLite-friendly, pure logic only).
+- **E2E tests** verify controller + service + repository integration using real Nest modules.
+- External dependencies (e.g., Sleeper, FIFA, FanDuel, ESPN) are **mocked via `nock`** in E2E tests.
+- **E2E runs against in-process PGlite (Postgres 16)**, not SQLite — `createTestApp()` in `backend/src/infrastructure/test/app.factory.ts` boots a per-file `PGlite` instance via `kysely-pglite-dialect`; no Docker required.
+  - Full `AppModule` suites run `migrateToLatest()` automatically; partial-module specs (e.g. `SleeperModule`, `FifaModule`) have no tables and skip it.
+  - `resetDatabase(app)` truncates all tables between tests (`TRUNCATE ... RESTART IDENTITY CASCADE`); the sqlite ordered-delete fallback is retained for legacy/unit flows.
+  - **Postgres enforces FKs that SQLite did not** — fixtures must create real parent rows (use `ensureTeamWithFKs`, `ensureEventGroup`, etc. from `factories.ts`).
 
 #### E2E Coverage Workflow (Required)
 Whenever you **add or modify an API route** (i.e., a controller method with `@TypedRoute`):
@@ -90,6 +93,7 @@ Whenever you **add or modify an API route** (i.e., a controller method with `@Ty
 ### 7. Environment and Database Strategy
 - Local: SQLite (fast, simple, ephemeral)
 - Staging/Prod: PostgreSQL
+- E2E: in-process PGlite (Postgres 16) via the test harness — `DB_ENGINE=postgres` is forced in `jest.setup.e2e.ts` so engine-aware branches (migrations 0003/0004, repository helpers) take the PG path
 - `DB_ENGINE` toggle in `database.ts` determines the dialect at runtime.
 - Migrations are explicit and versioned via **Kysely**.
 - Schema consistency > auto-generation.

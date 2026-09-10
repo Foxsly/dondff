@@ -81,12 +81,16 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
   }
 
   async updateLeague(id: string, league: Partial<League>): Promise<League | null> {
+    const values = {
+      ...(league.name && { name: league.name }),
+      ...(league.sportLeague && { sportLeague: league.sportLeague }),
+    };
+    if (Object.keys(values).length === 0) {
+      return this.findOneLeague(id);
+    }
     const result = await this.db
       .updateTable('league')
-      .set({
-        ...(league.name && { name: league.name }),
-        ...(league.sportLeague && { sportLeague: league.sportLeague }),
-      })
+      .set(values)
       .where('leagueId', '=', id)
       .returningAll()
       .executeTakeFirst();
@@ -181,8 +185,8 @@ export class DatabaseLeaguesRepository extends LeaguesRepository {
       .selectFrom('leagueSettings')
       .selectAll()
       .where('leagueId', '=', leagueId)
-      // Kysely prefers tuple form:
-      // .orderBy('createdAt', 'desc')
+      .orderBy('createdAt', 'desc')
+      .orderBy('leagueSettingsId', 'desc')
       .executeTakeFirst();
 
     return row ? row as ILeagueSettings : null;

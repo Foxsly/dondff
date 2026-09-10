@@ -1,18 +1,19 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@/app.module';
-import { CamelCasePlugin, Kysely, ParseJSONResultsPlugin, SqliteDialect } from 'kysely';
-import Database from 'better-sqlite3';
+import { CamelCasePlugin, Kysely } from 'kysely';
+import { PGlite } from '@electric-sql/pglite';
+import { PGliteDialect } from 'kysely-pglite-dialect';
 import type { DB } from '@/infrastructure/database/types';
 import { DB_PROVIDER } from '@/infrastructure/database/database.module';
 import { migrateToLatest, resetAllTables } from './db';
 
 export async function createTestApp(rootModule: any = AppModule): Promise<INestApplication> {
-  // In-memory SQLite for fast, isolated E2E
-  const sqlite = new Database(':memory:');
+  // In-process PGlite (Postgres in WASM) for fast, isolated E2E
+  const pglite = new PGlite();
   const db = new Kysely<DB>({
-    dialect: new SqliteDialect({ database: sqlite }),
-    plugins: [new CamelCasePlugin(), new ParseJSONResultsPlugin()],
+    dialect: new PGliteDialect(pglite),
+    plugins: [new CamelCasePlugin()],
   });
 
   const moduleRef: TestingModule = await Test.createTestingModule({

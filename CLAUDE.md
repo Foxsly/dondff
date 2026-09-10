@@ -16,7 +16,7 @@ Deal or No Deal Fantasy Football — a game where users draft their lineup by pl
 **Stack:**
 - Backend: NestJS + Kysely + typia + Nestia (`@nestia/core`)
 - Frontend: React + TypeScript + Tailwind CSS
-- Database: PostgreSQL (default/production), SQLite (local dev / tests)
+- Database: PostgreSQL (default/production), PGlite (in-process Postgres for E2E tests), SQLite (local dev)
 - Docker Compose for local Postgres
 
 **Repo:** https://github.com/Foxsly/dondff
@@ -55,7 +55,7 @@ Full details: `ai/docs/ARCHITECTURE.md` and `development.guidelines.md`
 
 ### Database
 - **Postgres is the default** — treat it as the production baseline
-- SQLite is for local dev and E2E tests only
+- SQLite is for local dev and unit tests only — E2E suites run against in-process PGlite (Postgres)
 - Engine-aware query branching goes in repository helpers only
 - Migrations are **append-only** — never destructive schema changes
 - Every schema change requires an explicit migration file
@@ -105,11 +105,15 @@ Auth context lives in `AuthContext.tsx`. Auth is currently email-based localStor
 Full details: `development.guidelines.md` §6
 
 - **Prefer E2E tests for all API behavior** — file pattern: `src/<module>/<module>.e2e.spec.ts`
+- **E2E runs against in-process PGlite (Postgres 16)** — per-file `PGlite` instance via `createTestApp()` in `backend/src/infrastructure/test/app.factory.ts`; no Docker required. Full `AppModule` suites run `migrateToLatest()` automatically.
+  - `resetDatabase(app)` truncates all tables between tests (PG `TRUNCATE ... CASCADE`)
+  - Partial-module specs (e.g. `SleeperModule`, `FifaModule`) have no tables and skip migration
+  - **Postgres enforces FKs that SQLite did not** — test fixtures must create real parent rows (e.g. `event_group` before `team`); use `ensureTeamWithFKs`/`ensureEventGroup` in `factories.ts`
 - Every new or modified endpoint requires:
   - At least one happy-path E2E test
   - At least one negative/error-path test (400, 404, 409, etc.)
 - Unit tests for isolated pure logic only (helpers, calculations)
-- External APIs (Sleeper) are mocked via `nock` in E2E tests
+- External APIs (Sleeper, FIFA, FanDuel, ESPN) are mocked via `nock` in E2E tests
 - After adding/modifying endpoints: update `backend/e2e-todo.md`
 - Error contract: `{ statusCode, message }` consistently
 

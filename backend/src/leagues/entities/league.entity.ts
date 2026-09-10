@@ -4,7 +4,7 @@ import { SportLeague } from '@/common/types/sport-league.type';
 
 export interface ILeague {
   leagueId: string & tags.Format<'uuid'>;
-  name: string;
+  name: string & tags.MinLength<1>;
   sportLeague: SportLeague;
 }
 
