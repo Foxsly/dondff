@@ -83,6 +83,10 @@ describe('Modal', () => {
     // escaping to the page behind.
     for (let i = 0; i < 6; i += 1) {
       await userEvent.tab();
+      // document.activeElement is the assertion — the question is where focus
+      // went, not what any particular control is doing, and Testing Library has
+      // no query for "whatever is focused right now".
+      // eslint-disable-next-line testing-library/no-node-access
       expect(dialog).toContainElement(document.activeElement as HTMLElement);
     }
   });
