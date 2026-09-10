@@ -6,6 +6,7 @@ export interface EventGroup {
   eventGroupId: string;
   name: string;
   sportLeague: string;
+  seasonYear: number;
   startDate: string | Date | null;
   endDate: string | Date | null;
   status?: EventGroupStatus;

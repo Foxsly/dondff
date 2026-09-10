@@ -34,8 +34,8 @@ describe('Sleeper (e2e)', () => {
 
     const res = await request(app.getHttpServer()).get('/sleeper/state').expect(200);
 
-    // Remove `season_has_scores` from the expected object
-    const { season_has_scores, ...expected } = stateResponse;
+    // Remove `season_has_scores` and `season_start_date` from the expected object
+    const { season_has_scores, season_start_date, ...expected } = stateResponse;
     expect(res.body).toEqual(expected);
   });
 

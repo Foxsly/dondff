@@ -19,8 +19,8 @@
      - Check the container/app logs for the *first* fatal error:
        - Docker: `docker compose logs -f dondff-backend`
        - Local: run the same start command in a terminal to see stack traces
-     - Verify required env vars are present:
-       - `NODE_ENV`, `PORT`, `DB_ENGINE`, `DATABASE_URL` (for Postgres)
+      - Verify required env vars are present:
+        - `NODE_ENV`, `PORT`, `DATABASE_URL` (for Postgres)
      - Confirm the start script points at the right entry:
        - Prod should run Node on `dist/**` (example: `node dist/bootstrap.js`)
      - If this happens in Docker distroless images:
@@ -174,30 +174,16 @@
 
 ---
 
-## 3. Database & Migrations (SQLite & Postgres) [DB][MIGRATIONS]
-
-### Issue: SQLite `ON DELETE CASCADE` not working
-- **Symptoms:**
-  - Deleting a `team` row does not delete dependent rows in `teamEntry`, `teamPlayer`, etc.
-- **Root Cause:**
-  - SQLite foreign key enforcement is off unless enabled (must be on for cascades to work).
-- **Resolution (steps):**
-  - Ensure the SQLite connection enables foreign keys:
-    - Execute `PRAGMA foreign_keys = ON` on every connection.
-  - Re-run the failing operation/test after enabling.
-  - If using Kysely + better-sqlite3, ensure the pragma runs during DB initialization.
+## 3. Database & Migrations (Postgres) [DB][MIGRATIONS]
 
 ### Issue: Postgres error `pg_catalog.json_object(...) does not exist`
 - **Symptoms:**
   - Postgres throws `function pg_catalog.json_object(...) does not exist` during a query.
 - **Root Cause:**
-  - A query is using SQLite-style JSON helpers (or otherwise non-portable JSON construction) that Postgres doesn’t support as written.
+  - A query is using non-portable JSON helpers that Postgres doesn't support as written.
 - **Resolution (steps):**
   - Locate the failing query from logs/stack trace (repository + line number).
-  - Implement engine-aware JSON construction in the repository:
-    - Postgres: use `json_build_object` / `jsonb_build_object` (or equivalent Kysely helper)
-    - SQLite: use `json_object`
-  - Keep the branching in the repository (do not leak engine checks into services/controllers).
+  - Replace with Postgres-native `json_build_object` / `jsonb_build_object` (or equivalent Kysely helper).
 
 ### Issue: Migration Scripts Fail to Run
 - **Symptoms:** Errors during migration execution or schema not updated.
@@ -207,14 +193,6 @@
   - Review migration scripts for syntax errors.
   - Check database user permissions.
   - Run migrations manually for debugging.
-
-### Issue: SQLite Database Locked or Unresponsive
-- **Symptoms:** Lock errors or slow queries.
-- **Root Cause:** Concurrent access conflicts or file permission issues.
-- **Resolution:**
-  - Avoid concurrent writes to SQLite database.
-  - Ensure file permissions allow read/write access.
-  - Consider using Postgres for concurrent environments.
 
 ### Issue: Postgres Connection Failures
 - **Symptoms:** Application cannot connect to Postgres.
@@ -401,23 +379,6 @@ A grab-bag of commands we repeatedly used while debugging. This is intentionally
 - Check roles:
   ```
   \\du
-  ```
-
-### SQLite (local / tests)
-
-- Open DB:
-  ```
-  sqlite3 <db-file>
-  ```
-
-- Verify foreign keys are enabled:
-  ```
-  PRAGMA foreign_keys;
-  ```
-
-- Enable foreign keys (session):
-  ```
-  PRAGMA foreign_keys = ON;
   ```
 
 ### Node / TypeScript

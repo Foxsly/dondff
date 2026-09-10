@@ -3,8 +3,7 @@ import { DB } from '@/infrastructure/database/types';
 import { ITeamPlayer, TeamPlayer } from '@/teams/entities/team-player.entity';
 import { Inject, Injectable } from '@nestjs/common';
 import { ExpressionBuilder, Kysely } from 'kysely';
-import { jsonArrayFrom as postgresJsonArrayFrom } from 'kysely/helpers/postgres';
-import { jsonArrayFrom as sqliteJsonArrayFrom } from 'kysely/helpers/sqlite';
+import { jsonArrayFrom } from 'kysely/helpers/postgres';
 import { CreateTeamDto, ITeam, Team } from './entities/team.entity';
 
 export abstract class TeamsRepository {
@@ -130,20 +129,7 @@ export class DatabaseTeamsRepository extends TeamsRepository {
   }
 }
 
-function resolveJsonArrayFrom() {
-  const engine = (process.env.DB_ENGINE ?? 'sqlite').toLowerCase();
-
-  if (engine === 'postgres' || engine === 'postgresql' || engine === 'pg') {
-    return postgresJsonArrayFrom;
-  }
-
-  // Default to sqlite helper for local dev/tests
-  return sqliteJsonArrayFrom;
-}
-
 export function withPlayers(eb: ExpressionBuilder<DB, 'team'>) {
-  const jsonArrayFrom = resolveJsonArrayFrom();
-
   return jsonArrayFrom(
     eb
       .selectFrom('teamPlayer')

@@ -10,7 +10,7 @@ This document describes the backend layering, invariants, and cross-cutting conv
 - Maintain a clear separation of responsibilities across controller/service/repository layers.
 - Keep business logic server-side and testable.
 - Preserve a stable, typed API contract using `@nestia/core` typed routes.
-- Support multiple database engines (Postgres as default; SQLite as exception) without leaking engine concerns into higher layers.
+- Use Postgres as the single database engine.
 
 ## Tech stack
 
@@ -18,8 +18,7 @@ This document describes the backend layering, invariants, and cross-cutting conv
 - **@nestia/core** `@TypedRoute` for API routing and runtime validation
 - **typia** for DTO validation and type-driven serialization
 - **Kysely** for database access (type-safe SQL builder)
-- **Postgres** as primary production DB
-- **SQLite** for local/testing and lightweight environments
+- **Postgres** for all database needs
 
 ## Layering
 
@@ -47,7 +46,6 @@ Service invariants:
 
 - All fairness-critical game logic lives in services.
 - Services may depend on multiple repositories.
-- Services may apply engine-aware logic only through repository abstractions.
 
 ### Repositories
 - Are the only layer allowed to execute SQL.
@@ -58,7 +56,6 @@ Service invariants:
 Repository invariants:
 - Do not contain business logic; only persistence and retrieval.
 - Prefer returning domain types (`ITeam`, `ITeamEntry`, etc.) and keep casting/local variables explicit.
-- Where engine differences exist, implement them in repository helpers (not in services/controllers).
 
 AI Notes:
 - Pay attention to which fields are available on the Entities being used
@@ -75,28 +72,11 @@ Type invariants:
 - Prefer `camelCase` for table and column names.
 - Use `Generated<T>` for DB-managed timestamp columns (`createdAt`, `updatedAt`) in table types.
 
-## Database engine support
+## Database
 
-### Postgres (default)
-
-- Treated as the production baseline.
-- Prefer Postgres-native JSON helpers where appropriate.
-- Avoid Postgres-only SQL when the same behavior is needed on SQLite; if unavoidable, implement engine-aware repository branches.
-
-### SQLite (exception)
-
-- Used for local development and some test flows.
-- Requires explicit foreign key enforcement:
-    - `PRAGMA foreign_keys = ON` on each connection.
-- JSON handling may require result parsing configuration depending on dialect setup.
-
-### Engine-aware repository patterns
-
-When a query must behave differently per engine:
-
-- Implement a small helper inside the repository that branches by engine.
-- Keep the service signature identical across engines.
-- Unit test the query logic per engine where feasible; always include E2E coverage for API behavior.
+- **Postgres** is the sole database engine.
+- E2E tests run against **PGlite** (in-process Postgres 16).
+- Use Postgres-native JSON helpers where appropriate.
 
 ## Game integrity invariants
 
@@ -110,7 +90,6 @@ When a query must behave differently per engine:
 - Migrations are append-only.
 - New tables/columns must be introduced via migration.
 - Migrations must be runnable in containerized environments.
-- If migration behavior must vary by engine, branch within migration logic in a controlled, explicit way.
 
 ## Testing strategy
 

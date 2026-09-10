@@ -27,6 +27,7 @@ export class GolfEventSyncStrategy implements IEventSyncStrategy {
 
         return {
           name: fanduelEvent.name,
+          seasonYear: currentYear,
           events: [
             {
               externalId: fanduelEvent.id,

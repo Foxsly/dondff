@@ -12,6 +12,7 @@ export * as users from "./users/index";
 export * as leagues from "./leagues/index";
 export * as teams from "./teams/index";
 export * as sleeper from "./sleeper/index";
+export * as events from "./events/index";
 
 /**
  * @controller AppController.getHello

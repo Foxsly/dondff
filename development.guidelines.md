@@ -11,7 +11,7 @@ It reflects the patterns and reasoning that have evolved across the codebase —
 - Keep modules focused: Controller → Service → Repository → DB.
 - Use append-only, explicit migrations (no destructive schema changes).
 - Prefer UUIDs for all abstract primary keys.
-- SQLite for local dev, PostgreSQL for staging/production.
+- PostgreSQL for local dev, staging, and production (E2E runs against in-process PGlite).
 - Consistent ISO string timestamps and JSON-safe serialization.
 
 ---
@@ -38,7 +38,7 @@ It reflects the patterns and reasoning that have evolved across the codebase —
 - Each repository:
   - Encapsulates DB access and serialization logic.
   - Returns **domain entities only**, never raw rows.
-  - Handles cross-database (SQLite/Postgres) differences cleanly.
+  - Encapsulates Postgres-specific query composition and serialization.
 - Abstract base repositories (e.g., `LeaguesRepository`) define the contract.
 - Concrete classes (e.g., `DatabaseLeaguesRepository`) implement persistence.
 
@@ -61,10 +61,13 @@ All timestamps are stored and represented as **ISO strings** for consistency.
 
 
 ### 6. Testing Philosophy
-- **Unit tests** mock repositories and validate logic in isolation.
-- **E2E tests** verify controller + service integration using real Nest modules.
-- External dependencies (e.g., Sleeper API) are **mocked via `nock`** in E2E tests.
-- SQLite is used for local integration tests to mirror production behavior with minimal setup.
+- **Unit tests** mock repositories and validate logic in isolation (pure logic only).
+- **E2E tests** verify controller + service + repository integration using real Nest modules.
+- External dependencies (e.g., Sleeper, FIFA, FanDuel, ESPN) are **mocked via `nock`** in E2E tests.
+- **E2E runs against in-process PGlite (Postgres 16)** — `createTestApp()` in `backend/src/infrastructure/test/app.factory.ts` boots a per-file `PGlite` instance via `kysely-pglite-dialect`; no Docker required.
+  - Full `AppModule` suites run `migrateToLatest()` automatically; partial-module specs (e.g. `SleeperModule`, `FifaModule`) have no tables and skip it.
+  - `resetDatabase(app)` truncates all tables between tests (`TRUNCATE ... RESTART IDENTITY CASCADE`).
+  - **Postgres enforces FK constraints** — fixtures must create real parent rows (use `ensureTeamWithFKs`, `ensureEventGroup`, etc. from `factories.ts`).
 
 #### E2E Coverage Workflow (Required)
 Whenever you **add or modify an API route** (i.e., a controller method with `@TypedRoute`):
@@ -88,9 +91,10 @@ Whenever you **add or modify an API route** (i.e., a controller method with `@Ty
 > **PR Gate**: Pull requests that add/modify routes must include the matching E2E tests and an updated `backend/e2e-todo.md` section. Otherwise, the PR is not merge-ready.
 
 ### 7. Environment and Database Strategy
-- Local: SQLite (fast, simple, ephemeral)
+- Local dev: PostgreSQL via Docker Compose
 - Staging/Prod: PostgreSQL
-- `DB_ENGINE` toggle in `database.ts` determines the dialect at runtime.
+- E2E: in-process PGlite (Postgres 16) via the test harness — no Docker required
+- Database layer is Postgres-only; `DATABASE_URL` drives the connection
 - Migrations are explicit and versioned via **Kysely**.
 - Schema consistency > auto-generation.
 
@@ -103,7 +107,7 @@ Whenever you **add or modify an API route** (i.e., a controller method with `@Ty
 ### 9. Developer Experience
 - WebStorm or VSCode debugging integrated with Jest and `tsx`.
 - Consistent Jest configuration for both **unit** and **E2E** tests.
-- Reproducible local setup (port `3001`, SQLite DB, `npm run migrate`).
+- Reproducible local setup (port `3001`, Postgres via Docker Compose, `npm run migrate`).
 - CI and dev environments should run tests identically.
 
 ### 10. Incremental, Traceable Schema Evolution

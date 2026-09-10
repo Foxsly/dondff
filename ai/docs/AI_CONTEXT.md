@@ -14,7 +14,7 @@ DONDFF is a fantasy-sports game application with:
 
 - **Backend**: NestJS + Kysely + Typia + Nestia
 - **Frontend**: React (Create React App–style)
-- **Database**: Postgres (default, production) with SQLite as a local/test exception
+- **Database**: Postgres (with PGlite for E2E tests)
 - **Infra**: Docker Compose, distroless + rootless containers
 
 The core product requirement is **game integrity**: the backend must own all randomness, offers, eliminations, and mappings so the frontend cannot cheat by inspecting API responses.
@@ -109,20 +109,8 @@ export type TeamEntryTable = ITeamEntry & {
 
 ### Engines
 
-- **Postgres is the default** (production)
-- SQLite is supported for local dev / tests only
-
-### SQLite Gotchas
-
-- `PRAGMA foreign_keys = ON` is required
-- `ON DELETE CASCADE` silently fails without it
-
-### Engine-Aware Queries
-
-- Avoid Postgres-only helpers (`json_object`) without fallbacks
-- Prefer:
-  - Kysely helpers when portable
-  - Engine-branching where unavoidable
+- **Postgres is the sole database engine**
+- E2E tests use **PGlite** (in-process Postgres 16)
 
 ---
 

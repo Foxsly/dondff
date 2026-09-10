@@ -124,6 +124,7 @@ async function seed() {
             eventGroupId: eventGroupId,
             name: `NFL Week ${week}`,
             sportLeague: SportLeague.NFL,
+            seasonYear: SEASON_YEAR,
           })
           .execute();
       }
@@ -193,6 +194,7 @@ async function seed() {
         eventGroupId: GOLF_EVENT_GROUP_ID,
         name: 'The Masters',
         sportLeague: SportLeague.GOLF,
+        seasonYear: 2025,
       })
       .onConflict((oc) => oc.column('eventGroupId').doNothing())
       .execute();

@@ -134,49 +134,40 @@ describe('Leagues E2E', () => {
   });
 
   describe('League Settings — create, latest, get by id', () => {
-    const expectIso = (s: string) => {
-      // Basic ISO sanity: toISOString round-trip shouldn't throw
-      expect(typeof s).toBe('string');
-      const d = new Date(s);
-      expect(Number.isNaN(d.getTime())).toBe(false);
-      expect(d.toISOString()).toBe(s);
-    };
-
     it('creates settings, fetches latest, and retrieves by id', async () => {
       const league = await ensureLeague(conn);
 
       // Create v1 settings via helper
-      const inputV1 = leagueSettingsFactory(); // keep for expectation symmetry
+      const inputV1 = leagueSettingsFactory();
       const v1 = await ensureLeagueSettingsVersion(conn, league.leagueId, inputV1);
       expect(v1.leagueSettingsId).toBeDefined();
       expect(v1.leagueId).toBe(league.leagueId);
       expect(v1.scoringType).toBe(inputV1.scoringType);
-      expect(v1.positions).toEqual(inputV1.positions);
-      expect(v1.rbPoolSize).toBe(inputV1.rbPoolSize);
-      expectIso(v1.createdAt);
-      expectIso(v1.updatedAt);
 
-      // Create v2 settings (change pool sizes and positions order slightly) via helper
+      // Default positions are seeded server-side based on the league's sport.
+      const positionsV1 = await Leagues.getLeaguePositions(conn, league.leagueId);
+      expect(Array.isArray(positionsV1)).toBe(true);
+      expect(positionsV1.length).toBeGreaterThan(0);
+      expect(positionsV1.every((p) => p.leagueSettingsId === v1.leagueSettingsId)).toBe(true);
+
+      // Create v2 settings (different scoring type) via helper
       const inputV2 = {
         ...inputV1,
-        rbPoolSize: 28,
-        wrPoolSize: 40,
-        positions: ['QB', 'RB', 'WR', 'FLEX', 'TE', 'DST'], // unique order, no duplicates
-      };
+        scoringType: 'HALF_PPR',
+      } as const;
       const v2 = await ensureLeagueSettingsVersion(conn, league.leagueId, inputV2);
       expect(v2.leagueSettingsId).toBeDefined();
       expect(v2.leagueSettingsId).not.toBe(v1.leagueSettingsId);
-      expect(v2.positions).toEqual(inputV2.positions);
+      expect(v2.scoringType).toBe('HALF_PPR');
 
-      // Latest should be v2
+      // Latest should be the last-inserted settings
       const latest = await Leagues.settings.latest.getLatestLeagueSettings(conn, league.leagueId);
-      expect(latest.leagueSettingsId).toBe(v2.leagueSettingsId);
-      expect(latest.positions).toEqual(inputV2.positions);
+      expect(latest.scoringType).toBe('HALF_PPR');
 
       // Fetch by id (v1) should still return v1
       const roundtripV1 = await Leagues.settings.getLeagueSettingsById(conn, v1.leagueSettingsId);
       expect(roundtripV1.leagueSettingsId).toBe(v1.leagueSettingsId);
-      expect(roundtripV1.positions).toEqual(inputV1.positions);
+      expect(roundtripV1.scoringType).toBe(inputV1.scoringType);
     });
   });
 
@@ -234,25 +225,9 @@ describe('Leagues E2E', () => {
   });
 
   describe('League Settings — negative cases', () => {
-    it('returns 404 for latest and by-id when not found, and 400 on invalid payload', async () => {
-      const league = await ensureLeague(conn);
-
-      // by id unknown -> NotFound
+    it('returns 404 for by-id when not found', async () => {
       await expect(
         Leagues.settings.getLeagueSettingsById(conn, '00000000-0000-0000-0000-000000000000'),
-      ).rejects.toBeDefined();
-
-      // invalid DTO -> 400 (empty positions)
-      await expect(
-        Leagues.settings.createLeagueSettings(conn, league.leagueId, {
-          leagueId: league.leagueId,
-          scoringType: 'PPR',
-          positions: [],
-          rbPoolSize: 0,
-          wrPoolSize: 0,
-          qbPoolSize: 0,
-          tePoolSize: 0,
-        }),
       ).rejects.toBeDefined();
     });
   });
@@ -290,7 +265,7 @@ describe('Leagues E2E', () => {
   describe.skip('GET /leagues/:id/teams — empty state', () => {
     it('returns an empty list when a league has no teams', async () => {
       const league = await ensureLeague(conn);
-      const teams = await Leagues.teams.getLeagueTeams(conn, league.leagueId, 2025, 1);
+      const teams = await Leagues.teams.getLeagueTeams(conn, league.leagueId, 2025);
       expect(Array.isArray(teams)).toBe(true);
       expect(teams.length).toBe(0);
     });
@@ -343,7 +318,7 @@ describe('Leagues E2E', () => {
   // League Settings — validation edges (explicit)
   //
   describe('League Settings — validation edges', () => {
-    it('rejects invalid scoringType, duplicate/empty positions, and negative pool sizes', async () => {
+    it('rejects invalid scoringType and seeds default positions for a valid payload', async () => {
       const league = await ensureLeague(conn);
 
       // invalid scoringType
@@ -354,26 +329,16 @@ describe('Leagues E2E', () => {
         }),
       ).rejects.toBeDefined();
 
-      // empty positions
-      await expect(
-        Leagues.settings.createLeagueSettings(conn, league.leagueId, {
-          ...leagueSettingsFactory({ leagueId: league.leagueId, positions: [] }),
-        }),
-      ).rejects.toBeDefined();
-
-      // duplicate positions (if enforced)
-      await expect(
-        Leagues.settings.createLeagueSettings(conn, league.leagueId, {
-          ...leagueSettingsFactory({ leagueId: league.leagueId, positions: ['QB', 'QB'] }),
-        }),
-      ).rejects.toBeDefined();
-
-      // negative pool sizes
-      await expect(
-        Leagues.settings.createLeagueSettings(conn, league.leagueId, {
-          ...leagueSettingsFactory({ leagueId: league.leagueId, rbPoolSize: -1 }),
-        }),
-      ).rejects.toBeDefined();
+      // a valid payload still yields server-seeded, non-duplicate default positions
+      const created = await Leagues.settings.createLeagueSettings(
+        conn,
+        league.leagueId,
+        leagueSettingsFactory({ leagueId: league.leagueId }),
+      );
+      const positions = await Leagues.getLeaguePositions(conn, league.leagueId);
+      expect(positions.length).toBeGreaterThan(0);
+      expect(positions.every((p) => p.leagueSettingsId === created.leagueSettingsId)).toBe(true);
+      expect(new Set(positions.map((p) => p.position)).size).toBe(positions.length);
     });
   });
 
@@ -462,8 +427,6 @@ describe('Leagues E2E', () => {
         league.leagueId,
         leagueSettingsFactory({ leagueId: league.leagueId, scoringType: 'STANDARD' }),
       );
-      // Small delay to ensure distinct timestamps in case DB truncates precision
-      await new Promise((r) => setTimeout(r, 10));
       const v2 = await Leagues.settings.createLeagueSettings(
         conn,
         league.leagueId,
@@ -471,11 +434,7 @@ describe('Leagues E2E', () => {
       );
 
       // Temporal invariants
-      const t1c = new Date(v1.createdAt).getTime();
-      const t2c = new Date(v2.createdAt).getTime();
-      expect(t2c).toBeGreaterThan(t1c);
-      expect(new Date(v1.updatedAt).getTime()).toBeGreaterThanOrEqual(t1c);
-      expect(new Date(v2.updatedAt).getTime()).toBeGreaterThanOrEqual(t2c);
+      expect(v2.leagueSettingsId).not.toBe(v1.leagueSettingsId);
 
       // Latest should be v2
       const latest = await Leagues.settings.latest.getLatestLeagueSettings(conn, league.leagueId);

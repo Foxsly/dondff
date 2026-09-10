@@ -37,14 +37,16 @@ export class EventsService {
   async getOrCreateEventGroup(
     name: string,
     sportLeague: SportLeague,
+    seasonYear?: number,
   ): Promise<EventGroupWithDatesAndStatusDto> {
     const existing = await this.eventsRepository.findEventGroupByName(name);
     if (existing) {
       return this.getEventGroupWithDates(existing.eventGroupId);
     }
-    const created = await this.createEventGroup({ 
-      name, 
+    const created = await this.createEventGroup({
+      name,
       sportLeague,
+      seasonYear: seasonYear ?? new Date().getFullYear(),
     });
     return this.getEventGroupWithDates(created.eventGroupId);
   }
@@ -83,11 +85,13 @@ export class EventsService {
         );
         if (existing) continue;
 
+        //TODO might need to find by name and season
         let eventGroup = await this.eventsRepository.findEventGroupByName(group.name);
         if (!eventGroup) {
           eventGroup = await this.createEventGroup({
             name: group.name,
             sportLeague,
+            seasonYear: group.seasonYear,
           });
         }
 

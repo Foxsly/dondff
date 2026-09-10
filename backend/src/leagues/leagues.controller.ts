@@ -7,7 +7,7 @@ import type { CreateLeagueDto, League, UpdateLeagueDto } from '@/leagues/entitie
 import { ITeam } from '@/teams/entities/team.entity';
 import { TeamsService } from '@/teams/teams.service';
 import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
-import { Body, Controller, Query } from '@nestjs/common';
+import { Controller, Query } from '@nestjs/common';
 import type {
   AddLeagueUserDto,
   ILeagueUser,
@@ -23,7 +23,7 @@ export class LeaguesController {
   ) {}
 
   @TypedRoute.Post()
-  create(@Body() createLeagueDto: CreateLeagueDto): Promise<League> {
+  create(@TypedBody() createLeagueDto: CreateLeagueDto): Promise<League> {
     return this.leaguesService.create(createLeagueDto);
   }
 
@@ -38,7 +38,7 @@ export class LeaguesController {
   }
 
   @TypedRoute.Patch(':id')
-  update(@TypedParam('id') id: string, @Body() updateLeagueDto: UpdateLeagueDto): Promise<League> {
+  update(@TypedParam('id') id: string, @TypedBody() updateLeagueDto: UpdateLeagueDto): Promise<League> {
     return this.leaguesService.update(id, updateLeagueDto);
   }
 

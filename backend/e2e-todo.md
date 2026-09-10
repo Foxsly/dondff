@@ -2,6 +2,8 @@
 
 This document tracks remaining and current **end-to-end (E2E)** coverage across backend modules. Items are grouped by module and marked complete `[x]` when covered by existing specs. Use these as checklists when expanding `*.e2e.spec.ts` suites.
 
+> **E2E harness:** suites boot a full `AppModule` (or module subset) against an **in-process PGlite (Postgres 16)** instance — no Docker needed. `createTestApp()` runs `migrateToLatest()` for the full app; per-file instances isolate state, and `resetDatabase(app)` truncates all tables between tests.
+
 ---
 
 ## Leagues (`src/leagues/leagues.e2e.spec.ts`)
@@ -20,14 +22,16 @@ This document tracks remaining and current **end-to-end (E2E)** coverage across 
 - [x] Add second user and verify lists/roles across update.
 - [x] `DELETE /leagues/:id/users/:userId` — remove user (true on first remove).
 - [x] `DELETE /leagues/:id/users/:userId` — removing same user twice → 404.
-- [x] `POST /leagues/:id/settings` — create settings v1 (fields + ISO timestamps).
+- [x] `POST /leagues/:id/settings` — create settings v1 (fields verified).
 - [x] `POST /leagues/:id/settings` — create settings v2 and verify latest reflects v2.
 - [x] `GET /leagues/:id/settings/latest` — returns latest (v2) settings.
 - [x] `GET /leagues/settings/:settingsId` — returns settings by id (v1).
-- [x] Settings **negative cases** — latest w/ none → 404; unknown by-id → 404; invalid DTO (empty positions) → 400.
-- [x] Settings **validation edges** — invalid `scoringType`; duplicate positions; negative pool sizes → 400.
+- [x] Settings **negative cases** — unknown settings by-id → 404.
+- [x] Settings **validation edges** — invalid `scoringType` → 400; valid payload seeds non-duplicate default positions (`GET /leagues/:id/positions`).
 - [x] Settings **cross-league safety** — path `leagueId` trusted over body; no leakage between leagues.
 - [x] Settings **burst writes** — latest remains the truly newest version.
+- [x] Settings **enum validation & temporal ordering** — invalid enum rejected; `latest` returns newest via `createdAt desc` (and `leagueSettingsId` tie-break).
+- [x] `GET /leagues/:id/positions` — returns server-seeded default positions from `league_settings_position`.
 
 ### ⏭️ Remaining / Next Up
 - [ ] `GET /leagues` — sorting/pagination semantics (when implemented).
@@ -60,27 +64,54 @@ This document tracks remaining and current **end-to-end (E2E)** coverage across 
 
 ---
 
-## Sleeper (`src/sleeper/sleeper.e2e.spec.ts`)
+## Sleeper (`src/external-providers/sleeper/sleeper.e2e.spec.ts`)
 
-> External integration should be deterministic — consider mocks/fixtures.
+> External providers are mocked via `nock`; fixtures live in `__fixtures__/`.
 
-### Desired Coverage
-- [ ] Happy path: fetch league/players from Sleeper and map to internal DTOs.
+### ✅ Covered
+- [x] `GET /sleeper/state` — returns transformed state (mocked, from `sleeper-state.test.json`).
+- [x] `GET /sleeper/stats/:year/:week` — returns transformed stats (mocked).
+- [x] `GET /sleeper/projections/:year/:week` — returns transformed projections (mocked).
+
+### ⏭️ Remaining / Next Up
 - [ ] Upstream errors: propagate 4xx/5xx with clear error messages.
 - [ ] Timeouts / retry behavior (if implemented).
 - [ ] Caching semantics (if any): warm cache, subsequent reads from cache; invalidation policy.
 
 ---
 
-## Teams (`src/teams/teams.e2e.spec.ts`) — future when SDK endpoints exist
+## Teams (`src/teams/teams.e2e.spec.ts`)
 
-### Desired Coverage
-- [ ] `POST /teams` — create team for a league (validate league/user constraints).
-- [ ] `GET /teams/:id` — returns team (and players if embedded).
-- [ ] `PATCH /teams/:id` — update team metadata.
-- [ ] `DELETE /teams/:id` — cascade/constraints on team players.
-- [ ] `POST /teams/:id/players` — add multiple players; prevent duplicates; enforce roster rules.
-- [ ] `DELETE /teams/:id/players/:playerId` — remove player; second removal → 404.
+### ✅ Covered
+- [x] `POST /teams` — create team with valid user/league/event-group FKs (Sleeper projections mocked).
+- [x] `GET /teams` — list includes the created team and exposes `players` array.
+- [x] `GET /teams/:id` — fetch a team by id.
+- [x] `PATCH /teams/:id` — update team fields and reflect on subsequent reads.
+- [x] `DELETE /teams/:id` — remove team and exclude it from subsequent listings.
+- [x] Negative: `PATCH/GET/DELETE` unknown team id → 404.
+
+### ⏭️ Remaining / Next Up
+- [ ] Team player CRUD (`POST /teams/:id/players`, `DELETE /teams/:id/players/:playerId`).
+- [ ] Roster rules / duplicate-prevention enforcement.
+- [ ] `DELETE /teams/:id` — cascade/constraint behavior on team players.
+
+---
+
+## Events (`src/events/events.e2e.spec.ts`)
+
+> Covers the `EventSyncGroup` strategies (NFL/Golf/World Cup) via `GET /event-groups/:sportLeague` (each GET re-syncs, so Sleeper/FIFA/FanDuel/ESPN upstreams are re-mocked per request).
+
+### ✅ Covered
+- [x] `GET /event-groups/NFL` — happy path: syncs NFL from Sleeper (state + projections mocked).
+- [x] `GET /event-groups/NFL` — idempotency: second call does not duplicate event groups/events.
+- [x] `GET /event-groups/NFL` — multiple weeks in the same season merge into one event group.
+- [x] `GET /event-groups/GOLF` — sync from FanDuel (post events) + ESPN (start/end dates), verify merged event group.
+- [x] `GET /event-groups/WORLDCUP` — sync events from FIFA (start/end dates from fixture).
+- [x] `GET /event-groups/NBA` — unknown `sportLeague` → 500 (strategy registry miss).
+
+### ⏭️ Remaining / Next Up
+- [ ] Verify `status` (PENDING/PLAYING/FINISHED) transitions across date ranges.
+- [ ] Upstream errors (Sleeper/FIFA timeouts or 4xx/5xx) propagate cleanly.
 
 ---
 
@@ -103,7 +134,7 @@ This document tracks remaining and current **end-to-end (E2E)** coverage across 
 ## Cross-cutting / Infrastructure
 - [ ] **Error contract**: Ensure all endpoints return consistent error payloads for 400/404 (assert `{ statusCode, message }`).
 - [ ] **Typia runtime validation**: Confirm `@TypedRoute` + `typia` validation active for all DTOs.
-- [ ] **SDK stability**: Regenerate functional SDK in CI and keep tests aligned (`npm run sdk`).
+- [ ] **SDK stability**: Regenerate functional SDK in CI and keep tests aligned (`npm run sdk`). NOTE: `npm run sdk` currently fails on `FanduelController.getGolfEventsEnriched()` (implicit return type) — while unblocked, `functional/events` and `getLeaguePositions` are maintained by hand in nestia's generated style.
 - [ ] **DB reset hook**: Maintain `__reset__` test hook; global afterEach prevents state leakage.
 - [ ] **Auth/permissions (future)**: Add E2E once auth lands—401/403 flows and role-based restrictions.
 - [ ] **Pagination**: Standard paging tests (first/next/last pages; boundary conditions) where lists support it.

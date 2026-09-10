@@ -53,7 +53,7 @@ export class NflPlayerStatsStrategy implements IPlayerStatsStrategy {
     return sleeperStats.map((player) => ({
       playerId: player.player.metadata.genius_id,
       name: `${player.player.first_name} ${player.player.last_name}`,
-      position: this.mapPosition(player.player.position),
+      position: position as PlayerPosition,
       points: player.stats.pts_ppr,
       injuryStatus: player.player.injury_status ?? null,
       oppTeam: player.opponent,
@@ -74,7 +74,7 @@ export class NflPlayerStatsStrategy implements IPlayerStatsStrategy {
     return sleeperProjections.map((projection) => ({
       playerId: projection.player.metadata.genius_id,
       name: `${projection.player.first_name} ${projection.player.last_name}`,
-      position: this.mapPosition(projection.player.position),
+      position: position as PlayerPosition,
       projectedPoints: projection.stats.pts_ppr,
       injuryStatus: projection.player.injury_status ?? null,
       oppTeam: projection.opponent,
@@ -117,16 +117,5 @@ export class NflPlayerStatsStrategy implements IPlayerStatsStrategy {
   private getWeekNumberFromEventGroup(eventGroupName: string): number | null {
     const match = eventGroupName.match(/Week\s+(\d+)/);
     return match ? parseInt(match[1], 10) : null;
-  }
-
-  private mapPosition(position: string): PlayerPosition {
-    switch (position) {
-      case 'FB':
-        return 'RB';
-      case 'DEF':
-        return 'DST';
-      default:
-        return position as PlayerPosition;
-    }
   }
 }

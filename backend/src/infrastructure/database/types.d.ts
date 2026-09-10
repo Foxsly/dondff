@@ -9,14 +9,19 @@ import { Team } from '@/teams/entities/team.entity';
 import { ILeague } from '@/leagues/entities/league.entity';
 import { ITeamPlayer } from '@/teams/entities/team-player.entity';
 import { ILeagueUser } from '@/leagues/entities/league-user.entity';
-import { LeagueSettingsRow, ILeagueSettingsPosition } from '@/leagues/entities/league-settings.entity';
+import {
+  LeagueSettingsTable,
+  LeagueSettingsPositionTable,
+  ILeagueSettings,
+  ILeagueSettingsPosition,
+} from '@/leagues/entities/league-settings.entity';
 import { IEventGroup } from '@/events/entities/event-group.entity';
 import { IEvent } from '@/events/entities/event.entity';
 
 //Maps DB table (key) to object (value)
 export interface DB {
   league: ILeague;
-  leagueSettings: LeagueSettingsRow;
+  leagueSettings: LeagueSettingsTable;
   leagueSettingsPosition: ILeagueSettingsPosition;
   leagueUser: ILeagueUser;
   team: Team;

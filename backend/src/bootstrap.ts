@@ -1,7 +1,7 @@
 /**
  * Bootstrap launcher for distroless + rootless runtime.
  * - Runs DB migrations (and optional seeding) BEFORE starting the HTTP server.
- * - Respects Postgres-by-default, with SQLite as an explicit exception.
+ * - Postgres-only database layer.
  *
  * NOTE:
  *  - Dockerfile CMD points to "dist/bootstrap.js"
@@ -79,9 +79,7 @@ async function runMigrationsIfPossible(): Promise<void> {
 }*/
 
 function logConfigPreview(): void {
-  const DB_ENGINE = env('DB_ENGINE', 'postgres'); // default
   const DATABASE_URL = env('DATABASE_URL');
-  const SQLITE_DB_PATH = env('SQLITE_DB_PATH');
   const NODE_ENV = env('NODE_ENV', 'production');
   const PORT = env('PORT', '3001');
   const RUN_SEED = env('RUN_SEED', 'false');
@@ -92,9 +90,7 @@ function logConfigPreview(): void {
   console.log('[bootstrap] Environment preview:');
   console.log('  NODE_ENV       =', NODE_ENV);
   console.log('  PORT           =', PORT);
-  console.log('  DB_ENGINE      =', DB_ENGINE);
   console.log('  DATABASE_URL   =', redact(DATABASE_URL));
-  console.log('  SQLITE_DB_PATH =', SQLITE_DB_PATH);
   console.log('  RUN_SEED       =', RUN_SEED);
 }
 
@@ -111,7 +107,7 @@ async function main(): Promise<void> {
   try {
     logConfigPreview();
 
-    // Postgres-by-default, SQLite as an exception is enforced by env read in your DB layer.
+    // Database layer is Postgres-only; migrations run before the app starts.
     // Here we just run migrations before starting the app.
     await runMigrationsIfPossible();
     // await runSeedIfRequested();
