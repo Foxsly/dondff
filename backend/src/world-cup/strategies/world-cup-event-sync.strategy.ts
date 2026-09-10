@@ -25,7 +25,7 @@ export class WorldCupEventSyncStrategy implements IEventSyncStrategy {
 
         let group = groupMap.get(groupName);
         if (!group) {
-          group = { name: groupName, events: [] };
+          group = { name: groupName, seasonYear: new Date(match.date).getFullYear(), events: [] };
           groupMap.set(groupName, group);
         }
 

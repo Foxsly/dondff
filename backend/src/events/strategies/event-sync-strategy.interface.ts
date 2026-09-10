@@ -20,6 +20,8 @@ export interface EventSyncEvent {
 export interface EventSyncGroup {
   /** Canonical tournament name shared by all events in this group. */
   name: string;
+  /** The season year these events belong to (e.g. 2025 for the 2025 NFL season). */
+  seasonYear: number;
   /** The provider-specific event entries matched under this group. */
   events: EventSyncEvent[];
 }

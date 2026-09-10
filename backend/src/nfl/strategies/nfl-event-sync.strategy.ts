@@ -16,6 +16,7 @@ export class NflEventSyncStrategy implements IEventSyncStrategy {
     return [
       {
         name: groupName,
+        seasonYear,
         events: [
           {
             externalId: externalEventId,
