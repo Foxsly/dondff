@@ -79,7 +79,6 @@ async function runMigrationsIfPossible(): Promise<void> {
 }*/
 
 function logConfigPreview(): void {
-  const DB_ENGINE = env('DB_ENGINE', 'postgres'); // default
   const DATABASE_URL = env('DATABASE_URL');
   const NODE_ENV = env('NODE_ENV', 'production');
   const PORT = env('PORT', '3001');
@@ -91,7 +90,6 @@ function logConfigPreview(): void {
   console.log('[bootstrap] Environment preview:');
   console.log('  NODE_ENV       =', NODE_ENV);
   console.log('  PORT           =', PORT);
-  console.log('  DB_ENGINE      =', DB_ENGINE);
   console.log('  DATABASE_URL   =', redact(DATABASE_URL));
   console.log('  RUN_SEED       =', RUN_SEED);
 }

@@ -32,7 +32,6 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3001"
-      DB_ENGINE: postgres
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@dondff-postgres:5432/${POSTGRES_DB}
       RUN_SEED: "false"
     ports:

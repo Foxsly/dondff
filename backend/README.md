@@ -200,7 +200,7 @@ By default this will:
 
 - Start a Postgres container
 - Start the backend API container
-- Configure the backend to use Postgres as the primary database (via `DB_ENGINE=postgres` and `DATABASE_URL`)
+- Configure the backend to use Postgres as the primary database (via `DATABASE_URL`)
 
 ### Applying Migrations in Docker
 
@@ -216,7 +216,7 @@ docker compose exec backend npm run migrate
 
 ### Environment Variables
 
-The Docker Compose file is responsible for setting the core environment variables (for example `DB_ENGINE=postgres`, `DATABASE_URL`, `NODE_ENV=production`, `PORT=3001`).
+The Docker Compose file is responsible for setting the core environment variables (for example `DATABASE_URL`, `NODE_ENV=production`, `PORT=3001`).
 
 If you need to override or add local-only settings, you can use a `.env` file alongside `docker-compose.yml`. Docker Compose will automatically load values from `.env`.
 
@@ -264,7 +264,6 @@ For production, you should:
 
 - Use strong, non-default credentials for Postgres (`POSTGRES_USER`, `POSTGRES_PASSWORD`).
 - Set a production-ready `DATABASE_URL` (matching your Postgres credentials/host).
-- Ensure `DB_ENGINE=postgres` for Postgres-backed deployments.
 - Set `NODE_ENV=production`.
 
 You can store these in a `.env` file alongside `docker-compose.yml` on the server. Docker Compose will automatically pick up values from `.env`.

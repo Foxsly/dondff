@@ -53,7 +53,6 @@ Typical variables:
 
 - `NODE_ENV=production`
 - `PORT=3001`
-- `DB_ENGINE=postgres`
 - `POSTGRES_USER=...`
 - `POSTGRES_PASSWORD=...`
 - `POSTGRES_DB=...`
@@ -245,7 +244,6 @@ Before deploying a new version to a server, verify the following:
 - [ ] All required environment variables are present:
   - `NODE_ENV`
   - `PORT`
-  - `DB_ENGINE`
   - `POSTGRES_USER`
   - `POSTGRES_PASSWORD`
   - `POSTGRES_DB`
