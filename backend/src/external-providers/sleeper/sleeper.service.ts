@@ -5,6 +5,7 @@ import {
   ISleeperPlayerEntry,
   ISleeperState,
   SleeperProjectionResponse,
+  SleeperScoresResponse,
   SleeperStatResponse,
 } from './entities/sleeper.entity';
 import typia from 'typia';
@@ -12,10 +13,12 @@ import typia from 'typia';
 @Injectable()
 export class SleeperService {
   private readonly BASE_URL = 'https://api.sleeper.app';
+  private readonly GRAPHQL_URL = 'https://sleeper.com/graphql';
 
   // Create transformer functions
   private assertSleeperStats = typia.misc.createAssertPrune<SleeperStatResponse>();
   private assertSleeperProjections = typia.misc.createAssertPrune<SleeperProjectionResponse>();
+  private assertSleeperScores = typia.misc.createAssertPrune<SleeperScoresResponse>();
 
   constructor(
     @Inject(HttpService)
@@ -27,7 +30,7 @@ export class SleeperService {
     const response = await lastValueFrom(response$);
     const sleeperState: ISleeperState = response.data;
 
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' && false) {
       const devWeek = process.env.DEV_WEEK ? Number(process.env.DEV_WEEK) : 14;
       const devSeason = process.env.DEV_SEASON_YEAR ?? '2025';
       if (devWeek !== null && devSeason !== null) {
@@ -44,6 +47,18 @@ export class SleeperService {
       sleeperState.week = sleeperState.week + 18;
     }
     return sleeperState;
+  }
+
+  async getNflWeekGameDates(
+    season: number,
+    week: number,
+    seasonType: 'regular' | 'post',
+  ): Promise<string[]> {
+    const query = `query batch_scores { scores(sport: "nfl", season_type: "${seasonType}", season: "${season}", week: ${week}) { date status } }`;
+    const response$ = this.httpService.post(this.GRAPHQL_URL, { query });
+    const response = await lastValueFrom(response$);
+    const scores = this.assertSleeperScores(response.data).data.scores;
+    return scores.map((score) => score.date).filter((date) => date.trim().length > 0);
   }
 
   async getPlayerProjections(

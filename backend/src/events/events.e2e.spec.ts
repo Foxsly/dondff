@@ -38,9 +38,28 @@ describe('Event Groups (e2e)', () => {
     });
   };
 
+  const dateStr = (offsetDays: number) =>
+    new Date(Date.now() + offsetDays * 24 * 3600 * 1000).toISOString().slice(0, 10);
+
+  const isoDay = (d: string | Date) => new Date(d).toISOString().slice(0, 10);
+
+  const mockNflScores = (dates: string[]) => {
+    nock('https://sleeper.com')
+      .post('/graphql')
+      .reply(200, {
+        data: {
+          scores: dates.map((date) => ({ date, status: 'pre_game' })),
+        },
+      });
+  };
+
   describe('NFL', () => {
-    it('creates an event group with seasonYear from Sleeper state', async () => {
+    const WEEK_1_DATES = [dateStr(7), dateStr(8), dateStr(9)];
+    const WEEK_2_DATES = [dateStr(14), dateStr(15), dateStr(16)];
+
+    it('creates an event group with seasonYear from Sleeper state and real week dates', async () => {
       mockNflState();
+      mockNflScores(WEEK_1_DATES);
 
       const res = await request(app.getHttpServer()).get('/event-groups/NFL').expect(200);
 
@@ -52,14 +71,37 @@ describe('Event Groups (e2e)', () => {
           seasonYear: 2025,
         }),
       );
+
+      const events = await db
+        .selectFrom('event')
+        .selectAll()
+        .where('externalEventId', '=', '2025-1')
+        .where('externalEventSource', '=', 'SLEEPER')
+        .execute();
+      expect(events).toHaveLength(1);
+      expect(isoDay(events[0].startDate)).toBe(dateStr(7));
+      expect(isoDay(events[0].endDate)).toBe(dateStr(9));
+
+      // with-dates triggers a re-sync, so re-arm the Sleeper mocks
+      mockNflState();
+      mockNflScores(WEEK_1_DATES);
+      const withDates = await request(app.getHttpServer())
+        .get('/event-groups/NFL/with-dates')
+        .expect(200);
+      const weekOne = withDates.body.find((g: any) => g.name === 'NFL Week 1');
+      expect(isoDay(weekOne.startDate)).toBe(dateStr(7));
+      expect(isoDay(weekOne.endDate)).toBe(dateStr(9));
+      expect(weekOne.status).toBe('PENDING');
     });
 
     it('re-sync is idempotent and preserves the group id and seasonYear', async () => {
       mockNflState();
+      mockNflScores(WEEK_1_DATES);
       const first = await request(app.getHttpServer()).get('/event-groups/NFL').expect(200);
       const firstGroup = first.body.find((g: any) => g.name === 'NFL Week 1');
 
       mockNflState();
+      mockNflScores(WEEK_1_DATES);
       const second = await request(app.getHttpServer()).get('/event-groups/NFL').expect(200);
       const secondGroup = second.body.find((g: any) => g.name === 'NFL Week 1');
 
@@ -80,22 +122,36 @@ describe('Event Groups (e2e)', () => {
         .where('externalEventSource', '=', 'SLEEPER')
         .execute();
       expect(events).toHaveLength(1);
+      expect(isoDay(events[0].startDate)).toBe(dateStr(7));
+      expect(isoDay(events[0].endDate)).toBe(dateStr(9));
     });
 
     it('tags each week of the same season with the same seasonYear', async () => {
       mockNflState({ week: 1 });
+      mockNflScores(WEEK_1_DATES);
       await request(app.getHttpServer()).get('/event-groups/NFL').expect(200);
 
       mockNflState({ week: 2 });
+      mockNflScores(WEEK_2_DATES);
       await request(app.getHttpServer()).get('/event-groups/NFL').expect(200);
 
       mockNflState({ week: 2 });
+      mockNflScores(WEEK_2_DATES);
       const res = await request(app.getHttpServer()).get('/event-groups/NFL').expect(200);
 
       expect(res.body.map((g: any) => g.name).sort()).toEqual(['NFL Week 1', 'NFL Week 2']);
       for (const g of res.body) {
         expect(g.seasonYear).toBe(2025);
       }
+    });
+
+    it('skips the event and group entirely when the week has no game dates', async () => {
+      mockNflState();
+      mockNflScores([]);
+
+      const res = await request(app.getHttpServer()).get('/event-groups/NFL').expect(200);
+
+      expect(res.body).toEqual([]);
     });
   });
 

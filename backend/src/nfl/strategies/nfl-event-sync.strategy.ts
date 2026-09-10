@@ -8,10 +8,22 @@ export class NflEventSyncStrategy implements IEventSyncStrategy {
 
   async fetchSyncData(): Promise<EventSyncGroup[]> {
     const nflState = await this.sleeperService.getNflState();
-    const weekNumber = nflState.week;
+    const displayWeek = nflState.week;
     const seasonYear = Number(nflState.season);
-    const externalEventId = `${seasonYear}-${weekNumber}`;
-    const groupName = `NFL Week ${weekNumber}`;
+
+    const isPost = nflState.season_type === 'post';
+    const sleeperWeek = isPost ? displayWeek - 18 : displayWeek;
+    const seasonType = isPost ? 'post' : 'regular';
+
+    const dates = await this.sleeperService.getNflWeekGameDates(
+      seasonYear,
+      sleeperWeek,
+      seasonType,
+    );
+    if (dates.length === 0) return [];
+
+    const sorted = [...dates].sort();
+    const groupName = `NFL Week ${displayWeek}`;
 
     return [
       {
@@ -19,11 +31,11 @@ export class NflEventSyncStrategy implements IEventSyncStrategy {
         seasonYear,
         events: [
           {
-            externalId: externalEventId,
+            externalId: `${seasonYear}-${displayWeek}`,
             externalSource: 'SLEEPER',
             name: groupName,
-            startDate: new Date().toISOString(),
-            endDate: new Date().toISOString(),
+            startDate: sorted[0],
+            endDate: sorted[sorted.length - 1],
           },
         ],
       },
