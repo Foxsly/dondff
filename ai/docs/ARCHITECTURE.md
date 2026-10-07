@@ -66,6 +66,52 @@ Type invariants:
 - Prefer `camelCase` for table and column names.
 - Use `Generated<T>` for DB-managed timestamp columns (`createdAt`, `updatedAt`) in table types.
 
+## Sport strategies
+
+Sport-specific behaviour lives behind four strategy interfaces. Each sport module
+(`nfl/`, `golf/`, `world-cup/`, `nba/`) provides one implementation of each, and a registry
+per interface picks it by `SportLeague`. An unregistered sport throws (HTTP 500).
+
+| Interface | Registry | Decides |
+|-----------|----------|---------|
+| `IEventSyncStrategy` | `EventSyncStrategyRegistry` | Which event groups/events exist (synced on `GET /event-groups/:sport`) |
+| `ILeagueDefaultsStrategy` | `LeagueDefaultsStrategyRegistry` | Default positions and pool sizes for new league settings |
+| `IPlayerStatsStrategy` | `PlayerStatsStrategyRegistry` | Projections (case values) and actual points (scoring) |
+| `ITeamsGameStrategy` | `TeamsGameStrategyRegistry` | Player pool, excluded players, number of cases, name normalisation |
+
+| Sport | Provider(s) | Event group | Positions (pool) | Amount |
+|-------|-------------|-------------|------------------|--------|
+| NFL | Sleeper (FanDuel for postseason projections) | One NFL week | RB 64, WR 96 | PPR points |
+| GOLF | FanDuel projections, ESPN leaderboard | One tournament | GOLF_PLAYER_1–3, 150 each (shared pool) | FanDuel golf points |
+| WORLDCUP | FIFA fantasy | Matchday / knockout round | GK 48, DEF 168, MID 240, FWD 120 (per-country quotas) | FIFA price / fantasy points |
+| NBA | Sleeper | One Sleeper fantasy week (Mon–Sun) | G 64, F 64, C 32 | Best single game of the week |
+
+### NBA specifics
+
+- **Weeks.** Event groups are Sleeper NBA fantasy weeks, named with the season because
+  group lookup matches on name only: `NBA 2025-26 Week 10`, `NBA 2025-26 Playoffs Week 1`
+  (`nba/nba-week.util.ts`). Sync creates the current and next week (regular-season week 1
+  during the preseason); every game in the week is an event (`externalEventId` = Sleeper
+  `game_id`). Opening week is short (starts on the season's first game day).
+- **Positions.** Eligibility uses Sleeper `fantasy_positions`: G = PG/SG, F = SF/PF, C = C.
+  A multi-position player appears in every pool they qualify for; a player already on the
+  team at another slot is excluded from the board and offers.
+- **Scoring.** Sleeper default points (`pts_std`): PTS 0.5, REB 1, AST 1, STL 2, BLK 2,
+  TO −1, 3PM 0.5, double-double +1, triple-double +2, 40-pt +2, 50-pt +2
+  (`nba/nba-scoring.util.ts`). Sleeper returns rows per player *per game*; the DOND amount
+  is the player's best game — best projected game for case values, best actual `pts_std`
+  for the final score. Projections carry no fantasy points, so they are scored with the
+  same weights (double/triple-double as probabilities; 40/50-pt bonuses not projected).
+
+### Adding a sport
+
+1. Provider calls (typia assert-prune at the boundary) in `external-providers/`.
+2. A `<sport>/` module with the four strategies; add it to each registry and to the
+   Events, Leagues, PlayerStats and Teams modules and `AppModule`.
+3. Extend `PlayerPosition` if the sport has new position keys.
+4. Frontend: a `SportConfig` in `frontend/src/sports/` registered in `registry.ts`.
+5. Unit tests per strategy and an E2E suite with the provider mocked via nock.
+
 ## Database
 
 - **Postgres** is the sole database engine.
