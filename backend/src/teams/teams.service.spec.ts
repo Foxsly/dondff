@@ -476,29 +476,49 @@ describe('TeamsService — golf shared pool exclusion', () => {
       ).rejects.toThrow(ConflictException);
     });
 
-    it('accepting an offer for an already-drafted player changes nothing', async () => {
+    it('accepting an offer for an already-drafted player puts the offer back and changes nothing else', async () => {
       entryRepo.getCurrentOffer.mockResolvedValue(offer as any);
+      entryRepo.updateOfferStatus.mockResolvedValue({ ...offer, status: 'accepted' } as any);
       teamsRepo.upsertTeamPlayer.mockResolvedValue(null);
 
       await expect(service.acceptOffer('golf-team-1', 'GOLF_PLAYER_2')).rejects.toThrow(
         ConflictException,
       );
-      expect(entryRepo.updateOfferStatus).not.toHaveBeenCalled();
+      expect(entryRepo.updateOfferStatus.mock.calls).toEqual([
+        ['offer-1', 'accepted'],
+        ['offer-1', 'pending', 'accepted'],
+      ]);
       expect(entryRepo.updateEntry).not.toHaveBeenCalled();
     });
 
-    it('accepting an offer assigns the player before finishing the entry', async () => {
+    it('accepting loses cleanly to a reject that already took the offer', async () => {
+      // Read as pending, but a concurrent reject moved it on before our conditional update
       entryRepo.getCurrentOffer.mockResolvedValue(offer as any);
-      teamsRepo.upsertTeamPlayer.mockResolvedValue({} as any);
+      entryRepo.updateOfferStatus.mockResolvedValue(null);
+
+      await expect(service.acceptOffer('golf-team-1', 'GOLF_PLAYER_2')).rejects.toThrow(
+        ConflictException,
+      );
+      expect(teamsRepo.upsertTeamPlayer).not.toHaveBeenCalled();
+      expect(entryRepo.updateEntry).not.toHaveBeenCalled();
+    });
+
+    it('accepting assigns the player on the accepted row, then finishes the entry', async () => {
+      entryRepo.getCurrentOffer.mockResolvedValue(offer as any);
       entryRepo.updateOfferStatus.mockResolvedValue({ ...offer, status: 'accepted' } as any);
+      teamsRepo.upsertTeamPlayer.mockResolvedValue({} as any);
       entryRepo.findCurrentAuditsForEntry.mockResolvedValue([]);
       (playerStatsService as any).getTeamAndOpponentForPlayer = jest.fn();
 
       await service.acceptOffer('golf-team-1', 'GOLF_PLAYER_2');
 
+      expect(entryRepo.getCurrentOffer).toHaveBeenCalledTimes(1);
       expect(teamsRepo.upsertTeamPlayer).toHaveBeenCalledWith(
         'golf-team-1',
         expect.objectContaining({ position: 'GOLF_PLAYER_2', playerId: 'player-1' }),
+      );
+      expect(entryRepo.updateOfferStatus.mock.invocationCallOrder[0]).toBeLessThan(
+        teamsRepo.upsertTeamPlayer.mock.invocationCallOrder[0],
       );
       expect(teamsRepo.upsertTeamPlayer.mock.invocationCallOrder[0]).toBeLessThan(
         entryRepo.updateEntry.mock.invocationCallOrder[0],

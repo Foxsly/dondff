@@ -1,10 +1,12 @@
 import request from 'supertest';
 import nock from 'nock';
+import { randomUUID } from 'crypto';
 import type { INestApplication } from '@nestjs/common';
 import type { Kysely } from 'kysely';
 import type { DB } from '@/infrastructure/database/types';
 import { closeTestApp, createTestApp } from '@/infrastructure/test/app.factory';
 import { resetDatabase } from '@/infrastructure/test/factories';
+import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
 
 const SLEEPER = 'https://api.sleeper.app';
 const WEEK_NAME = 'NBA 2025-26 Week 10';
@@ -354,6 +356,102 @@ describe('NBA (e2e)', () => {
         .where('teamEntryId', '=', entry.teamEntryId)
         .executeTakeFirstOrThrow();
       expect(entryAfter.status).toBe('playing');
+    });
+
+    const pendingOffer = async (
+      teamId: string,
+      position: string,
+      playerId: string,
+      playerName: string,
+    ) => {
+      const entry = await db
+        .selectFrom('teamEntry')
+        .selectAll()
+        .where('teamId', '=', teamId)
+        .where('position', '=', position)
+        .executeTakeFirstOrThrow();
+      const offerId = randomUUID();
+      await db
+        .insertInto('teamEntryOffer')
+        .values({
+          offerId,
+          teamEntryId: entry.teamEntryId,
+          playerId,
+          playerName,
+          projectedPoints: 10,
+          injuryStatus: null,
+          status: 'pending',
+        } as any)
+        .execute();
+      return { offerId, teamEntryId: entry.teamEntryId };
+    };
+
+    const offerStatus = async (offerId: string) =>
+      (
+        await db
+          .selectFrom('teamEntryOffer')
+          .select('status')
+          .where('offerId', '=', offerId)
+          .executeTakeFirstOrThrow()
+      ).status;
+
+    it('accepting an offer for an already-drafted player leaves the offer pending and the entry open', async () => {
+      const teamId = await openBothBoards();
+      await draft(teamId, 'G', 'wing', 'Ausar Thompson');
+      const { offerId, teamEntryId } = await pendingOffer(teamId, 'F', 'wing', 'Ausar Thompson');
+
+      await request(app.getHttpServer())
+        .post(`/teams/${teamId}/offers/accept`)
+        .send({ position: 'F' })
+        .expect(409);
+
+      expect(await offerStatus(offerId)).toBe('pending');
+      expect(await lineup(teamId)).toEqual({ G: 'wing' });
+      const entry = await db
+        .selectFrom('teamEntry')
+        .select('status')
+        .where('teamEntryId', '=', teamEntryId)
+        .executeTakeFirstOrThrow();
+      expect(entry.status).not.toBe('finished');
+    });
+
+    it('accepts an offer only once when accept is sent twice at the same time', async () => {
+      const teamId = await openBothBoards();
+      const { offerId } = await pendingOffer(teamId, 'F', 'pf', 'Tobias Harris');
+
+      const results = await Promise.all(
+        [1, 2].map(() =>
+          request(app.getHttpServer())
+            .post(`/teams/${teamId}/offers/accept`)
+            .send({ position: 'F' }),
+        ),
+      );
+
+      const statuses = results.map((r) => r.status);
+      expect(statuses.filter((code) => code === 201)).toHaveLength(1);
+      expect(
+        statuses.filter((code) => code !== 201).every((code) => [404, 409].includes(code)),
+      ).toBe(true);
+      expect(await offerStatus(offerId)).toBe('accepted');
+      expect(await lineup(teamId)).toEqual({ F: 'pf' });
+    });
+
+    it('cannot accept an offer that a reject already moved on, even holding a stale read', async () => {
+      // The interleaving PGlite cannot produce over HTTP: accept read the offer as
+      // pending, then a reject rejected it and created a replacement.
+      const teamId = await openBothBoards();
+      const stale = await pendingOffer(teamId, 'F', 'pf', 'Tobias Harris');
+      await db
+        .updateTable('teamEntryOffer')
+        .set({ status: 'rejected' })
+        .where('offerId', '=', stale.offerId)
+        .execute();
+      const replacement = await pendingOffer(teamId, 'F', 'big', 'Jalen Duren');
+      const offers = app.get(TeamsEntryRepository);
+
+      expect(await offers.updateOfferStatus(stale.offerId, 'accepted')).toBeNull();
+      expect(await offerStatus(stale.offerId)).toBe('rejected');
+      expect(await offerStatus(replacement.offerId)).toBe('pending');
     });
 
     it('lets only one of two simultaneous assignments of the same player through', async () => {

@@ -131,6 +131,9 @@ This document tracks remaining and current **end-to-end (E2E)** coverage across 
 - [x] `GET /leagues/:id/teams?eventGroupId=` — finished week scores best actual game per drafted player; DNP → 0; team rows ignored.
 - [x] `PUT /teams/:teamId/players` — player already filling another slot → 409 (both boards opened first); lineup unchanged.
 - [x] `POST /teams/:teamId/offers` (keep) — case holding an already-drafted player → 409; board and entry unchanged.
+- [x] `POST /teams/:teamId/offers/accept` — offered player already on the team elsewhere → 409; offer put back to pending, entry not finished.
+- [x] `POST /teams/:teamId/offers/accept` sent twice at once → accepted once; lineup holds the offered player.
+- [x] `TeamsEntryRepository.updateOfferStatus` — a stale accept of an offer a reject already moved on returns null and changes nothing (the interleaving HTTP-over-PGlite cannot produce).
 - [x] Simultaneous `PUT /teams/:teamId/players` of one player to two slots → exactly one 200, one 409 (PGlite serialises transactions, so this does not exercise row-lock contention).
 
 ### ⏭️ Remaining / Next Up

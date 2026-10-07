@@ -426,7 +426,8 @@ export class TeamsService {
       status,
     );
     if (!updatedOffer) {
-      throw new NotFoundException(`Could not update offer with id ${currentOffer.offerId}`);
+      // Another request accepted or rejected this offer in the meantime
+      throw new ConflictException(`Offer ${currentOffer.offerId} is no longer pending`);
     }
     return updatedOffer;
   }
@@ -486,26 +487,28 @@ export class TeamsService {
 
   async acceptOffer(teamId: string, position: string): Promise<TeamEntryOfferResponseDto> {
     const teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
-    const pendingOffer = await this.teamsEntryRepository.getCurrentOffer(teamEntry.teamEntryId);
-    if (!pendingOffer) {
-      throw new NotFoundException(
-        `No current offer found for team ${teamId} and position ${position}`,
-      );
+    // Accepting is a conditional pending → accepted update, so a concurrent
+    // reject can't swap the offer out from under us; the player assigned is
+    // the one on the row this call accepted.
+    const acceptedOffer = await this.updateOfferStatus(teamId, position, 'accepted');
+    try {
+      await this.upsertTeamPlayer(teamId, {
+        playerId: acceptedOffer.playerId,
+        playerName: acceptedOffer.playerName,
+        projectedPoints: acceptedOffer.projectedPoints,
+        position: position,
+        teamId: teamId,
+      });
+    } catch (err) {
+      // Player already on the team elsewhere: put the offer back so the game
+      // is left as it was.
+      await this.teamsEntryRepository.updateOfferStatus(acceptedOffer.offerId, 'pending', 'accepted');
+      throw err;
     }
-    // Assign first: if the player is already on the team elsewhere this throws
-    // before the offer or entry changes, leaving the game as it was.
-    await this.upsertTeamPlayer(teamId, {
-      playerId: pendingOffer.playerId,
-      playerName: pendingOffer.playerName,
-      projectedPoints: pendingOffer.projectedPoints,
-      position: position,
-      teamId: teamId,
-    });
-    const updatedOffer = await this.updateOfferStatus(teamId, position, 'accepted');
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
     await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, { status: 'finished' });
     return {
-      offer: this.addTeamsToOffer(updatedOffer),
+      offer: this.addTeamsToOffer(acceptedOffer),
       boxes: audits,
     };
   }
