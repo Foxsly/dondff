@@ -257,6 +257,121 @@ describe('NBA (e2e)', () => {
     });
   });
 
+  describe('one player per team', () => {
+    // A wing (SF/SG) is on both the G and F boards when both are opened
+    // before either slot is filled; finishing one must lock out the other.
+    const openBothBoards = async () => {
+      const group = await createEventGroup(WEEK_NAME, ['2025-12-22', '2025-12-28']);
+      nock(SLEEPER)
+        .persist()
+        .get('/projections/nba/2025/10')
+        .query({ season_type: 'regular' })
+        .reply(200, [
+          sleeperRow('wing', 'Ausar Thompson', ['SF', 'SG'], '2025-12-22', 'BOS', { pts: 20 }),
+          sleeperRow('pg', 'Point Guard', ['PG'], '2025-12-22', 'BOS', { pts: 18 }),
+          sleeperRow('big', 'Jalen Duren', ['C', 'PF'], '2025-12-22', 'BOS', { pts: 12 }),
+          sleeperRow('pf', 'Tobias Harris', ['PF'], '2025-12-22', 'BOS', { pts: 16 }),
+        ]);
+      const { teamId } = await createNbaTeam(group.eventGroupId);
+      for (const position of ['G', 'F']) {
+        const board = await request(app.getHttpServer())
+          .get(`/teams/${teamId}/cases`)
+          .query({ position })
+          .expect(200);
+        expect(board.body.players.map((p: any) => p.playerId)).toContain('wing');
+      }
+      return teamId;
+    };
+
+    const lineup = async (teamId: string) => {
+      const team = await request(app.getHttpServer()).get(`/teams/${teamId}`).expect(200);
+      return Object.fromEntries(team.body.players.map((p: any) => [p.position, p.playerId]));
+    };
+
+    it('rejects assigning a player already filling another slot with 409', async () => {
+      const teamId = await openBothBoards();
+      await draft(teamId, 'G', 'wing', 'Ausar Thompson');
+
+      const res = await request(app.getHttpServer())
+        .put(`/teams/${teamId}/players`)
+        .send({ teamId, position: 'F', playerId: 'wing', playerName: 'Ausar Thompson' })
+        .expect(409);
+
+      expect(res.body.statusCode).toBe(409);
+      expect(await lineup(teamId)).toEqual({ G: 'wing' });
+    });
+
+    it('rejects keeping a case holding an already-drafted player, leaving the board as it was', async () => {
+      const teamId = await openBothBoards();
+      await draft(teamId, 'G', 'wing', 'Ausar Thompson');
+
+      // Put the F board in its endgame: the wing's case selected, one other case left.
+      const entry = await db
+        .selectFrom('teamEntry')
+        .selectAll()
+        .where('teamId', '=', teamId)
+        .where('position', '=', 'F')
+        .executeTakeFirstOrThrow();
+      const audits = await db
+        .selectFrom('teamEntryAudit')
+        .selectAll()
+        .where('teamEntryId', '=', entry.teamEntryId)
+        .orderBy('boxNumber')
+        .execute();
+      const wingBox = audits.find((a) => a.playerId === 'wing')!;
+      const [eliminated] = audits.filter((a) => a.playerId !== 'wing');
+      await db
+        .updateTable('teamEntryAudit')
+        .set({ boxStatus: 'selected' })
+        .where('auditId', '=', wingBox.auditId)
+        .execute();
+      await db
+        .updateTable('teamEntryAudit')
+        .set({ boxStatus: 'eliminated' })
+        .where('auditId', '=', eliminated.auditId)
+        .execute();
+      await db
+        .updateTable('teamEntry')
+        .set({ selectedBox: wingBox.boxNumber, status: 'playing' })
+        .where('teamEntryId', '=', entry.teamEntryId)
+        .execute();
+
+      await request(app.getHttpServer())
+        .post(`/teams/${teamId}/offers`)
+        .send({ position: 'F', decision: 'keep' })
+        .expect(409);
+
+      expect(await lineup(teamId)).toEqual({ G: 'wing' });
+      const after = await db
+        .selectFrom('teamEntryAudit')
+        .select(['playerId', 'boxStatus'])
+        .where('teamEntryId', '=', entry.teamEntryId)
+        .execute();
+      expect(after.filter((a) => a.boxStatus === 'available')).toHaveLength(1);
+      const entryAfter = await db
+        .selectFrom('teamEntry')
+        .select('status')
+        .where('teamEntryId', '=', entry.teamEntryId)
+        .executeTakeFirstOrThrow();
+      expect(entryAfter.status).toBe('playing');
+    });
+
+    it('lets only one of two simultaneous assignments of the same player through', async () => {
+      const teamId = await openBothBoards();
+
+      const results = await Promise.all(
+        ['G', 'F'].map((position) =>
+          request(app.getHttpServer())
+            .put(`/teams/${teamId}/players`)
+            .send({ teamId, position, playerId: 'wing', playerName: 'Ausar Thompson' }),
+        ),
+      );
+
+      expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+      expect(Object.values(await lineup(teamId))).toEqual(['wing']);
+    });
+  });
+
   describe('scoring', () => {
     it("scores each drafted player's best game of the finished week", async () => {
       const group = await createEventGroup(WEEK_NAME, ['2025-12-22', '2025-12-28']);

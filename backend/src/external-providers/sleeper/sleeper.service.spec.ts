@@ -107,11 +107,37 @@ describe('SleeperService', () => {
   });
 
   describe('NBA', () => {
-    it('should return NBA state from the nba state endpoint', async () => {
+    it('should return NBA state pruned to the fields sync uses', async () => {
       httpService.get.mockReturnValueOnce(of(mockAxiosResponse(mockState)));
       const result = await service.getNbaState();
-      expect(result).toEqual(mockState);
+      expect(result).toEqual({
+        week: mockState.week,
+        season: mockState.season,
+        season_type: mockState.season_type,
+      });
       expect(httpService.get).toHaveBeenCalledWith('https://api.sleeper.app/v1/state/nba');
+    });
+
+    it('should accept an off-season state', async () => {
+      httpService.get.mockReturnValueOnce(
+        of(mockAxiosResponse({ week: 0, season: '2026', season_type: 'off' })),
+      );
+      await expect(service.getNbaState()).resolves.toEqual({
+        week: 0,
+        season: '2026',
+        season_type: 'off',
+      });
+    });
+
+    it.each([
+      ['empty body', {}],
+      ['non-numeric season', { week: 3, season: 'next', season_type: 'regular' }],
+      ['fractional week', { week: 2.5, season: '2026', season_type: 'regular' }],
+      ['negative week', { week: -1, season: '2026', season_type: 'regular' }],
+      ['missing season type', { week: 3, season: '2026' }],
+    ])('should reject a malformed NBA state (%s)', async (_label, body) => {
+      httpService.get.mockReturnValueOnce(of(mockAxiosResponse(body)));
+      await expect(service.getNbaState()).rejects.toThrow();
     });
 
     it('should return the games for an NBA week, pruned to the fields we use', async () => {
@@ -164,7 +190,7 @@ describe('SleeperService', () => {
       });
     });
 
-    it('should return per-game stats, dropping team rows and scoring DNP rows as 0', async () => {
+    it('should return per-game stats, dropping team rows and keeping DNP rows', async () => {
       httpService.get.mockReturnValueOnce(of(mockAxiosResponse(rawNbaStatsFixture)));
 
       const result = await service.getNbaStatistics(2025, 10);
@@ -175,9 +201,21 @@ describe('SleeperService', () => {
       expect(result.map((e) => [e.player.last_name, e.date, e.stats.pts_std])).toEqual([
         ['Cunningham', '2025-12-22', 19.5],
         ['Cunningham', '2025-12-23', 35.5],
-        ['Curry', '2025-12-22', 0],
+        ['Curry', '2025-12-22', undefined],
       ]);
+      // DNP: Sleeper sends an empty stat line, passed through as-is
+      expect(result[2].stats).toEqual({});
       expect(result[0].stats).not.toHaveProperty('pts_std_dfs');
+    });
+
+    it.each([
+      ['null stats', null],
+      ['missing stats', undefined],
+    ])('should reject a stat row with %s', async (_label, stats) => {
+      const [first] = rawNbaStatsFixture;
+      httpService.get.mockReturnValueOnce(of(mockAxiosResponse([{ ...first, stats }])));
+
+      await expect(service.getNbaStatistics(2025, 10)).rejects.toThrow();
     });
 
     it('should reject an unexpected response shape instead of returning partial data', async () => {

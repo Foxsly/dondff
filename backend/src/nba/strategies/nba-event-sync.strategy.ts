@@ -4,7 +4,7 @@ import {
   IEventSyncStrategy,
   EventSyncGroup,
 } from '@/events/strategies/event-sync-strategy.interface';
-import { buildNbaWeekName, NbaWeek } from '@/nba/nba-week.util';
+import { buildNbaWeekName, NbaSeasonType, NbaWeek } from '@/nba/nba-week.util';
 
 @Injectable()
 export class NbaEventSyncStrategy implements IEventSyncStrategy {
@@ -24,7 +24,7 @@ export class NbaEventSyncStrategy implements IEventSyncStrategy {
     if (state.season_type === 'pre') {
       weeks = [{ seasonYear, seasonType: 'regular', week: 1 }];
     } else if (state.season_type === 'regular' || state.season_type === 'post') {
-      const seasonType = state.season_type;
+      const seasonType: NbaSeasonType = state.season_type === 'post' ? 'post' : 'regular';
       weeks = [state.week, state.week + 1].map((week) => ({ seasonYear, seasonType, week }));
     } else {
       return [];

@@ -1,7 +1,9 @@
 import { NbaEventSyncStrategy } from './nba-event-sync.strategy';
 import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
-import { ISleeperNbaGame } from '@/external-providers/sleeper/entities/sleeper-nba.entity';
-import { ISleeperState } from '@/external-providers/sleeper/entities/sleeper.entity';
+import {
+  ISleeperNbaGame,
+  ISleeperNbaState,
+} from '@/external-providers/sleeper/entities/sleeper-nba.entity';
 
 const game = (id: string, date: string, away: string, home: string): ISleeperNbaGame => ({
   game_id: id,
@@ -15,7 +17,7 @@ describe('NbaEventSyncStrategy', () => {
   let sleeper: { getNbaState: jest.Mock; getNbaWeekGames: jest.Mock };
   let strategy: NbaEventSyncStrategy;
 
-  const state = (overrides: Partial<ISleeperState>) =>
+  const state = (overrides: Partial<ISleeperNbaState>) =>
     sleeper.getNbaState.mockResolvedValue({
       week: 1,
       season: '2025',

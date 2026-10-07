@@ -119,6 +119,23 @@ describe('NbaPlayerStatsStrategy', () => {
       ]);
     });
 
+    it('scores a line without pts_std from its stats instead of as 0', async () => {
+      // Sleeper omits pts_std when it is 0 (DNP `{}`, or minutes with no scoring stats)
+      sleeper.getNbaStatistics.mockResolvedValue([
+        row('dnp', 'Bench Guard', ['PG'], '2025-12-22', 'BOS', {}),
+        row('quiet', 'Quiet Guard', ['SG'], '2025-12-22', 'BOS', { sp: 120, ast: 1, to: 1 }),
+        row('odd', 'Odd Guard', ['SG'], '2025-12-22', 'BOS', { pts: 30 }),
+      ]);
+
+      const result = await strategy.getStatistics(2025, eventGroup, [], 'G');
+
+      expect(result.map((p) => [p.playerId, p.points])).toEqual([
+        ['dnp', 0],
+        ['quiet', 0],
+        ['odd', 15],
+      ]);
+    });
+
     it('reads playoff weeks with the post season type', async () => {
       sleeper.getNbaStatistics.mockResolvedValue([]);
       const playoffs = { name: 'NBA 2025-26 Playoffs Week 2', seasonYear: 2025 } as EventGroup;

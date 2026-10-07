@@ -80,7 +80,12 @@ export class NbaPlayerStatsStrategy implements IPlayerStatsStrategy {
   ): Promise<IPlayerStats[]> {
     const { seasonYear, seasonType, week } = parseNbaWeekName(eventGroup.name);
     const rows = await this.sleeperService.getNbaStatistics(seasonYear, week, seasonType);
-    return this.toWeekLines(rows, (row) => row.stats.pts_std).map((line) => ({
+    // Sleeper omits pts_std when it is 0; scoring the stat line with the same
+    // weights gives that 0 and still scores a line if pts_std is ever missing.
+    return this.toWeekLines(
+      rows,
+      (row) => row.stats.pts_std ?? calculateNbaFantasyPoints(row.stats),
+    ).map((line) => ({
       playerId: line.playerId,
       name: line.name,
       position: position as PlayerPosition,

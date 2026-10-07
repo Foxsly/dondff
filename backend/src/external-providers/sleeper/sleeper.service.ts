@@ -13,6 +13,7 @@ import {
   SleeperNbaScoresResponse,
   SleeperNbaStatResponse,
   ISleeperNbaGame,
+  ISleeperNbaState,
 } from './entities/sleeper-nba.entity';
 import typia from 'typia';
 
@@ -28,6 +29,7 @@ export class SleeperService {
   private assertSleeperNbaProjections = typia.misc.createAssertPrune<SleeperNbaProjectionResponse>();
   private assertSleeperNbaStats = typia.misc.createAssertPrune<SleeperNbaStatResponse>();
   private assertSleeperNbaScores = typia.misc.createAssertPrune<SleeperNbaScoresResponse>();
+  private assertSleeperNbaState = typia.misc.createAssertPrune<ISleeperNbaState>();
 
   constructor(
     @Inject(HttpService)
@@ -113,10 +115,10 @@ export class SleeperService {
     );
   }
 
-  async getNbaState(): Promise<ISleeperState> {
+  async getNbaState(): Promise<ISleeperNbaState> {
     const response$ = this.httpService.get(`${this.BASE_URL}/v1/state/nba`);
     const response = await lastValueFrom(response$);
-    return response.data;
+    return this.assertSleeperNbaState(response.data);
   }
 
   /** Every game scheduled in a Sleeper NBA fantasy week (Monday–Sunday). */
@@ -154,8 +156,8 @@ export class SleeperService {
 
   /**
    * Per-game statistics (one row per player per game) for an NBA week.
-   * Team rows are dropped; a player listed for a game they did not play has
-   * an empty stat line, which scores 0.
+   * Team rows are dropped. Every row must carry a stat object; a player listed
+   * for a game they did not play has an empty one.
    */
   async getNbaStatistics(
     season: number,
@@ -166,14 +168,7 @@ export class SleeperService {
     const response$ = this.httpService.get(url);
     const response = await lastValueFrom(response$);
     return this.assertSleeperNbaStats(
-      this.transformNbaEntries(
-        response.data
-          .filter((entry) => entry?.player?.position !== 'TEAM')
-          .map((entry) => ({
-            ...entry,
-            stats: { ...entry.stats, pts_std: entry.stats?.pts_std ?? 0 },
-          })),
-      ),
+      this.transformNbaEntries(response.data.filter((entry) => entry?.player?.position !== 'TEAM')),
     );
   }
 

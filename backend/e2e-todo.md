@@ -129,6 +129,9 @@ This document tracks remaining and current **end-to-end (E2E)** coverage across 
 - [x] `GET /players/projections/...` — NBA group whose name is not a Sleeper week → 500.
 - [x] `GET /teams/:teamId/cases?position=F` — player drafted at another slot excluded from the board; boxes hide player ids.
 - [x] `GET /leagues/:id/teams?eventGroupId=` — finished week scores best actual game per drafted player; DNP → 0; team rows ignored.
+- [x] `PUT /teams/:teamId/players` — player already filling another slot → 409 (both boards opened first); lineup unchanged.
+- [x] `POST /teams/:teamId/offers` (keep) — case holding an already-drafted player → 409; board and entry unchanged.
+- [x] Simultaneous `PUT /teams/:teamId/players` of one player to two slots → exactly one 200, one 409 (PGlite serialises transactions, so this does not exercise row-lock contention).
 
 ### ⏭️ Remaining / Next Up
 - [ ] Playoff weeks (`season_type=post`) through the HTTP layer (unit-tested only).
