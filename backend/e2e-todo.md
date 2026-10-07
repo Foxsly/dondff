@@ -99,7 +99,7 @@ This document tracks remaining and current **end-to-end (E2E)** coverage across 
 
 ## Events (`src/events/events.e2e.spec.ts`)
 
-> Covers the `EventSyncGroup` strategies (NFL/Golf/World Cup) via `GET /event-groups/:sportLeague` (each GET re-syncs, so Sleeper/FIFA/FanDuel/ESPN upstreams are re-mocked per request).
+> Covers the `EventSyncGroup` strategies (NFL/Golf/World Cup; NBA lives in `src/nba/nba.e2e.spec.ts`) via `GET /event-groups/:sportLeague` (each GET re-syncs, so Sleeper/FIFA/FanDuel/ESPN upstreams are re-mocked per request).
 
 ### ✅ Covered
 - [x] `GET /event-groups/NFL` — happy path: syncs NFL from Sleeper (state + scores mocked), persists min/max game dates from `batch_scores` as `event.startDate`/`endDate`.
@@ -109,11 +109,30 @@ This document tracks remaining and current **end-to-end (E2E)** coverage across 
 - [x] `GET /event-groups/NFL/with-dates` — future-week dates → `status: 'PENDING'`.
 - [x] `GET /event-groups/GOLF` — sync from FanDuel (post events) + ESPN (start/end dates), verify merged event group.
 - [x] `GET /event-groups/WORLDCUP` — sync events from FIFA (start/end dates from fixture).
-- [x] `GET /event-groups/NBA` — unknown `sportLeague` → 500 (strategy registry miss).
+- [x] `GET /event-groups/NHL` — unknown `sportLeague` → 500 (strategy registry miss).
 
 ### ⏭️ Remaining / Next Up
 - [ ] Verify `status` (PENDING/PLAYING/FINISHED) transitions across date ranges (only PENDING for future dates covered so far).
 - [ ] Upstream errors (Sleeper/FIFA timeouts or 4xx/5xx) propagate cleanly.
+
+---
+
+## NBA (`src/nba/nba.e2e.spec.ts`)
+
+> Sleeper NBA upstreams (state, GraphQL `batch_scores`, per-game projections/stats) mocked with nock.
+
+### ✅ Covered
+- [x] `GET /event-groups/NBA` — syncs current + next Sleeper week; one group per week ("NBA 2025-26 Week 10"), one event per game; empty next week → no group.
+- [x] `GET /event-groups/NBA` — Sleeper state unavailable → 500 error contract.
+- [x] `POST /leagues` (NBA) → `GET /leagues/:id/positions` — defaults G 64 / F 64 / C 32.
+- [x] `GET /players/projections/:year/:eventGroupId/F?sportLeague=NBA` — best projected game per player; multi-position players in every eligible pool; empty projections dropped.
+- [x] `GET /players/projections/...` — NBA group whose name is not a Sleeper week → 500.
+- [x] `GET /teams/:teamId/cases?position=F` — player drafted at another slot excluded from the board; boxes hide player ids.
+- [x] `GET /leagues/:id/teams?eventGroupId=` — finished week scores best actual game per drafted player; DNP → 0; team rows ignored.
+
+### ⏭️ Remaining / Next Up
+- [ ] Playoff weeks (`season_type=post`) through the HTTP layer (unit-tested only).
+- [ ] `POST /events` without `externalEventId`/`externalEventSource` returns 500 (pre-existing, all sports; cause unverified).
 
 ---
 

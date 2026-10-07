@@ -1,0 +1,294 @@
+import request from 'supertest';
+import nock from 'nock';
+import type { INestApplication } from '@nestjs/common';
+import type { Kysely } from 'kysely';
+import type { DB } from '@/infrastructure/database/types';
+import { closeTestApp, createTestApp } from '@/infrastructure/test/app.factory';
+import { resetDatabase } from '@/infrastructure/test/factories';
+
+const SLEEPER = 'https://api.sleeper.app';
+const WEEK_NAME = 'NBA 2025-26 Week 10';
+
+/** A raw Sleeper NBA week row, shaped as the API returns it. */
+const sleeperRow = (
+  playerId: string,
+  name: string,
+  positions: string[],
+  date: string,
+  opponent: string,
+  stats: Record<string, number>,
+) => {
+  const [first_name, last_name] = name.split(' ');
+  return {
+    status: null,
+    date,
+    stats,
+    category: 'stat',
+    week: 10,
+    season: '2025',
+    season_type: 'regular',
+    sport: 'nba',
+    company: 'sportradar',
+    player_id: playerId,
+    player: {
+      first_name,
+      last_name,
+      fantasy_positions: positions,
+      position: positions[0],
+      injury_status: null,
+      metadata: { channel_id: '1' },
+    },
+    team: 'DET',
+    opponent,
+    game_id: `${playerId}-${date}`,
+  };
+};
+
+const sleeperGame = (gameId: string, date: string, away: string, home: string) => ({
+  game_id: gameId,
+  date,
+  status: 'pre_game',
+  start_time: 1766682000000,
+  metadata: { away_team: { team: away }, home_team: { team: home }, channel: 'ESPN' },
+});
+
+describe('NBA (e2e)', () => {
+  let app: INestApplication;
+  let db: Kysely<DB>;
+
+  beforeAll(async () => {
+    app = await createTestApp();
+    db = (app as any).__db__ as Kysely<DB>;
+  });
+
+  afterEach(async () => {
+    await resetDatabase(app);
+    nock.cleanAll();
+  });
+
+  afterAll(async () => {
+    await closeTestApp(app);
+  });
+
+  const createEventGroup = async (name: string, dates: string[]) => {
+    const group = await request(app.getHttpServer())
+      .post('/event-groups')
+      .send({ name, sportLeague: 'NBA', seasonYear: 2025 })
+      .expect(201);
+    for (const [i, date] of dates.entries()) {
+      await request(app.getHttpServer())
+        .post('/events')
+        .send({
+          eventGroupId: group.body.eventGroupId,
+          name: 'DET @ BOS',
+          startDate: date,
+          endDate: date,
+          externalEventId: `${name}-${i}`,
+          externalEventSource: 'SLEEPER',
+        })
+        .expect(201);
+    }
+    return group.body as { eventGroupId: string };
+  };
+
+  const createNbaTeam = async (eventGroupId: string) => {
+    const user = await request(app.getHttpServer())
+      .post('/users')
+      .send({ name: 'Hoops Fan', email: `hoops.${Date.now()}@example.com` })
+      .expect(201);
+    const league = await request(app.getHttpServer())
+      .post('/leagues')
+      .send({ name: 'Hoops League', sportLeague: 'NBA' })
+      .expect(201);
+    const team = await request(app.getHttpServer())
+      .post('/teams')
+      .send({
+        leagueId: league.body.leagueId,
+        userId: user.body.userId,
+        seasonYear: 2025,
+        eventGroupId,
+      })
+      .expect(201);
+    return { leagueId: league.body.leagueId as string, teamId: team.body.teamId as string };
+  };
+
+  const draft = (teamId: string, position: string, playerId: string, playerName: string) =>
+    request(app.getHttpServer())
+      .put(`/teams/${teamId}/players`)
+      .send({ teamId, position, playerId, playerName })
+      .expect(200);
+
+  describe('GET /event-groups/NBA', () => {
+    it('creates a group per Sleeper week with one event per game', async () => {
+      nock(SLEEPER)
+        .get('/v1/state/nba')
+        .reply(200, { week: 10, season: '2025', season_type: 'regular' });
+      nock('https://sleeper.com')
+        .post('/graphql', (body) => body.query.includes('week: 10'))
+        .reply(200, {
+          data: {
+            scores: [
+              sleeperGame('g1', '2025-12-22', 'DET', 'BOS'),
+              sleeperGame('g2', '2025-12-28', 'CLE', 'NYK'),
+            ],
+          },
+        })
+        .post('/graphql', (body) => body.query.includes('week: 11'))
+        .reply(200, { data: { scores: [] } });
+
+      const res = await request(app.getHttpServer()).get('/event-groups/NBA').expect(200);
+
+      expect(res.body).toEqual([
+        expect.objectContaining({ name: WEEK_NAME, sportLeague: 'NBA', seasonYear: 2025 }),
+      ]);
+      const events = await db
+        .selectFrom('event')
+        .select(['name', 'externalEventId', 'externalEventSource'])
+        .where('eventGroupId', '=', res.body[0].eventGroupId)
+        .orderBy('externalEventId')
+        .execute();
+      expect(events).toEqual([
+        { name: 'DET @ BOS', externalEventId: 'g1', externalEventSource: 'SLEEPER' },
+        { name: 'CLE @ NYK', externalEventId: 'g2', externalEventSource: 'SLEEPER' },
+      ]);
+    });
+
+    it('returns the error contract when Sleeper is unavailable', async () => {
+      nock(SLEEPER).get('/v1/state/nba').reply(503);
+
+      const res = await request(app.getHttpServer()).get('/event-groups/NBA').expect(500);
+
+      expect(res.body.statusCode).toBe(500);
+    });
+  });
+
+  describe('league defaults', () => {
+    it('gives a new NBA league G/F/C positions', async () => {
+      const league = await request(app.getHttpServer())
+        .post('/leagues')
+        .send({ name: 'Hoops League', sportLeague: 'NBA' })
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .get(`/leagues/${league.body.leagueId}/positions`)
+        .expect(200);
+
+      expect(res.body.map((p: any) => [p.position, p.poolSize])).toEqual(
+        expect.arrayContaining([
+          ['G', 64],
+          ['F', 64],
+          ['C', 32],
+        ]),
+      );
+      expect(res.body).toHaveLength(3);
+    });
+  });
+
+  describe('projections', () => {
+    const mockProjections = () =>
+      nock(SLEEPER)
+        .persist()
+        .get('/projections/nba/2025/10')
+        .query({ season_type: 'regular' })
+        .reply(200, [
+          sleeperRow('wing', 'Ausar Thompson', ['SF', 'SG'], '2025-12-22', 'BOS', {
+            pts: 20,
+            reb: 6,
+          }), // 16
+          sleeperRow('wing', 'Ausar Thompson', ['SF', 'SG'], '2025-12-26', 'MIA', {
+            pts: 30,
+            reb: 6,
+          }), // 21
+          sleeperRow('big', 'Jalen Duren', ['C', 'PF'], '2025-12-22', 'BOS', { pts: 12, reb: 12 }), // 18
+          sleeperRow('pf', 'Tobias Harris', ['PF'], '2025-12-22', 'BOS', { pts: 16, reb: 5 }), // 13
+          sleeperRow('out', 'Injured Player', ['PF'], '2025-12-22', 'BOS', {}),
+        ]);
+
+    it("returns each eligible player's best projected game", async () => {
+      const group = await createEventGroup(WEEK_NAME, ['2025-12-22', '2025-12-28']);
+      mockProjections();
+
+      const res = await request(app.getHttpServer())
+        .get(`/players/projections/2025/${group.eventGroupId}/F`)
+        .query({ sportLeague: 'NBA' })
+        .expect(200);
+
+      expect(res.body).toEqual([
+        expect.objectContaining({
+          playerId: 'wing',
+          position: 'F',
+          projectedPoints: 21,
+          oppTeam: 'BOS, MIA',
+        }),
+        expect.objectContaining({ playerId: 'big', position: 'F', projectedPoints: 18 }),
+        expect.objectContaining({ playerId: 'pf', position: 'F', projectedPoints: 13 }),
+      ]);
+    });
+
+    it('rejects an NBA event group that is not a Sleeper week', async () => {
+      const group = await createEventGroup('Some Custom Group', ['2025-12-22']);
+
+      const res = await request(app.getHttpServer())
+        .get(`/players/projections/2025/${group.eventGroupId}/F`)
+        .query({ sportLeague: 'NBA' })
+        .expect(500);
+
+      expect(res.body.statusCode).toBe(500);
+    });
+
+    it('keeps a player drafted at another slot off the board', async () => {
+      const group = await createEventGroup(WEEK_NAME, ['2025-12-22', '2025-12-28']);
+      mockProjections();
+      const { teamId } = await createNbaTeam(group.eventGroupId);
+      await draft(teamId, 'G', 'wing', 'Ausar Thompson');
+
+      const res = await request(app.getHttpServer())
+        .get(`/teams/${teamId}/cases`)
+        .query({ position: 'F' })
+        .expect(200);
+
+      expect(res.body.position).toBe('F');
+      expect(res.body.players.map((p: any) => p.playerId).sort()).toEqual(['big', 'pf']);
+      expect(res.body.boxes).toHaveLength(2);
+      // The board never reveals which player is in which case
+      for (const box of res.body.boxes) {
+        expect(box).not.toHaveProperty('playerId');
+      }
+    });
+  });
+
+  describe('scoring', () => {
+    it("scores each drafted player's best game of the finished week", async () => {
+      const group = await createEventGroup(WEEK_NAME, ['2025-12-22', '2025-12-28']);
+      const { leagueId, teamId } = await createNbaTeam(group.eventGroupId);
+      await draft(teamId, 'G', 'cade', 'Cade Cunningham');
+      await draft(teamId, 'F', 'wing', 'Ausar Thompson');
+      await draft(teamId, 'C', 'dnp', 'Bench Center');
+      nock(SLEEPER)
+        .persist()
+        .get('/stats/nba/2025/10')
+        .query({ season_type: 'regular' })
+        .reply(200, [
+          sleeperRow('cade', 'Cade Cunningham', ['PG'], '2025-12-22', 'BOS', { pts_std: 12 }),
+          sleeperRow('cade', 'Cade Cunningham', ['PG'], '2025-12-23', 'MIA', { pts_std: 22 }),
+          sleeperRow('cade', 'Cade Cunningham', ['PG'], '2025-12-26', 'NYK', { pts_std: 14 }),
+          sleeperRow('cade', 'Cade Cunningham', ['PG'], '2025-12-28', 'CHI', { pts_std: 31 }),
+          sleeperRow('wing', 'Ausar Thompson', ['SF', 'SG'], '2025-12-22', 'BOS', {
+            pts_std: 18.5,
+          }),
+          sleeperRow('dnp', 'Bench Center', ['C'], '2025-12-22', 'BOS', {}),
+          sleeperRow('DET', 'Detroit Pistons', ['TEAM'], '2025-12-22', 'BOS', { pts_std: 150 }),
+        ]);
+
+      const res = await request(app.getHttpServer())
+        .get(`/leagues/${leagueId}/teams`)
+        .query({ eventGroupId: group.eventGroupId })
+        .expect(200);
+
+      const actual = Object.fromEntries(
+        res.body[0].players.map((p: any) => [p.position, p.actualPoints]),
+      );
+      expect(actual).toEqual({ G: 31, F: 18.5, C: 0 });
+    });
+  });
+});

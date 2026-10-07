@@ -220,7 +220,7 @@ describe('Event Groups (e2e)', () => {
 
   describe('NEGATIVE', () => {
     it('returns an error for an unsupported sport league', async () => {
-      const res = await request(app.getHttpServer()).get('/event-groups/NBA').expect(500);
+      const res = await request(app.getHttpServer()).get('/event-groups/NHL').expect(500);
 
       expect(res.body.statusCode).toBe(500);
     });

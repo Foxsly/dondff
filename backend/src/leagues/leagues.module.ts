@@ -5,6 +5,7 @@ import { TeamsModule } from '@/teams/teams.module';
 import { NflModule } from '@/nfl/nfl.module';
 import { GolfModule } from '@/golf/golf.module';
 import { WorldCupModule } from '@/world-cup/world-cup.module';
+import { NbaModule } from '@/nba/nba.module';
 import { LeaguesController } from './leagues.controller';
 import { DatabaseLeaguesRepository, LeaguesRepository } from './leagues.repository';
 import { LeaguesService } from './leagues.service';
@@ -24,7 +25,7 @@ import { LeagueDefaultsStrategyRegistry } from './strategies/league-defaults-str
       useClass: DatabaseLeaguesRepository,
     },
   ],
-  imports: [DatabaseModule, forwardRef(() => TeamsModule), NflModule, GolfModule, WorldCupModule],
+  imports: [DatabaseModule, forwardRef(() => TeamsModule), NflModule, GolfModule, WorldCupModule, NbaModule],
   exports: [LeaguesService],
 })
 export class LeaguesModule {}

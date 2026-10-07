@@ -4,6 +4,7 @@ import { ITeamsGameStrategy } from './teams-game-strategy.interface';
 import { NflTeamsGameStrategy } from '@/nfl/strategies/nfl-teams-game.strategy';
 import { GolfTeamsGameStrategy } from '@/golf/strategies/golf-teams-game.strategy';
 import { WorldCupTeamsGameStrategy } from '@/world-cup/strategies/world-cup-teams-game.strategy';
+import { NbaTeamsGameStrategy } from '@/nba/strategies/nba-teams-game.strategy';
 
 @Injectable()
 export class TeamsGameStrategyRegistry {
@@ -13,11 +14,13 @@ export class TeamsGameStrategyRegistry {
     nfl: NflTeamsGameStrategy,
     golf: GolfTeamsGameStrategy,
     worldCup: WorldCupTeamsGameStrategy,
+    nba: NbaTeamsGameStrategy,
   ) {
     this.strategies = new Map<SportLeague, ITeamsGameStrategy>([
       [SportLeague.NFL, nfl],
       [SportLeague.GOLF, golf],
       [SportLeague.WORLDCUP, worldCup],
+      [SportLeague.NBA, nba],
     ]);
   }
 
