@@ -1,0 +1,159 @@
+[
+  {
+    "status": null,
+    "date": "2025-12-22",
+    "stats": {
+      "ast": 7.92,
+      "blk": 0.7,
+      "dd": 0.34,
+      "dreb": 5.47,
+      "fga": 21.4,
+      "fgm": 10.0,
+      "fgmi": 11.4,
+      "fta": 6.26,
+      "ftm": 5.34,
+      "ftmi": 0.92,
+      "gp": 1.0,
+      "pts": 27.89,
+      "reb": 6.73,
+      "sp": 2160.0,
+      "stl": 1.51,
+      "td": 0.09,
+      "to": 4.12,
+      "tpa": 7.33,
+      "tpm": 2.55,
+      "tpmi": 4.78
+    },
+    "category": "proj",
+    "last_modified": 1766994004815,
+    "week": 10,
+    "sport": "nba",
+    "season_type": "regular",
+    "season": "2025",
+    "player": {
+      "fantasy_positions": [
+        "PG"
+      ],
+      "first_name": "Cade",
+      "injury_body_part": null,
+      "injury_notes": null,
+      "injury_start_date": null,
+      "injury_status": null,
+      "last_name": "Cunningham",
+      "metadata": {
+        "channel_id": "1113936497972609024"
+      },
+      "news_updated": 1791305444941,
+      "position": "PG",
+      "team": "DET",
+      "team_abbr": null,
+      "team_changed_at": null,
+      "years_exp": 5
+    },
+    "team": "DET",
+    "player_id": "2267",
+    "opponent": "POR",
+    "updated_at": 1766994004815,
+    "game_id": "1261814776841895936",
+    "week_shard": "10_2",
+    "company": "rotowire"
+  },
+  {
+    "status": null,
+    "date": "2025-12-23",
+    "stats": {
+      "ast": 7.88,
+      "blk": 0.66,
+      "dd": 0.33,
+      "dreb": 5.53,
+      "fga": 20.87,
+      "fgm": 9.89,
+      "fgmi": 10.97,
+      "fta": 5.96,
+      "ftm": 4.98,
+      "ftmi": 0.98,
+      "gp": 1.0,
+      "pts": 27.36,
+      "reb": 6.78,
+      "sp": 2100.0,
+      "stl": 1.31,
+      "td": 0.09,
+      "to": 3.89,
+      "tpa": 7.35,
+      "tpm": 2.59,
+      "tpmi": 4.75
+    },
+    "category": "proj",
+    "last_modified": 1766994005590,
+    "week": 10,
+    "sport": "nba",
+    "season_type": "regular",
+    "season": "2025",
+    "player": {
+      "fantasy_positions": [
+        "PG"
+      ],
+      "first_name": "Cade",
+      "injury_body_part": null,
+      "injury_notes": null,
+      "injury_start_date": null,
+      "injury_status": null,
+      "last_name": "Cunningham",
+      "metadata": {
+        "channel_id": "1113936497972609024"
+      },
+      "news_updated": 1791305444941,
+      "position": "PG",
+      "team": "DET",
+      "team_abbr": null,
+      "team_changed_at": null,
+      "years_exp": 5
+    },
+    "team": "DET",
+    "player_id": "2267",
+    "opponent": "SAC",
+    "updated_at": 1766994005590,
+    "game_id": "1261814785209532416",
+    "week_shard": "10_3",
+    "company": "rotowire"
+  },
+  {
+    "status": null,
+    "date": "2025-12-22",
+    "stats": {},
+    "category": "proj",
+    "last_modified": 1766994004733,
+    "week": 10,
+    "sport": "nba",
+    "season_type": "regular",
+    "season": "2025",
+    "player": {
+      "fantasy_positions": [
+        "PG",
+        "SG"
+      ],
+      "first_name": "Seth",
+      "injury_body_part": null,
+      "injury_notes": null,
+      "injury_start_date": null,
+      "injury_status": null,
+      "last_name": "Curry",
+      "metadata": {
+        "channel_id": "1118765758738870272"
+      },
+      "news_updated": 1776524713769,
+      "position": "SG",
+      "team": null,
+      "team_abbr": null,
+      "team_changed_at": null,
+      "years_exp": 12
+    },
+    "team": "GSW",
+    "player_id": "1041",
+    "opponent": "ORL",
+    "updated_at": 1766994004733,
+    "game_id": "1261814775801708544",
+    "week_shard": "10_5",
+    "company": "rotowire"
+  }
+]

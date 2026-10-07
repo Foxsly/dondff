@@ -1,0 +1,267 @@
+{
+  "data": {
+    "scores": [
+      {
+        "date": "2025-12-25",
+        "game_id": "1261029462443565056",
+        "metadata": {
+          "away_team": {
+            "on_court": [
+              "1845",
+              "1798",
+              "2259",
+              "2007",
+              "2139"
+            ],
+            "points": 124,
+            "record": "52-30",
+            "scoring": [
+              {
+                "number": 1,
+                "points": 38,
+                "sequence": 1,
+                "type": "quarter"
+              },
+              {
+                "number": 2,
+                "points": 20,
+                "sequence": 2,
+                "type": "quarter"
+              },
+              {
+                "number": 3,
+                "points": 38,
+                "sequence": 3,
+                "type": "quarter"
+              },
+              {
+                "number": 4,
+                "points": 28,
+                "sequence": 4,
+                "type": "quarter"
+              }
+            ],
+            "starters": [
+              "1845",
+              "1787",
+              "2007",
+              "2139",
+              "2008"
+            ],
+            "team": "CLE"
+          },
+          "channel": "ABC",
+          "channel_id": "1261029462443565057",
+          "clock": "00:00",
+          "close_game": true,
+          "contract_event_ids": "1308898193479602176,1319499466054578176,1319499529954824192",
+          "dl_trading_event_id": 2603959,
+          "fantasydata_id": 22474,
+          "home_team": {
+            "on_court": [
+              "2742",
+              "1975",
+              "1613",
+              "1831",
+              "1967"
+            ],
+            "points": 126,
+            "record": "53-29",
+            "scoring": [
+              {
+                "number": 1,
+                "points": 23,
+                "sequence": 1,
+                "type": "quarter"
+              },
+              {
+                "number": 2,
+                "points": 37,
+                "sequence": 2,
+                "type": "quarter"
+              },
+              {
+                "number": 3,
+                "points": 24,
+                "sequence": 3,
+                "type": "quarter"
+              },
+              {
+                "number": 4,
+                "points": 42,
+                "sequence": 4,
+                "type": "quarter"
+              }
+            ],
+            "starters": [
+              "1803",
+              "1975",
+              "1613",
+              "1831",
+              "1967"
+            ],
+            "team": "NYK"
+          },
+          "oddsjam_fixture_id": "20251225F719F866",
+          "pick_stats": {
+            "pick_count": 304733,
+            "total_count": 307573
+          },
+          "picks_lines": true,
+          "postgame_topic_id": "1261029463819296769",
+          "pregame_poll_id": "1261029463768965120",
+          "pregame_topic_id": "1261029463789936640",
+          "primary_contract_event_id": "1308898193479602176",
+          "quarter": "4",
+          "quarter_num": 4,
+          "scheduled": "2025-12-25T17:00:00+00:00",
+          "sportradar_game_id": "8dd98551-3802-4fc3-a2d0-1e7a5df65e40",
+          "status": "closed",
+          "venue": {
+            "address": "4 Pennsylvania Plaza",
+            "capacity": 19812,
+            "city": "New York",
+            "country": "USA",
+            "id": "583152aa-de75-5bea-ac92-ac5b8a51f9f9",
+            "name": "Madison Square Garden",
+            "sr_id": "sr:venue:6054",
+            "state": "NY",
+            "zip": "10001"
+          }
+        },
+        "start_time": 1766682000000,
+        "status": "complete"
+      },
+      {
+        "date": "2025-12-25",
+        "game_id": "1261029463890599936",
+        "metadata": {
+          "away_team": {
+            "on_court": [
+              "2037",
+              "2451",
+              "2408",
+              "1282",
+              "4753"
+            ],
+            "points": 117,
+            "record": "62-20",
+            "scoring": [
+              {
+                "number": 1,
+                "points": 41,
+                "sequence": 1,
+                "type": "quarter"
+              },
+              {
+                "number": 2,
+                "points": 28,
+                "sequence": 2,
+                "type": "quarter"
+              },
+              {
+                "number": 3,
+                "points": 26,
+                "sequence": 3,
+                "type": "quarter"
+              },
+              {
+                "number": 4,
+                "points": 22,
+                "sequence": 4,
+                "type": "quarter"
+              }
+            ],
+            "starters": [
+              "1092",
+              "2146",
+              "1872",
+              "1759",
+              "2722"
+            ],
+            "team": "SAS"
+          },
+          "channel": "ABC",
+          "channel_id": "1261029463894794240",
+          "clock": "00:00",
+          "contract_event_ids": "1308898193429270528,1319499465991684096,1319499529900294144",
+          "dl_trading_event_id": 2604143,
+          "fantasydata_id": 22475,
+          "home_team": {
+            "on_court": [
+              "4792",
+              "2299",
+              "2781",
+              "1946",
+              "4830"
+            ],
+            "points": 102,
+            "record": "64-18",
+            "scoring": [
+              {
+                "number": 1,
+                "points": 36,
+                "sequence": 1,
+                "type": "quarter"
+              },
+              {
+                "number": 2,
+                "points": 24,
+                "sequence": 2,
+                "type": "quarter"
+              },
+              {
+                "number": 3,
+                "points": 19,
+                "sequence": 3,
+                "type": "quarter"
+              },
+              {
+                "number": 4,
+                "points": 23,
+                "sequence": 4,
+                "type": "quarter"
+              }
+            ],
+            "starters": [
+              "2095",
+              "2455",
+              "1957",
+              "1934",
+              "2453"
+            ],
+            "team": "OKC"
+          },
+          "oddsjam_fixture_id": "20251225AB21D4B5",
+          "pick_stats": {
+            "pick_count": 584443,
+            "total_count": 586875
+          },
+          "picks_lines": true,
+          "postgame_topic_id": "1261029465056616448",
+          "pregame_poll_id": "1261029465018867712",
+          "pregame_topic_id": "1261029465027256320",
+          "primary_contract_event_id": "1308898193429270528",
+          "quarter": "4",
+          "quarter_num": 4,
+          "scheduled": "2025-12-25T19:30:00+00:00",
+          "sportradar_game_id": "d740bbb0-387e-46a8-8677-1d2a30bdf7ec",
+          "status": "closed",
+          "venue": {
+            "address": "100 W. Reno Avenue",
+            "capacity": 18203,
+            "city": "Oklahoma City",
+            "country": "USA",
+            "id": "a13af216-4409-5021-8dd5-255cc71bffc3",
+            "name": "Paycom Center",
+            "sr_id": "sr:venue:6934",
+            "state": "OK",
+            "zip": "73102"
+          }
+        },
+        "start_time": 1766691000000,
+        "status": "complete"
+      }
+    ]
+  }
+}

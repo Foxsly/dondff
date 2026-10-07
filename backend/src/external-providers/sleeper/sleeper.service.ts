@@ -8,6 +8,12 @@ import {
   SleeperScoresResponse,
   SleeperStatResponse,
 } from './entities/sleeper.entity';
+import {
+  SleeperNbaProjectionResponse,
+  SleeperNbaScoresResponse,
+  SleeperNbaStatResponse,
+  ISleeperNbaGame,
+} from './entities/sleeper-nba.entity';
 import typia from 'typia';
 
 @Injectable()
@@ -19,6 +25,9 @@ export class SleeperService {
   private assertSleeperStats = typia.misc.createAssertPrune<SleeperStatResponse>();
   private assertSleeperProjections = typia.misc.createAssertPrune<SleeperProjectionResponse>();
   private assertSleeperScores = typia.misc.createAssertPrune<SleeperScoresResponse>();
+  private assertSleeperNbaProjections = typia.misc.createAssertPrune<SleeperNbaProjectionResponse>();
+  private assertSleeperNbaStats = typia.misc.createAssertPrune<SleeperNbaStatResponse>();
+  private assertSleeperNbaScores = typia.misc.createAssertPrune<SleeperNbaScoresResponse>();
 
   constructor(
     @Inject(HttpService)
@@ -102,6 +111,74 @@ export class SleeperService {
           })),
       ),
     );
+  }
+
+  async getNbaState(): Promise<ISleeperState> {
+    const response$ = this.httpService.get(`${this.BASE_URL}/v1/state/nba`);
+    const response = await lastValueFrom(response$);
+    return response.data;
+  }
+
+  /** Every game scheduled in a Sleeper NBA fantasy week (Monday–Sunday). */
+  async getNbaWeekGames(
+    season: number,
+    week: number,
+    seasonType: 'regular' | 'post',
+  ): Promise<ISleeperNbaGame[]> {
+    const query = `query batch_scores { scores(sport: "nba", season_type: "${seasonType}", season: "${season}", week: ${week}) { game_id date status start_time metadata } }`;
+    const response$ = this.httpService.post(this.GRAPHQL_URL, { query });
+    const response = await lastValueFrom(response$);
+    return this.assertSleeperNbaScores(response.data).data.scores;
+  }
+
+  /**
+   * Per-game projections (one row per player per game) for an NBA week.
+   * Team rows and rows without a projected stat line are dropped.
+   */
+  async getNbaProjections(
+    season: number,
+    week: number,
+    seasonType: 'regular' | 'post' = 'regular',
+  ): Promise<SleeperNbaProjectionResponse> {
+    const url = `${this.BASE_URL}/projections/nba/${season}/${week}?season_type=${seasonType}`;
+    const response$ = this.httpService.get(url);
+    const response = await lastValueFrom(response$);
+    return this.assertSleeperNbaProjections(
+      this.transformNbaEntries(
+        response.data.filter(
+          (entry) => entry?.player?.position !== 'TEAM' && Object.keys(entry?.stats ?? {}).length > 0,
+        ),
+      ),
+    );
+  }
+
+  /**
+   * Per-game statistics (one row per player per game) for an NBA week.
+   * Team rows are dropped; a player listed for a game they did not play has
+   * an empty stat line, which scores 0.
+   */
+  async getNbaStatistics(
+    season: number,
+    week: number,
+    seasonType: 'regular' | 'post' = 'regular',
+  ): Promise<SleeperNbaStatResponse> {
+    const url = `${this.BASE_URL}/stats/nba/${season}/${week}?season_type=${seasonType}`;
+    const response$ = this.httpService.get(url);
+    const response = await lastValueFrom(response$);
+    return this.assertSleeperNbaStats(
+      this.transformNbaEntries(
+        response.data
+          .filter((entry) => entry?.player?.position !== 'TEAM')
+          .map((entry) => ({
+            ...entry,
+            stats: { ...entry.stats, pts_std: entry.stats?.pts_std ?? 0 },
+          })),
+      ),
+    );
+  }
+
+  private transformNbaEntries(raw: any[]): unknown[] {
+    return raw.map((entry) => ({ ...entry, season: Number(entry.season) }));
   }
 
   /**
