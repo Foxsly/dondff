@@ -94,8 +94,7 @@ per interface picks it by `SportLeague`. An unregistered sport throws (HTTP 500)
   during the preseason); every game in the week is an event (`externalEventId` = Sleeper
   `game_id`). Opening week is short (starts on the season's first game day).
 - **Positions.** Eligibility uses Sleeper `fantasy_positions`: G = PG/SG, F = SF/PF, C = C.
-  A multi-position player appears in every pool they qualify for; a player already on the
-  team at another slot is excluded from the board and offers.
+  A multi-position player only appears in the pool that aligns with their primary position
 - **Scoring.** Sleeper default points (`pts_std`): PTS 0.5, REB 1, AST 1, STL 2, BLK 2,
   TO −1, 3PM 0.5, double-double +1, triple-double +2, 40-pt +2, 50-pt +2
   (`nba/nba-scoring.util.ts`). Sleeper returns rows per player *per game*; the DOND amount

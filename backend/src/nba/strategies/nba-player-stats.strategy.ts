@@ -45,16 +45,18 @@ export class NbaPlayerStatsStrategy implements IPlayerStatsStrategy {
    * positions, so a PF/C appears in both the F and C pools.
    */
   async getProjections(
-    _season: number,
+    season: number,
     eventGroup: EventGroup,
     _events: Event[],
     position: string,
   ): Promise<IPlayerProjection[]> {
+    //seasonYear is already passed in, and is also on the eventGroup
+
     const { seasonYear, seasonType, week } = parseNbaWeekName(eventGroup.name);
-    const rows = await this.sleeperService.getNbaProjections(seasonYear, week, seasonType);
+    const projections = await this.sleeperService.getNbaProjections(season, week, seasonType);
     const eligible = SLOT_POSITIONS[position] ?? [];
     return this.toWeekLines(
-      rows.filter((row) => row.player.fantasy_positions.some((p) => eligible.includes(p))),
+      projections.filter((row) => eligible.includes(row.player.position)),
       (row) => calculateNbaFantasyPoints(row.stats),
     ).map((line) => ({
       playerId: line.playerId,
@@ -97,23 +99,23 @@ export class NbaPlayerStatsStrategy implements IPlayerStatsStrategy {
 
   /** Collapse per-game rows into one line per player, keeping the best game. */
   private toWeekLines<TStats>(
-    rows: ISleeperNbaPlayerEntry<TStats>[],
+    projections: ISleeperNbaPlayerEntry<TStats>[],
     score: (row: ISleeperNbaPlayerEntry<TStats>) => number,
   ): NbaWeekLine[] {
     const byPlayer = new Map<string, ISleeperNbaPlayerEntry<TStats>[]>();
-    for (const row of rows) {
+    for (const row of projections) {
       byPlayer.set(row.player_id, [...(byPlayer.get(row.player_id) ?? []), row]);
     }
     return [...byPlayer.values()].map((games) => {
-      const ordered = [...games].sort((a, b) => a.date.localeCompare(b.date));
-      const latest = ordered[ordered.length - 1];
+      const sortedGames = [...games].sort((a, b) => a.date.localeCompare(b.date));
+      const lastGame = sortedGames[sortedGames.length - 1];
       return {
-        playerId: latest.player_id,
-        name: `${latest.player.first_name} ${latest.player.last_name}`,
-        team: latest.team,
-        injuryStatus: latest.player.injury_status,
-        oppTeam: ordered.map((game) => game.opponent).join(', '),
-        bestGame: Math.max(...ordered.map(score)),
+        playerId: lastGame.player_id,
+        name: `${lastGame.player.first_name} ${lastGame.player.last_name}`,
+        team: lastGame.team,
+        injuryStatus: lastGame.player.injury_status,
+        oppTeam: sortedGames.map((game) => game.opponent).join(', '),
+        bestGame: Math.max(...sortedGames.map(score)),
       };
     });
   }

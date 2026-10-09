@@ -55,6 +55,7 @@ describe('NbaPlayerStatsStrategy', () => {
         row('cade', 'Cade Cunningham', ['PG'], '2025-12-22', 'BOS', { pts: 20, ast: 10 }), // 20
         row('jd', 'Jalen Duren', ['C', 'PF'], '2025-12-22', 'BOS', { pts: 10, reb: 12 }), // 17
         row('ausar', 'Ausar Thompson', ['SF', 'SG'], '2025-12-22', 'BOS', { pts: 12 }), // 6
+        row('duncan', 'Duncan Robinson', ['SG', 'SF'], '2025-12-22', 'BOS', { pts: 15 }), // 7.5
       ]);
     });
 
@@ -72,15 +73,17 @@ describe('NbaPlayerStatsStrategy', () => {
           oppTeam: 'BOS, MIA',
           team: 'DET',
         },
-        expect.objectContaining({ playerId: 'ausar', position: 'G', projectedPoints: 6 }),
+        expect.objectContaining({ playerId: 'duncan', position: 'G', projectedPoints: 7.5 }),
       ]);
     });
 
-    it('puts a multi-position player in every pool they are eligible for', async () => {
+    it('multi-position players are only in their primary position pool', async () => {
+      const guards = await strategy.getProjections(2025, eventGroup, [], 'G');
       const forwards = await strategy.getProjections(2025, eventGroup, [], 'F');
       const centers = await strategy.getProjections(2025, eventGroup, [], 'C');
 
-      expect(forwards.map((p) => p.playerId)).toEqual(['jd', 'ausar']);
+      expect(guards.map((p) => p.playerId)).toEqual(['cade', 'duncan']);
+      expect(forwards.map((p) => p.playerId)).toEqual(['ausar']);
       expect(centers.map((p) => p.playerId)).toEqual(['jd']);
       expect(centers[0].position).toBe('C');
     });
