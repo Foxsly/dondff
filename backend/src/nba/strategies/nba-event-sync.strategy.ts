@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
+import { SportLeague } from '@/common/types/sport-league.type';
 import {
-  IEventSyncStrategy,
   EventSyncGroup,
+  IEventSyncStrategy,
 } from '@/events/strategies/event-sync-strategy.interface';
+import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
 import { buildNbaWeekName, NbaSeasonType, NbaWeek } from '@/nba/nba-week.util';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class NbaEventSyncStrategy implements IEventSyncStrategy {
@@ -17,7 +18,7 @@ export class NbaEventSyncStrategy implements IEventSyncStrategy {
    * (e.g. the week after the regular season ends) produce no group.
    */
   async fetchSyncData(): Promise<EventSyncGroup[]> {
-    const state = await this.sleeperService.getNbaState();
+    const state = await this.sleeperService.getStateForSport(SportLeague.NBA);
     const seasonYear = Number(state.season);
 
     let weeks: NbaWeek[];

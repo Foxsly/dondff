@@ -1,3 +1,4 @@
+import { SportLeague } from '@/common/types/sport-league.type';
 import { Inject, Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
@@ -13,7 +14,6 @@ import {
   SleeperNbaScoresResponse,
   SleeperNbaStatResponse,
   ISleeperNbaGame,
-  ISleeperNbaState,
 } from './entities/sleeper-nba.entity';
 import typia from 'typia';
 
@@ -29,19 +29,19 @@ export class SleeperService {
   private assertSleeperNbaProjections = typia.misc.createAssertPrune<SleeperNbaProjectionResponse>();
   private assertSleeperNbaStats = typia.misc.createAssertPrune<SleeperNbaStatResponse>();
   private assertSleeperNbaScores = typia.misc.createAssertPrune<SleeperNbaScoresResponse>();
-  private assertSleeperNbaState = typia.misc.createAssertPrune<ISleeperNbaState>();
+  private assertSleeperState = typia.misc.createAssertPrune<ISleeperState>();
 
   constructor(
     @Inject(HttpService)
     private readonly httpService: HttpService,
   ) {}
 
-  async getNflState(): Promise<ISleeperState> {
-    const response$ = this.httpService.get(`${this.BASE_URL}/v1/state/nfl`);
+  async getStateForSport(sport: SportLeague = SportLeague.NFL): Promise<ISleeperState> {
+    const response$ = this.httpService.get(`${this.BASE_URL}/v1/state/${sport.toLowerCase()}`);
     const response = await lastValueFrom(response$);
     const sleeperState: ISleeperState = response.data;
 
-    if (process.env.NODE_ENV === 'development' && false) {
+    if (process.env.NODE_ENV === 'development') {
       const devWeek = process.env.DEV_WEEK ? Number(process.env.DEV_WEEK) : 14;
       const devSeason = process.env.DEV_SEASON_YEAR ?? '2025';
       if (devWeek !== null && devSeason !== null) {
@@ -54,10 +54,10 @@ export class SleeperService {
       }
     }
 
-    if (sleeperState.season_type === 'post') {
+    if (sport === SportLeague.NFL && sleeperState.season_type === 'post') {
       sleeperState.week = sleeperState.week + 18;
     }
-    return sleeperState;
+    return this.assertSleeperState(sleeperState);
   }
 
   async getNflWeekGameDates(
@@ -82,9 +82,7 @@ export class SleeperService {
     const response = await lastValueFrom(response$);
     return this.assertSleeperProjections(
       this.transformSleeperEntries(
-        response.data.filter(
-          (entry) => entry?.stats?.pts_ppr && entry.player.metadata.genius_id,
-        ),
+        response.data.filter((entry) => entry?.stats?.pts_ppr && entry.player.metadata.genius_id),
       ),
     );
   }
@@ -113,12 +111,6 @@ export class SleeperService {
           })),
       ),
     );
-  }
-
-  async getNbaState(): Promise<ISleeperNbaState> {
-    const response$ = this.httpService.get(`${this.BASE_URL}/v1/state/nba`);
-    const response = await lastValueFrom(response$);
-    return this.assertSleeperNbaState(response.data);
   }
 
   /** Every game scheduled in a Sleeper NBA fantasy week (Monday–Sunday). */

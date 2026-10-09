@@ -6,14 +6,6 @@ import { tags } from 'typia';
  * in the (Monday–Sunday) fantasy week.
  */
 
-/** The fields of GET /v1/state/nba that NBA event sync relies on. */
-export interface ISleeperNbaState {
-  week: number & tags.Type<'uint32'>;
-  season: string & tags.Pattern<'^[0-9]{4}$'>;
-  /** 'pre' | 'regular' | 'post' drive sync; anything else (off-season) syncs nothing. */
-  season_type: string & tags.MinLength<1>;
-}
-
 export type SleeperNbaPosition = 'PG' | 'SG' | 'SF' | 'PF' | 'C';
 
 export interface ISleeperNbaPlayer {

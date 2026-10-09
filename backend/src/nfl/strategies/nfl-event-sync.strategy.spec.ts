@@ -8,7 +8,7 @@ describe('NflEventSyncStrategy', () => {
 
   beforeEach(async () => {
     sleeperService = {
-      getNflState: jest.fn(),
+      getStateForSport: jest.fn(),
       getNflWeekGameDates: jest.fn(),
     } as any;
 
@@ -24,7 +24,7 @@ describe('NflEventSyncStrategy', () => {
 
   describe('fetchSyncData', () => {
     it('builds a group with min/max game dates as start/end', async () => {
-      sleeperService.getNflState.mockResolvedValue({
+      sleeperService.getStateForSport.mockResolvedValue({
         week: 1,
         season: '2025',
         season_type: 'regular',
@@ -56,7 +56,7 @@ describe('NflEventSyncStrategy', () => {
     });
 
     it('maps post-season display weeks back to Sleeper weeks', async () => {
-      sleeperService.getNflState.mockResolvedValue({
+      sleeperService.getStateForSport.mockResolvedValue({
         week: 19,
         season: '2025',
         season_type: 'post',
@@ -72,7 +72,7 @@ describe('NflEventSyncStrategy', () => {
     });
 
     it('returns an empty array when the week has no game dates', async () => {
-      sleeperService.getNflState.mockResolvedValue({
+      sleeperService.getStateForSport.mockResolvedValue({
         week: 1,
         season: '2025',
         season_type: 'regular',

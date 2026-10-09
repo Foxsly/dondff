@@ -7,10 +7,8 @@ export interface ISleeperState {
   week: number;
   season_type: string;
   season: string;
-  previous_season: string;
   leg: number;
   league_season: string;
-  league_create_season: string;
   display_week: number;
 }
 

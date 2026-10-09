@@ -16,10 +16,8 @@ describe('SleeperController', () => {
     week: 3,
     season_type: 'regular',
     season: '2025',
-    previous_season: '2024',
     leg: 3,
     league_season: '2025',
-    league_create_season: '2020',
     display_week: 3,
   };
 
@@ -80,7 +78,7 @@ describe('SleeperController', () => {
         {
           provide: SleeperService,
           useValue: {
-            getNflState: jest.fn(),
+            getStateForSport: jest.fn(),
             getPlayerProjections: jest.fn(),
             getPlayerStatistics: jest.fn(),
           },
@@ -94,11 +92,11 @@ describe('SleeperController', () => {
 
   describe('getState', () => {
     it('should return NFL state', async () => {
-      service.getNflState.mockResolvedValue(mockState);
+      service.getStateForSport.mockResolvedValue(mockState);
 
       const result = await controller.getState();
 
-      expect(service.getNflState).toHaveBeenCalled();
+      expect(service.getStateForSport).toHaveBeenCalled();
       expect(result).toEqual(mockState);
     });
   });

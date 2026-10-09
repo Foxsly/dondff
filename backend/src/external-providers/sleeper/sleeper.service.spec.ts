@@ -1,20 +1,18 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { SportLeague } from '@/common/types/sport-league.type';
 import { HttpService } from '@nestjs/axios';
+import { Test, TestingModule } from '@nestjs/testing';
+import { AxiosResponse } from 'axios';
 import { of } from 'rxjs';
-import { SleeperService } from './sleeper.service';
-import {
-  SleeperProjectionResponse,
-  SleeperStatResponse,
-} from './entities/sleeper.entity';
-import stateFixture from './__fixtures__/sleeper-state.test.json';
+import rawNbaProjectionsFixture from './__fixtures__/sleeper-nba-projections.raw.test.json';
+import rawNbaScoresFixture from './__fixtures__/sleeper-nba-scores.raw.test.json';
+import rawNbaStatsFixture from './__fixtures__/sleeper-nba-stats.raw.test.json';
 import rawProjectionsFixture from './__fixtures__/sleeper-projections.raw.test.json';
 import projectionsFixture from './__fixtures__/sleeper-projections.transformed.test.json';
+import stateFixture from './__fixtures__/sleeper-state.test.json';
 import rawStatsFixture from './__fixtures__/sleeper-stats.raw.test.json';
 import statsFixture from './__fixtures__/sleeper-stats.transformed.test.json';
-import rawNbaProjectionsFixture from './__fixtures__/sleeper-nba-projections.raw.test.json';
-import rawNbaStatsFixture from './__fixtures__/sleeper-nba-stats.raw.test.json';
-import rawNbaScoresFixture from './__fixtures__/sleeper-nba-scores.raw.test.json';
-import { AxiosResponse } from 'axios';
+import { SleeperProjectionResponse, SleeperStatResponse } from './entities/sleeper.entity';
+import { SleeperService } from './sleeper.service';
 
 describe('SleeperService', () => {
   let service: SleeperService;
@@ -51,7 +49,7 @@ describe('SleeperService', () => {
 
   it('should return NFL state', async () => {
     httpService.get.mockReturnValueOnce(of(mockAxiosResponse(mockState)));
-    const result = await service.getNflState();
+    const result = await service.getStateForSport();
     expect(result).toEqual(mockState);
   });
 
@@ -109,23 +107,29 @@ describe('SleeperService', () => {
   describe('NBA', () => {
     it('should return NBA state pruned to the fields sync uses', async () => {
       httpService.get.mockReturnValueOnce(of(mockAxiosResponse(mockState)));
-      const result = await service.getNbaState();
+      const result = await service.getStateForSport(SportLeague.NBA);
       expect(result).toEqual({
         week: mockState.week,
         season: mockState.season,
         season_type: mockState.season_type,
+        display_week: mockState.display_week,
+        league_season: mockState.league_season,
+        leg: mockState.leg
       });
       expect(httpService.get).toHaveBeenCalledWith('https://api.sleeper.app/v1/state/nba');
     });
 
     it('should accept an off-season state', async () => {
       httpService.get.mockReturnValueOnce(
-        of(mockAxiosResponse({ week: 0, season: '2026', season_type: 'off' })),
+        of(mockAxiosResponse({ ...mockState, season_type: 'off', season: '2026', week: 0 })),
       );
-      await expect(service.getNbaState()).resolves.toEqual({
+      await expect(service.getStateForSport(SportLeague.NBA)).resolves.toEqual({
         week: 0,
         season: '2026',
         season_type: 'off',
+        display_week: mockState.display_week,
+        league_season: mockState.league_season,
+        leg: mockState.leg,
       });
     });
 
@@ -137,7 +141,7 @@ describe('SleeperService', () => {
       ['missing season type', { week: 3, season: '2026' }],
     ])('should reject a malformed NBA state (%s)', async (_label, body) => {
       httpService.get.mockReturnValueOnce(of(mockAxiosResponse(body)));
-      await expect(service.getNbaState()).rejects.toThrow();
+      await expect(service.getStateForSport(SportLeague.NBA)).rejects.toThrow();
     });
 
     it('should return the games for an NBA week, pruned to the fields we use', async () => {
