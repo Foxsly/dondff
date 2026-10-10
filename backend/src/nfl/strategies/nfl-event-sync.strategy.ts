@@ -16,11 +16,11 @@ export class NflEventSyncStrategy implements IEventSyncStrategy {
     const sleeperWeek = isPost ? displayWeek - 18 : displayWeek;
     const seasonType = isPost ? 'post' : 'regular';
 
-    const dates = await this.sleeperService.getNflWeekGameDates(
-      seasonYear,
-      sleeperWeek,
-      seasonType,
-    );
+    const schedule = await this.sleeperService.getNflSchedule(seasonYear, seasonType);
+    // Canceled games (e.g. unused playoff placeholders) don't define the week
+    const dates = schedule
+      .filter((game) => game.week === sleeperWeek && game.status !== 'canceled')
+      .map((game) => game.date);
     if (dates.length === 0) return [];
 
     const sorted = [...dates].sort();

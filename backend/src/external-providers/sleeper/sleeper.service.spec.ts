@@ -4,7 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AxiosResponse } from 'axios';
 import { of } from 'rxjs';
 import rawNbaProjectionsFixture from './__fixtures__/sleeper-nba-projections.raw.test.json';
-import rawNbaScoresFixture from './__fixtures__/sleeper-nba-scores.raw.test.json';
+import rawNbaScheduleFixture from './__fixtures__/sleeper-nba-schedule.raw.test.json';
 import rawNbaStatsFixture from './__fixtures__/sleeper-nba-stats.raw.test.json';
 import rawProjectionsFixture from './__fixtures__/sleeper-projections.raw.test.json';
 import projectionsFixture from './__fixtures__/sleeper-projections.transformed.test.json';
@@ -81,27 +81,36 @@ describe('SleeperService', () => {
     ).toEqual(expectedStatsResponse);
   });
 
-  it('should return NFL week game dates from the GraphQL scores endpoint', async () => {
-    httpService.post.mockReturnValueOnce(
+  it('should return the NFL season schedule, keeping playoff placeholder rows', async () => {
+    const schedule = [
+      { status: 'complete', date: '2026-01-10', home: 'CAR', week: 1, game_id: '202530105', away: 'LAR' },
+      {
+        status: 'canceled',
+        date: '2026-02-08',
+        home: 'AFC Championship (win)',
+        week: 4,
+        game_id: '202530400',
+        away: 'NFC Championship (win)',
+      },
+    ];
+    httpService.get.mockReturnValueOnce(of(mockAxiosResponse(schedule)));
+
+    const result = await service.getNflSchedule(2025, 'post');
+
+    expect(httpService.get).toHaveBeenCalledWith('https://api.sleeper.com/schedule/nfl/post/2025');
+    expect(result).toEqual(schedule);
+  });
+
+  it('should reject an NFL schedule game with a malformed date', async () => {
+    httpService.get.mockReturnValueOnce(
       of(
-        mockAxiosResponse({
-          data: {
-            scores: [
-              { date: '2025-09-04', status: 'pre_game' },
-              { date: '2025-09-07', status: 'pre_game' },
-              { date: '2025-09-08', status: 'pre_game' },
-            ],
-          },
-        }),
+        mockAxiosResponse([
+          { status: 'pre_game', date: '', home: 'KC', week: 1, game_id: '202610101', away: 'BUF' },
+        ]),
       ),
     );
 
-    const result = await service.getNflWeekGameDates(2025, 1, 'regular');
-
-    expect(result).toEqual(['2025-09-04', '2025-09-07', '2025-09-08']);
-    expect(httpService.post).toHaveBeenCalledWith('https://sleeper.com/graphql', {
-      query: expect.stringContaining('batch_scores'),
-    });
+    await expect(service.getNflSchedule(2026, 'regular')).rejects.toThrow();
   });
 
   describe('NBA', () => {
@@ -144,31 +153,40 @@ describe('SleeperService', () => {
       await expect(service.getStateForSport(SportLeague.NBA)).rejects.toThrow();
     });
 
-    it('should return the games for an NBA week, pruned to the fields we use', async () => {
-      httpService.post.mockReturnValueOnce(of(mockAxiosResponse(rawNbaScoresFixture)));
+    it('should return the NBA season schedule, pruned to the fields we use', async () => {
+      httpService.get.mockReturnValueOnce(of(mockAxiosResponse(rawNbaScheduleFixture)));
 
-      const result = await service.getNbaWeekGames(2025, 10, 'regular');
+      const result = await service.getNbaSchedule(2025, 'regular');
 
+      expect(httpService.get).toHaveBeenCalledWith(
+        'https://api.sleeper.com/schedule/nba/regular/2025',
+      );
+      // Box-score fields on completed games (points, starters, ...) are dropped
       expect(result).toEqual([
         {
           game_id: '1261029462443565056',
           date: '2025-12-25',
+          week: 10,
           status: 'complete',
-          start_time: 1766682000000,
-          metadata: { home_team: { team: 'NYK' }, away_team: { team: 'CLE' } },
+          home: { team: 'NYK' },
+          away: { team: 'CLE' },
         },
         {
-          game_id: '1261029463890599936',
-          date: '2025-12-25',
-          status: 'complete',
-          start_time: 1766691000000,
-          metadata: { home_team: { team: 'OKC' }, away_team: { team: 'SAS' } },
+          game_id: '1261814864452517888',
+          date: '2026-01-08',
+          week: 12,
+          status: 'postponed',
+          home: { team: 'CHI' },
+          away: { team: 'MIA' },
         },
       ]);
-      const [, body] = httpService.post.mock.calls[0];
-      expect((body as { query: string }).query).toContain(
-        'scores(sport: "nba", season_type: "regular", season: "2025", week: 10)',
-      );
+    });
+
+    it('should reject a schedule game without a week', async () => {
+      const { week, ...noWeek } = rawNbaScheduleFixture[0];
+      httpService.get.mockReturnValueOnce(of(mockAxiosResponse([noWeek])));
+
+      await expect(service.getNbaSchedule(2025, 'regular')).rejects.toThrow();
     });
 
     it('should return per-game projections, dropping rows with no projected stats', async () => {

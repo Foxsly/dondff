@@ -62,24 +62,3 @@ export interface ISleeperNbaPlayerEntry<TStats> {
 
 export type SleeperNbaProjectionResponse = ISleeperNbaPlayerEntry<ISleeperNbaStatLine>[];
 export type SleeperNbaStatResponse = ISleeperNbaPlayerEntry<ISleeperNbaGameStats>[];
-
-// -----------------------------
-// NBA week schedule (GraphQL: batch_scores)
-// -----------------------------
-export interface ISleeperNbaGame {
-  game_id: string & tags.MinLength<1>;
-  date: string & tags.Format<'date'>;
-  status: string & tags.MinLength<1>;
-  /** Scheduled tip-off, epoch ms. */
-  start_time: number;
-  metadata: {
-    home_team: { team: string & tags.MinLength<2> & tags.MaxLength<3> };
-    away_team: { team: string & tags.MinLength<2> & tags.MaxLength<3> };
-  };
-}
-
-export interface SleeperNbaScoresResponse {
-  data: {
-    scores: ISleeperNbaGame[];
-  };
-}

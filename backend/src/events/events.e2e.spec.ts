@@ -32,7 +32,10 @@ describe('Event Groups (e2e)', () => {
   const mockNflState = (overrides: Partial<{ week: number; season: string }> = {}) => {
     nock('https://api.sleeper.app').get(SLEEPER_STATE_URL).reply(200, {
       week: 1,
+      leg: 1,
+      display_week: 1,
       season: '2025',
+      league_season: '2025',
       season_type: 'regular',
       ...overrides,
     });
@@ -43,14 +46,27 @@ describe('Event Groups (e2e)', () => {
 
   const isoDay = (d: string | Date) => new Date(d).toISOString().slice(0, 10);
 
-  const mockNflScores = (dates: string[]) => {
-    nock('https://sleeper.com')
-      .post('/graphql')
-      .reply(200, {
-        data: {
-          scores: dates.map((date) => ({ date, status: 'pre_game' })),
-        },
-      });
+  /**
+   * The 2025 regular-season schedule: `dates` are the given week's games, plus a
+   * canceled game in that week and a game the following week, both later
+   * than every date in `dates`, which must not affect the week's range.
+   */
+  const mockNflSchedule = (dates: string[], week = 1) => {
+    const game = (w: number, date: string, status: string, i: number) => ({
+      status,
+      date,
+      home: 'KC',
+      week: w,
+      game_id: `2025${w}${status}${i}`,
+      away: 'BUF',
+    });
+    nock('https://api.sleeper.com')
+      .get('/schedule/nfl/regular/2025')
+      .reply(200, [
+        ...dates.map((date, i) => game(week, date, 'pre_game', i)),
+        game(week, dateStr(60), 'canceled', 0),
+        game(week + 1, dateStr(90), 'pre_game', 0),
+      ]);
   };
 
   describe('NFL', () => {
@@ -59,7 +75,7 @@ describe('Event Groups (e2e)', () => {
 
     it('creates an event group with seasonYear from Sleeper state and real week dates', async () => {
       mockNflState();
-      mockNflScores(WEEK_1_DATES);
+      mockNflSchedule(WEEK_1_DATES);
 
       const res = await request(app.getHttpServer()).get('/event-groups/NFL').expect(200);
 
@@ -84,7 +100,7 @@ describe('Event Groups (e2e)', () => {
 
       // with-dates triggers a re-sync, so re-arm the Sleeper mocks
       mockNflState();
-      mockNflScores(WEEK_1_DATES);
+      mockNflSchedule(WEEK_1_DATES);
       const withDates = await request(app.getHttpServer())
         .get('/event-groups/NFL/with-dates')
         .expect(200);
@@ -96,12 +112,12 @@ describe('Event Groups (e2e)', () => {
 
     it('re-sync is idempotent and preserves the group id and seasonYear', async () => {
       mockNflState();
-      mockNflScores(WEEK_1_DATES);
+      mockNflSchedule(WEEK_1_DATES);
       const first = await request(app.getHttpServer()).get('/event-groups/NFL').expect(200);
       const firstGroup = first.body.find((g: any) => g.name === 'NFL Week 1');
 
       mockNflState();
-      mockNflScores(WEEK_1_DATES);
+      mockNflSchedule(WEEK_1_DATES);
       const second = await request(app.getHttpServer()).get('/event-groups/NFL').expect(200);
       const secondGroup = second.body.find((g: any) => g.name === 'NFL Week 1');
 
@@ -128,15 +144,15 @@ describe('Event Groups (e2e)', () => {
 
     it('tags each week of the same season with the same seasonYear', async () => {
       mockNflState({ week: 1 });
-      mockNflScores(WEEK_1_DATES);
+      mockNflSchedule(WEEK_1_DATES);
       await request(app.getHttpServer()).get('/event-groups/NFL').expect(200);
 
       mockNflState({ week: 2 });
-      mockNflScores(WEEK_2_DATES);
+      mockNflSchedule(WEEK_2_DATES, 2);
       await request(app.getHttpServer()).get('/event-groups/NFL').expect(200);
 
       mockNflState({ week: 2 });
-      mockNflScores(WEEK_2_DATES);
+      mockNflSchedule(WEEK_2_DATES, 2);
       const res = await request(app.getHttpServer()).get('/event-groups/NFL').expect(200);
 
       expect(res.body.map((g: any) => g.name).sort()).toEqual(['NFL Week 1', 'NFL Week 2']);
@@ -145,13 +161,25 @@ describe('Event Groups (e2e)', () => {
       }
     });
 
-    it('skips the event and group entirely when the week has no game dates', async () => {
+    it('skips the event and group entirely when the week has only canceled games', async () => {
       mockNflState();
-      mockNflScores([]);
+      mockNflSchedule([]);
 
       const res = await request(app.getHttpServer()).get('/event-groups/NFL').expect(200);
 
       expect(res.body).toEqual([]);
+    });
+
+    it('returns the error contract and creates nothing when the schedule is malformed', async () => {
+      mockNflState();
+      nock('https://api.sleeper.com')
+        .get('/schedule/nfl/regular/2025')
+        .reply(200, [{ status: 'pre_game', home: 'KC', week: 1, game_id: '202510101', away: 'BUF' }]);
+
+      const res = await request(app.getHttpServer()).get('/event-groups/NFL').expect(500);
+
+      expect(res.body.statusCode).toBe(500);
+      expect(await db.selectFrom('eventGroup').selectAll().execute()).toEqual([]);
     });
   });
 

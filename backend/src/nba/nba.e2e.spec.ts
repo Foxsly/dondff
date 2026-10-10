@@ -46,12 +46,21 @@ const sleeperRow = (
   };
 };
 
-const sleeperGame = (gameId: string, date: string, away: string, home: string) => ({
-  game_id: gameId,
+/** A raw Sleeper schedule row; completed games also carry box-score fields. */
+const sleeperGame = (
+  gameId: string,
+  week: number,
+  date: string,
+  away: string,
+  home: string,
+  status = 'pre_game',
+) => ({
+  status,
   date,
-  status: 'pre_game',
-  start_time: 1766682000000,
-  metadata: { away_team: { team: away }, home_team: { team: home }, channel: 'ESPN' },
+  home: { team: home, record: '10-5' },
+  week,
+  game_id: gameId,
+  away: { team: away, record: '7-8' },
 });
 
 describe('NBA (e2e)', () => {
@@ -121,22 +130,26 @@ describe('NBA (e2e)', () => {
       .expect(200);
 
   describe('GET /event-groups/NBA', () => {
-    it('creates a group per Sleeper week with one event per game', async () => {
+    it('creates a group per Sleeper week with one event per game, skipping canceled games', async () => {
       nock(SLEEPER)
         .get('/v1/state/nba')
-        .reply(200, { week: 10, season: '2025', season_type: 'regular' });
-      nock('https://sleeper.com')
-        .post('/graphql', (body) => body.query.includes('week: 10'))
         .reply(200, {
-          data: {
-            scores: [
-              sleeperGame('g1', '2025-12-22', 'DET', 'BOS'),
-              sleeperGame('g2', '2025-12-28', 'CLE', 'NYK'),
-            ],
-          },
-        })
-        .post('/graphql', (body) => body.query.includes('week: 11'))
-        .reply(200, { data: { scores: [] } });
+          week: 10,
+          leg: 10,
+          display_week: 10,
+          season: '2025',
+          league_season: '2025',
+          season_type: 'regular',
+        });
+      nock('https://api.sleeper.com')
+        .get('/schedule/nba/regular/2025')
+        .reply(200, [
+          sleeperGame('g0', 9, '2025-12-21', 'LAL', 'GSW', 'complete'),
+          sleeperGame('g1', 10, '2025-12-22', 'DET', 'BOS'),
+          sleeperGame('g2', 10, '2025-12-28', 'CLE', 'NYK'),
+          sleeperGame('gx', 10, '2025-12-27', 'STR', 'STP', 'canceled'),
+          sleeperGame('g12', 12, '2026-01-05', 'PHX', 'DEN'),
+        ]);
 
       const res = await request(app.getHttpServer()).get('/event-groups/NBA').expect(200);
 
@@ -161,6 +174,25 @@ describe('NBA (e2e)', () => {
       const res = await request(app.getHttpServer()).get('/event-groups/NBA').expect(500);
 
       expect(res.body.statusCode).toBe(500);
+    });
+
+    it('returns the error contract and creates nothing when the schedule is malformed', async () => {
+      nock(SLEEPER).get('/v1/state/nba').reply(200, {
+        week: 10,
+        leg: 10,
+        display_week: 10,
+        season: '2025',
+        league_season: '2025',
+        season_type: 'regular',
+      });
+      nock('https://api.sleeper.com')
+        .get('/schedule/nba/regular/2025')
+        .reply(200, [{ game_id: 'g1', date: '2025-12-22', status: 'pre_game' }]);
+
+      const res = await request(app.getHttpServer()).get('/event-groups/NBA').expect(500);
+
+      expect(res.body.statusCode).toBe(500);
+      expect(await db.selectFrom('eventGroup').selectAll().execute()).toEqual([]);
     });
   });
 
@@ -222,9 +254,25 @@ describe('NBA (e2e)', () => {
           projectedPoints: 21,
           oppTeam: 'BOS, MIA',
         }),
-        expect.objectContaining({ playerId: 'big', position: 'F', projectedPoints: 18 }),
         expect.objectContaining({ playerId: 'pf', position: 'F', projectedPoints: 13 }),
       ]);
+    });
+
+    it("pools players by primary position only, not every fantasy position they're eligible for", async () => {
+      const group = await createEventGroup(WEEK_NAME, ['2025-12-22', '2025-12-28']);
+      mockProjections();
+
+      const pool = async (position: string) =>
+        (
+          await request(app.getHttpServer())
+            .get(`/players/projections/2025/${group.eventGroupId}/${position}`)
+            .query({ sportLeague: 'NBA' })
+            .expect(200)
+        ).body.map((p: any) => p.playerId);
+
+      // The SF/SG wing is not a G, and the C/PF big is not an F
+      expect(await pool('G')).toEqual([]);
+      expect(await pool('C')).toEqual(['big']);
     });
 
     it('rejects an NBA event group that is not a Sleeper week', async () => {
@@ -250,8 +298,8 @@ describe('NBA (e2e)', () => {
         .expect(200);
 
       expect(res.body.position).toBe('F');
-      expect(res.body.players.map((p: any) => p.playerId).sort()).toEqual(['big', 'pf']);
-      expect(res.body.boxes).toHaveLength(2);
+      expect(res.body.players.map((p: any) => p.playerId).sort()).toEqual(['pf']);
+      expect(res.body.boxes).toHaveLength(1);
       // The board never reveals which player is in which case
       for (const box of res.body.boxes) {
         expect(box).not.toHaveProperty('playerId');
@@ -260,9 +308,10 @@ describe('NBA (e2e)', () => {
   });
 
   describe('one player per team', () => {
-    // A wing (SF/SG) is on both the G and F boards when both are opened
-    // before either slot is filled; finishing one must lock out the other.
-    const openBothBoards = async () => {
+    // Pools are by primary position, so a player normally sits on one board only.
+    // The wing (primary SF) is on the F board; drafting them at G as well stands in
+    // for Sleeper changing their primary position after one slot was filled.
+    const openForwardBoard = async () => {
       const group = await createEventGroup(WEEK_NAME, ['2025-12-22', '2025-12-28']);
       nock(SLEEPER)
         .persist()
@@ -270,18 +319,16 @@ describe('NBA (e2e)', () => {
         .query({ season_type: 'regular' })
         .reply(200, [
           sleeperRow('wing', 'Ausar Thompson', ['SF', 'SG'], '2025-12-22', 'BOS', { pts: 20 }),
-          sleeperRow('pg', 'Point Guard', ['PG'], '2025-12-22', 'BOS', { pts: 18 }),
+          sleeperRow('sf', 'Small Forward', ['SF'], '2025-12-22', 'BOS', { pts: 14 }),
           sleeperRow('big', 'Jalen Duren', ['C', 'PF'], '2025-12-22', 'BOS', { pts: 12 }),
           sleeperRow('pf', 'Tobias Harris', ['PF'], '2025-12-22', 'BOS', { pts: 16 }),
         ]);
       const { teamId } = await createNbaTeam(group.eventGroupId);
-      for (const position of ['G', 'F']) {
-        const board = await request(app.getHttpServer())
-          .get(`/teams/${teamId}/cases`)
-          .query({ position })
-          .expect(200);
-        expect(board.body.players.map((p: any) => p.playerId)).toContain('wing');
-      }
+      const board = await request(app.getHttpServer())
+        .get(`/teams/${teamId}/cases`)
+        .query({ position: 'F' })
+        .expect(200);
+      expect(board.body.players.map((p: any) => p.playerId).sort()).toEqual(['pf', 'sf', 'wing']);
       return teamId;
     };
 
@@ -291,7 +338,7 @@ describe('NBA (e2e)', () => {
     };
 
     it('rejects assigning a player already filling another slot with 409', async () => {
-      const teamId = await openBothBoards();
+      const teamId = await openForwardBoard();
       await draft(teamId, 'G', 'wing', 'Ausar Thompson');
 
       const res = await request(app.getHttpServer())
@@ -304,7 +351,7 @@ describe('NBA (e2e)', () => {
     });
 
     it('rejects keeping a case holding an already-drafted player, leaving the board as it was', async () => {
-      const teamId = await openBothBoards();
+      const teamId = await openForwardBoard();
       await draft(teamId, 'G', 'wing', 'Ausar Thompson');
 
       // Put the F board in its endgame: the wing's case selected, one other case left.
@@ -396,7 +443,7 @@ describe('NBA (e2e)', () => {
       ).status;
 
     it('accepting an offer for an already-drafted player leaves the offer pending and the entry open', async () => {
-      const teamId = await openBothBoards();
+      const teamId = await openForwardBoard();
       await draft(teamId, 'G', 'wing', 'Ausar Thompson');
       const { offerId, teamEntryId } = await pendingOffer(teamId, 'F', 'wing', 'Ausar Thompson');
 
@@ -416,7 +463,7 @@ describe('NBA (e2e)', () => {
     });
 
     it('accepts an offer only once when accept is sent twice at the same time', async () => {
-      const teamId = await openBothBoards();
+      const teamId = await openForwardBoard();
       const { offerId } = await pendingOffer(teamId, 'F', 'pf', 'Tobias Harris');
 
       const results = await Promise.all(
@@ -439,14 +486,14 @@ describe('NBA (e2e)', () => {
     it('cannot accept an offer that a reject already moved on, even holding a stale read', async () => {
       // The interleaving PGlite cannot produce over HTTP: accept read the offer as
       // pending, then a reject rejected it and created a replacement.
-      const teamId = await openBothBoards();
+      const teamId = await openForwardBoard();
       const stale = await pendingOffer(teamId, 'F', 'pf', 'Tobias Harris');
       await db
         .updateTable('teamEntryOffer')
         .set({ status: 'rejected' })
         .where('offerId', '=', stale.offerId)
         .execute();
-      const replacement = await pendingOffer(teamId, 'F', 'big', 'Jalen Duren');
+      const replacement = await pendingOffer(teamId, 'F', 'sf', 'Small Forward');
       const offers = app.get(TeamsEntryRepository);
 
       expect(await offers.updateOfferStatus(stale.offerId, 'accepted')).toBeNull();
@@ -455,7 +502,7 @@ describe('NBA (e2e)', () => {
     });
 
     it('lets only one of two simultaneous assignments of the same player through', async () => {
-      const teamId = await openBothBoards();
+      const teamId = await openForwardBoard();
 
       const results = await Promise.all(
         ['G', 'F'].map((position) =>

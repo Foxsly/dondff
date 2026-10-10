@@ -1,0 +1,142 @@
+[
+  {
+    "status": "complete",
+    "date": "2025-12-25",
+    "home": {
+      "on_court": [
+        "2742",
+        "1975",
+        "1613",
+        "1831",
+        "1967"
+      ],
+      "points": 126,
+      "record": "53-29",
+      "scoring": [
+        {
+          "number": 1,
+          "points": 23,
+          "sequence": 1,
+          "type": "quarter"
+        },
+        {
+          "number": 2,
+          "points": 37,
+          "sequence": 2,
+          "type": "quarter"
+        },
+        {
+          "number": 3,
+          "points": 24,
+          "sequence": 3,
+          "type": "quarter"
+        },
+        {
+          "number": 4,
+          "points": 42,
+          "sequence": 4,
+          "type": "quarter"
+        }
+      ],
+      "starters": [
+        "1803",
+        "1975",
+        "1613",
+        "1831",
+        "1967"
+      ],
+      "team": "NYK"
+    },
+    "week": 10,
+    "game_id": "1261029462443565056",
+    "away": {
+      "on_court": [
+        "1845",
+        "1798",
+        "2259",
+        "2007",
+        "2139"
+      ],
+      "points": 124,
+      "record": "52-30",
+      "scoring": [
+        {
+          "number": 1,
+          "points": 38,
+          "sequence": 1,
+          "type": "quarter"
+        },
+        {
+          "number": 2,
+          "points": 20,
+          "sequence": 2,
+          "type": "quarter"
+        },
+        {
+          "number": 3,
+          "points": 38,
+          "sequence": 3,
+          "type": "quarter"
+        },
+        {
+          "number": 4,
+          "points": 28,
+          "sequence": 4,
+          "type": "quarter"
+        }
+      ],
+      "starters": [
+        "1845",
+        "1787",
+        "2007",
+        "2139",
+        "2008"
+      ],
+      "team": "CLE"
+    }
+  },
+  {
+    "status": "postponed",
+    "date": "2026-01-08",
+    "home": {
+      "on_court": [
+        "2145",
+        "2835",
+        "2120",
+        "1998",
+        "1486"
+      ],
+      "points": 0,
+      "record": "31-51",
+      "starters": [
+        "2145",
+        "2835",
+        "2120",
+        "1998",
+        "1486"
+      ],
+      "team": "CHI"
+    },
+    "week": 12,
+    "game_id": "1261814864452517888",
+    "away": {
+      "on_court": [
+        "2301",
+        "2086",
+        "1637",
+        "1846",
+        "1525"
+      ],
+      "points": 0,
+      "record": "43-39",
+      "starters": [
+        "2301",
+        "2086",
+        "1637",
+        "1846",
+        "1525"
+      ],
+      "team": "MIA"
+    }
+  }
+]

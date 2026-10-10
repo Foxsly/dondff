@@ -91,8 +91,10 @@ per interface picks it by `SportLeague`. An unregistered sport throws (HTTP 500)
 - **Weeks.** Event groups are Sleeper NBA fantasy weeks, named with the season because
   group lookup matches on name only: `NBA 2025-26 Week 10`, `NBA 2025-26 Playoffs Week 1`
   (`nba/nba-week.util.ts`). Sync creates the current and next week (regular-season week 1
-  during the preseason); every game in the week is an event (`externalEventId` = Sleeper
-  `game_id`). Opening week is short (starts on the season's first game day).
+  during the preseason) from one season-schedule call
+  (`api.sleeper.com/schedule/nba/{regular|post}/{season}`); every non-canceled game in the
+  week is an event (`externalEventId` = Sleeper `game_id`). Opening week is short (starts on
+  the season's first game day).
 - **Positions.** Eligibility uses Sleeper `fantasy_positions`: G = PG/SG, F = SF/PF, C = C.
   A multi-position player only appears in the pool that aligns with their primary position
 - **Scoring.** Sleeper default points (`pts_std`): PTS 0.5, REB 1, AST 1, STL 2, BLK 2,

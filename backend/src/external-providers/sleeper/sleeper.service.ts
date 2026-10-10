@@ -6,29 +6,28 @@ import {
   ISleeperPlayerEntry,
   ISleeperState,
   SleeperProjectionResponse,
-  SleeperScoresResponse,
+  SleeperNbaScheduleResponse,
+  SleeperNflScheduleResponse,
   SleeperStatResponse,
 } from './entities/sleeper.entity';
 import {
   SleeperNbaProjectionResponse,
-  SleeperNbaScoresResponse,
   SleeperNbaStatResponse,
-  ISleeperNbaGame,
 } from './entities/sleeper-nba.entity';
 import typia from 'typia';
 
 @Injectable()
 export class SleeperService {
   private readonly BASE_URL = 'https://api.sleeper.app';
-  private readonly GRAPHQL_URL = 'https://sleeper.com/graphql';
+  private readonly SCHEDULE_URL = 'https://api.sleeper.com/schedule';
 
   // Create transformer functions
   private assertSleeperStats = typia.misc.createAssertPrune<SleeperStatResponse>();
   private assertSleeperProjections = typia.misc.createAssertPrune<SleeperProjectionResponse>();
-  private assertSleeperScores = typia.misc.createAssertPrune<SleeperScoresResponse>();
   private assertSleeperNbaProjections = typia.misc.createAssertPrune<SleeperNbaProjectionResponse>();
   private assertSleeperNbaStats = typia.misc.createAssertPrune<SleeperNbaStatResponse>();
-  private assertSleeperNbaScores = typia.misc.createAssertPrune<SleeperNbaScoresResponse>();
+  private assertSleeperNflSchedule = typia.misc.createAssertPrune<SleeperNflScheduleResponse>();
+  private assertSleeperNbaSchedule = typia.misc.createAssertPrune<SleeperNbaScheduleResponse>();
   private assertSleeperState = typia.misc.createAssertPrune<ISleeperState>();
 
   constructor(
@@ -60,16 +59,17 @@ export class SleeperService {
     return this.assertSleeperState(sleeperState);
   }
 
-  async getNflWeekGameDates(
+  /**
+   * Every game in an NFL season, each tagged with its Sleeper week (playoff
+   * weeks restart at 1). Includes canceled games, such as playoff placeholders.
+   */
+  async getNflSchedule(
     season: number,
-    week: number,
     seasonType: 'regular' | 'post',
-  ): Promise<string[]> {
-    const query = `query batch_scores { scores(sport: "nfl", season_type: "${seasonType}", season: "${season}", week: ${week}) { date status } }`;
-    const response$ = this.httpService.post(this.GRAPHQL_URL, { query });
+  ): Promise<SleeperNflScheduleResponse> {
+    const response$ = this.httpService.get(`${this.SCHEDULE_URL}/nfl/${seasonType}/${season}`);
     const response = await lastValueFrom(response$);
-    const scores = this.assertSleeperScores(response.data).data.scores;
-    return scores.map((score) => score.date).filter((date) => date.trim().length > 0);
+    return this.assertSleeperNflSchedule(response.data);
   }
 
   async getPlayerProjections(
@@ -113,16 +113,17 @@ export class SleeperService {
     );
   }
 
-  /** Every game scheduled in a Sleeper NBA fantasy week (Monday–Sunday). */
-  async getNbaWeekGames(
+  /**
+   * Every game in an NBA season, each tagged with its Sleeper fantasy week
+   * (Monday–Sunday). Includes canceled and postponed games.
+   */
+  async getNbaSchedule(
     season: number,
-    week: number,
     seasonType: 'regular' | 'post',
-  ): Promise<ISleeperNbaGame[]> {
-    const query = `query batch_scores { scores(sport: "nba", season_type: "${seasonType}", season: "${season}", week: ${week}) { game_id date status start_time metadata } }`;
-    const response$ = this.httpService.post(this.GRAPHQL_URL, { query });
+  ): Promise<SleeperNbaScheduleResponse> {
+    const response$ = this.httpService.get(`${this.SCHEDULE_URL}/nba/${seasonType}/${season}`);
     const response = await lastValueFrom(response$);
-    return this.assertSleeperNbaScores(response.data).data.scores;
+    return this.assertSleeperNbaSchedule(response.data);
   }
 
   /**

@@ -83,15 +83,29 @@ export type SleeperProjectionResponse = ISleeperPlayerEntry<ISleeperPlayerProjec
 export type SleeperStatRequest = Pick<ISleeperPlayer, 'position'>;
 
 // -----------------------------
-// NFL week schedule (GraphQL: batch_scores)
+// Season schedule (api.sleeper.com/schedule/:sport/:season_type/:season)
 // -----------------------------
-export interface ISleeperScore {
-  date: string & tags.MinLength<10>;
+/**
+ * One game in a Sleeper season schedule. `week` is Sleeper's fantasy week
+ * (playoff weeks restart at 1). Completed games also carry box-score fields,
+ * which are pruned. NFL rows give each team as a plain string, NBA rows as
+ * an object, so the team shape is a parameter.
+ */
+export interface ISleeperScheduleGame<TTeam> {
+  game_id: string & tags.MinLength<1>;
+  date: string & tags.Format<'date'>;
+  week: number & tags.Type<'uint32'> & tags.Minimum<1>;
   status: string & tags.MinLength<1>;
+  home: TTeam;
+  away: TTeam;
 }
 
-export interface SleeperScoresResponse {
-  data: {
-    scores: ISleeperScore[];
-  };
-}
+/**
+ * NFL team values are not constrained: playoff placeholder rows use labels
+ * such as "TBD" or "AFC Championship (win)", and sync only uses dates.
+ */
+export type SleeperNflScheduleResponse = ISleeperScheduleGame<string>[];
+
+export type SleeperNbaScheduleResponse = ISleeperScheduleGame<{
+  team: string & tags.MinLength<2> & tags.MaxLength<3>;
+}>[];
