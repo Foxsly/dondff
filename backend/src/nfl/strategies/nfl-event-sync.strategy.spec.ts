@@ -1,3 +1,4 @@
+import { SportLeague } from '@/common/types/sport-league.type';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
 import { NflEventSyncStrategy } from './nfl-event-sync.strategy';
@@ -18,14 +19,11 @@ describe('NflEventSyncStrategy', () => {
   beforeEach(async () => {
     sleeperService = {
       getStateForSport: jest.fn(),
-      getNflSchedule: jest.fn(),
+      getScheduleForSport: jest.fn(),
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        NflEventSyncStrategy,
-        { provide: SleeperService, useValue: sleeperService },
-      ],
+      providers: [NflEventSyncStrategy, { provide: SleeperService, useValue: sleeperService }],
     }).compile();
 
     strategy = module.get(NflEventSyncStrategy);
@@ -38,7 +36,7 @@ describe('NflEventSyncStrategy', () => {
         season: '2025',
         season_type: 'regular',
       } as any);
-      sleeperService.getNflSchedule.mockResolvedValue([
+      sleeperService.getScheduleForSport.mockResolvedValue([
         game(1, '2025-09-08'),
         game(1, '2025-09-04'),
         game(1, '2025-09-07'),
@@ -47,7 +45,11 @@ describe('NflEventSyncStrategy', () => {
 
       const result = await strategy.fetchSyncData();
 
-      expect(sleeperService.getNflSchedule).toHaveBeenCalledWith(2025, 'regular');
+      expect(sleeperService.getScheduleForSport).toHaveBeenCalledWith(
+        SportLeague.NFL,
+        2025,
+        'regular',
+      );
       expect(result).toEqual([
         {
           name: 'NFL Week 1',
@@ -71,7 +73,7 @@ describe('NflEventSyncStrategy', () => {
         season: '2025',
         season_type: 'post',
       } as any);
-      sleeperService.getNflSchedule.mockResolvedValue([
+      sleeperService.getScheduleForSport.mockResolvedValue([
         game(1, '2026-01-10'),
         game(1, '2026-01-11'),
         game(2, '2026-01-17'),
@@ -79,7 +81,11 @@ describe('NflEventSyncStrategy', () => {
 
       const result = await strategy.fetchSyncData();
 
-      expect(sleeperService.getNflSchedule).toHaveBeenCalledWith(2025, 'post');
+      expect(sleeperService.getScheduleForSport).toHaveBeenCalledWith(
+        SportLeague.NFL,
+        2025,
+        'post',
+      );
       expect(result![0].name).toBe('NFL Week 19');
       expect(result![0].events[0].startDate).toBe('2026-01-10');
       expect(result![0].events[0].endDate).toBe('2026-01-11');
@@ -91,7 +97,7 @@ describe('NflEventSyncStrategy', () => {
         season: '2025',
         season_type: 'regular',
       } as any);
-      sleeperService.getNflSchedule.mockResolvedValue([game(2, '2025-09-11')]);
+      sleeperService.getScheduleForSport.mockResolvedValue([game(2, '2025-09-11')]);
 
       const result = await strategy.fetchSyncData();
 
@@ -104,7 +110,7 @@ describe('NflEventSyncStrategy', () => {
         season: '2025',
         season_type: 'post',
       } as any);
-      sleeperService.getNflSchedule.mockResolvedValue([
+      sleeperService.getScheduleForSport.mockResolvedValue([
         game(1, '2026-01-10', 'complete'),
         game(1, '2026-01-11', 'complete'),
         game(1, '2026-01-12', 'canceled'),
@@ -121,7 +127,7 @@ describe('NflEventSyncStrategy', () => {
         season: '2025',
         season_type: 'regular',
       } as any);
-      sleeperService.getNflSchedule.mockResolvedValue([game(1, '2025-09-04', 'canceled')]);
+      sleeperService.getScheduleForSport.mockResolvedValue([game(1, '2025-09-04', 'canceled')]);
 
       expect(await strategy.fetchSyncData()).toEqual([]);
     });

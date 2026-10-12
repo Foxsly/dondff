@@ -7,11 +7,11 @@ import {
   ISleeperNbaBoxStats,
   ISleeperNbaGameStats,
   ISleeperPlayerEntry,
+  ISleeperScheduleGame,
   ISleeperState,
-  SleeperNbaScheduleResponse,
   SleeperNbaScoredResponse,
-  SleeperNflScheduleResponse,
   SleeperProjectionResponse,
+  SleeperScheduleResponse,
   SleeperStatResponse,
 } from './entities/sleeper.entity';
 
@@ -56,8 +56,7 @@ export class SleeperService {
   private assertSleeperStats = typia.misc.createAssertPrune<SleeperStatResponse>();
   private assertSleeperProjections = typia.misc.createAssertPrune<SleeperProjectionResponse>();
   private assertSleeperNbaScored = typia.misc.createAssertPrune<SleeperNbaScoredResponse>();
-  private assertSleeperNflSchedule = typia.misc.createAssertPrune<SleeperNflScheduleResponse>();
-  private assertSleeperNbaSchedule = typia.misc.createAssertPrune<SleeperNbaScheduleResponse>();
+  private assertSleeperSchedule = typia.misc.createAssertPrune<SleeperScheduleResponse>();
   private assertSleeperState = typia.misc.createAssertPrune<ISleeperState>();
 
   constructor(
@@ -90,16 +89,27 @@ export class SleeperService {
   }
 
   /**
-   * Every game in an NFL season, each tagged with its Sleeper week (playoff
-   * weeks restart at 1). Includes canceled games, such as playoff placeholders.
+   * Every game in a season's schedule, each tagged with its Sleeper week
+   * (playoff weeks restart at 1). NBA rows arrive with `home`/`away` team
+   * objects and are flattened to strings, so both sports share one shape.
+   * Includes canceled games, such as NFL playoff placeholders.
    */
-  async getNflSchedule(
+  async getScheduleForSport(
+    sport: SportLeague,
     season: number,
     seasonType: 'regular' | 'post',
-  ): Promise<SleeperNflScheduleResponse> {
-    const response$ = this.httpService.get(`${this.SCHEDULE_URL}/nfl/${seasonType}/${season}`);
+  ): Promise<SleeperScheduleResponse> {
+    const response$ = this.httpService.get(
+      `${this.SCHEDULE_URL}/${sport.toLowerCase()}/${seasonType}/${season}`,
+    );
     const response = await lastValueFrom(response$);
-    return this.assertSleeperNflSchedule(response.data);
+    return this.assertSleeperSchedule(
+      response.data.map((game: ISleeperScheduleGame) => {
+        const team = (value: unknown): string =>
+          typeof value === 'string' ? value : (value as { team: string }).team;
+        return { ...game, home: team(game.home), away: team(game.away) };
+      }),
+    );
   }
 
   async getPlayerProjections(
@@ -141,19 +151,6 @@ export class SleeperService {
           })),
       ),
     );
-  }
-
-  /**
-   * Every game in an NBA season, each tagged with its Sleeper fantasy week
-   * (Monday–Sunday). Includes canceled and postponed games.
-   */
-  async getNbaSchedule(
-    season: number,
-    seasonType: 'regular' | 'post',
-  ): Promise<SleeperNbaScheduleResponse> {
-    const response$ = this.httpService.get(`${this.SCHEDULE_URL}/nba/${seasonType}/${season}`);
-    const response = await lastValueFrom(response$);
-    return this.assertSleeperNbaSchedule(response.data);
   }
 
   /**

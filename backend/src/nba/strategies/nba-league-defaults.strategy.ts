@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
 import { ILeagueDefaultsStrategy } from '@/leagues/strategies/league-defaults-strategy.interface';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class NbaLeagueDefaultsStrategy implements ILeagueDefaultsStrategy {

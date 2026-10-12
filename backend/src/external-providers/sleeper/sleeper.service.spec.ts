@@ -102,7 +102,7 @@ describe('SleeperService', () => {
     ];
     httpService.get.mockReturnValueOnce(of(mockAxiosResponse(schedule)));
 
-    const result = await service.getNflSchedule(2025, 'post');
+    const result = await service.getScheduleForSport(SportLeague.NFL, 2025, 'post');
 
     expect(httpService.get).toHaveBeenCalledWith('https://api.sleeper.com/schedule/nfl/post/2025');
     expect(result).toEqual(schedule);
@@ -117,7 +117,7 @@ describe('SleeperService', () => {
       ),
     );
 
-    await expect(service.getNflSchedule(2026, 'regular')).rejects.toThrow();
+    await expect(service.getScheduleForSport(SportLeague.NFL, 2026, 'regular')).rejects.toThrow();
   });
 
   describe('NBA', () => {
@@ -185,10 +185,10 @@ describe('SleeperService', () => {
       await expect(service.getStateForSport(SportLeague.NBA)).rejects.toThrow();
     });
 
-    it('should return the NBA season schedule, pruned to the fields we use', async () => {
+    it('should return the NBA season schedule, flattening team objects and pruning box-score fields', async () => {
       httpService.get.mockReturnValueOnce(of(mockAxiosResponse(rawNbaScheduleFixture)));
 
-      const result = await service.getNbaSchedule(2025, 'regular');
+      const result = await service.getScheduleForSport(SportLeague.NBA, 2025, 'regular');
 
       expect(httpService.get).toHaveBeenCalledWith(
         'https://api.sleeper.com/schedule/nba/regular/2025',
@@ -200,25 +200,58 @@ describe('SleeperService', () => {
           date: '2025-12-25',
           week: 10,
           status: 'complete',
-          home: { team: 'NYK' },
-          away: { team: 'CLE' },
+          home: 'NYK',
+          away: 'CLE',
         },
         {
           game_id: '1261814864452517888',
           date: '2026-01-08',
           week: 12,
           status: 'postponed',
-          home: { team: 'CHI' },
-          away: { team: 'MIA' },
+          home: 'CHI',
+          away: 'MIA',
         },
       ]);
+    });
+
+    it('should flatten NBA schedule home/away team objects to plain strings', async () => {
+      // Sleeper sends NBA teams as objects ({ team, record, points, ... }), unlike
+      // NFL rows which are already plain strings
+      httpService.get.mockReturnValueOnce(
+        of(
+          mockAxiosResponse([
+            {
+              status: 'complete',
+              date: '2025-12-25',
+              week: 10,
+              game_id: '1261029462443565056',
+              home: { team: 'NYK', record: '53-29', points: 126 },
+              away: { team: 'CLE', record: '52-30', points: 124 },
+            },
+          ]),
+        ),
+      );
+
+      const result = await service.getScheduleForSport(SportLeague.NBA, 2025, 'regular');
+
+      expect(result[0].home).toBe('NYK');
+      expect(result[0].away).toBe('CLE');
+      // The team object's extra fields (record, points) are pruned away too
+      expect(result[0]).toEqual({
+        game_id: '1261029462443565056',
+        date: '2025-12-25',
+        week: 10,
+        status: 'complete',
+        home: 'NYK',
+        away: 'CLE',
+      });
     });
 
     it('should reject a schedule game without a week', async () => {
       const { week, ...noWeek } = rawNbaScheduleFixture[0];
       httpService.get.mockReturnValueOnce(of(mockAxiosResponse([noWeek])));
 
-      await expect(service.getNbaSchedule(2025, 'regular')).rejects.toThrow();
+      await expect(service.getScheduleForSport(SportLeague.NBA, 2025, 'regular')).rejects.toThrow();
     });
 
     it('should return per-game projections, dropping rows with no projected stats', async () => {

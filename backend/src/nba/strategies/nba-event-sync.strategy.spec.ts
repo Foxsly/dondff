@@ -1,8 +1,9 @@
+import { SportLeague } from '@/common/types/sport-league.type';
 import { NbaEventSyncStrategy } from './nba-event-sync.strategy';
 import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
 import {
   ISleeperState,
-  SleeperNbaScheduleResponse,
+  SleeperScheduleResponse,
 } from '@/external-providers/sleeper/entities/sleeper.entity';
 
 const game = (
@@ -12,17 +13,17 @@ const game = (
   away: string,
   home: string,
   status = 'pre_game',
-): SleeperNbaScheduleResponse[number] => ({
+): SleeperScheduleResponse[number] => ({
   game_id: id,
   date,
   week,
   status,
-  home: { team: home },
-  away: { team: away },
+  home,
+  away,
 });
 
 describe('NbaEventSyncStrategy', () => {
-  let sleeper: { getStateForSport: jest.Mock; getNbaSchedule: jest.Mock };
+  let sleeper: { getStateForSport: jest.Mock; getScheduleForSport: jest.Mock };
   let strategy: NbaEventSyncStrategy;
 
   const state = (overrides: Partial<ISleeperState>) =>
@@ -34,13 +35,13 @@ describe('NbaEventSyncStrategy', () => {
     });
 
   beforeEach(() => {
-    sleeper = { getStateForSport: jest.fn(), getNbaSchedule: jest.fn() };
+    sleeper = { getStateForSport: jest.fn(), getScheduleForSport: jest.fn() };
     strategy = new NbaEventSyncStrategy(sleeper as unknown as SleeperService);
   });
 
   it('syncs the current and next regular-season week, one event per game', async () => {
     state({ week: 10 });
-    sleeper.getNbaSchedule.mockResolvedValueOnce([
+    sleeper.getScheduleForSport.mockResolvedValueOnce([
       game('g0', 9, '2025-12-21', 'LAL', 'GSW'),
       game('g1', 10, '2025-12-22', 'DET', 'BOS'),
       game('g2', 10, '2025-12-28', 'CLE', 'NYK'),
@@ -50,7 +51,7 @@ describe('NbaEventSyncStrategy', () => {
 
     const groups = await strategy.fetchSyncData();
 
-    expect(sleeper.getNbaSchedule.mock.calls).toEqual([[2025, 'regular']]);
+    expect(sleeper.getScheduleForSport.mock.calls).toEqual([[SportLeague.NBA, 2025, 'regular']]);
     expect(groups.map((g) => [g.name, g.seasonYear, g.events.map((e) => e.externalId)])).toEqual([
       ['NBA 2025-26 Week 10', 2025, ['g1', 'g2']],
       ['NBA 2025-26 Week 11', 2025, ['g3']],
@@ -66,7 +67,7 @@ describe('NbaEventSyncStrategy', () => {
 
   it('skips canceled games but keeps postponed ones', async () => {
     state({ week: 17 });
-    sleeper.getNbaSchedule.mockResolvedValueOnce([
+    sleeper.getScheduleForSport.mockResolvedValueOnce([
       game('allstar', 17, '2026-02-15', 'STR', 'STP', 'canceled'),
       game('g1', 17, '2026-02-12', 'DET', 'BOS', 'complete'),
       game('g2', 17, '2026-02-13', 'CHI', 'MIA', 'postponed'),
@@ -79,12 +80,12 @@ describe('NbaEventSyncStrategy', () => {
 
   it('skips a week with no games, or only canceled ones', async () => {
     state({ week: 25 });
-    sleeper.getNbaSchedule.mockResolvedValueOnce([game('g1', 25, '2026-04-12', 'DET', 'BOS')]);
+    sleeper.getScheduleForSport.mockResolvedValueOnce([game('g1', 25, '2026-04-12', 'DET', 'BOS')]);
 
     expect((await strategy.fetchSyncData()).map((g) => g.name)).toEqual(['NBA 2025-26 Week 25']);
 
     state({ week: 3, season_type: 'post' });
-    sleeper.getNbaSchedule.mockResolvedValueOnce([
+    sleeper.getScheduleForSport.mockResolvedValueOnce([
       game('g1', 3, '2026-04-27', 'NYK', 'ATL', 'complete'),
       game('g7', 4, '2026-05-04', 'NYK', 'ATL', 'canceled'),
     ]);
@@ -96,14 +97,14 @@ describe('NbaEventSyncStrategy', () => {
 
   it('syncs regular-season week 1 during the preseason', async () => {
     state({ week: 2, season: '2026', season_type: 'pre' });
-    sleeper.getNbaSchedule.mockResolvedValueOnce([
+    sleeper.getScheduleForSport.mockResolvedValueOnce([
       game('g1', 1, '2026-10-20', 'BOS', 'DET'),
       game('g2', 2, '2026-10-26', 'BOS', 'NYK'),
     ]);
 
     const groups = await strategy.fetchSyncData();
 
-    expect(sleeper.getNbaSchedule).toHaveBeenCalledWith(2026, 'regular');
+    expect(sleeper.getScheduleForSport).toHaveBeenCalledWith(SportLeague.NBA, 2026, 'regular');
     expect(groups.map((g) => [g.name, g.seasonYear, g.events.length])).toEqual([
       ['NBA 2026-27 Week 1', 2026, 1],
     ]);
@@ -111,11 +112,11 @@ describe('NbaEventSyncStrategy', () => {
 
   it('names playoff weeks separately', async () => {
     state({ week: 1, season_type: 'post' });
-    sleeper.getNbaSchedule.mockResolvedValueOnce([game('g1', 1, '2026-04-14', 'MIA', 'CHI')]);
+    sleeper.getScheduleForSport.mockResolvedValueOnce([game('g1', 1, '2026-04-14', 'MIA', 'CHI')]);
 
     const groups = await strategy.fetchSyncData();
 
-    expect(sleeper.getNbaSchedule).toHaveBeenCalledWith(2025, 'post');
+    expect(sleeper.getScheduleForSport).toHaveBeenCalledWith(SportLeague.NBA, 2025, 'post');
     expect(groups.map((g) => g.name)).toEqual(['NBA 2025-26 Playoffs Week 1']);
   });
 
@@ -123,6 +124,6 @@ describe('NbaEventSyncStrategy', () => {
     state({ season_type: 'off' });
 
     expect(await strategy.fetchSyncData()).toEqual([]);
-    expect(sleeper.getNbaSchedule).not.toHaveBeenCalled();
+    expect(sleeper.getScheduleForSport).not.toHaveBeenCalled();
   });
 });

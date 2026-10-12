@@ -86,30 +86,24 @@ export type SleeperStatRequest = Pick<ISleeperPlayer, 'position'>;
  * One game in a Sleeper season schedule. `week` is Sleeper's fantasy week
  * (playoff weeks restart at 1). Completed games also carry box-score fields,
  * which are pruned. NFL rows give each team as a plain string, NBA rows as
- * an object, so the team shape is a parameter.
+ * `{ team }` objects — the service flattens NBA rows to strings, so both
+ * sports share this one shape.
  */
-export interface ISleeperScheduleGame<TTeam> {
+export interface ISleeperScheduleGame {
   game_id: string & tags.MinLength<1>;
   date: string & tags.Format<'date'>;
   week: number & tags.Minimum<1>;
   status: string & tags.MinLength<1>;
-  home: TTeam;
-  away: TTeam;
+  home: string;
+  away: string;
 }
 
 /**
- * NFL team values are not constrained: playoff placeholder rows use labels
- * such as "TBD" or "AFC Championship (win)", and sync only uses dates.
+ * Every game in a Sleeper season schedule. NFL team values are not
+ * constrained: playoff placeholder rows use labels such as "TBD" or
+ * "AFC Championship (win)", and sync only uses dates.
  */
-export type SleeperNflScheduleResponse = ISleeperScheduleGame<string>[];
-
-/**
- * TODO transform this in sleeper.service.ts so that we can consolidate these
- * types and simplify the service (e.g. one getScheduleForSport(SportLeague) method)
- */
-export type SleeperNbaScheduleResponse = ISleeperScheduleGame<{
-  team: string & tags.MinLength<2> & tags.MaxLength<3>;
-}>[];
+export type SleeperScheduleResponse = ISleeperScheduleGame[];
 
 // -----------------------------
 // NBA Types

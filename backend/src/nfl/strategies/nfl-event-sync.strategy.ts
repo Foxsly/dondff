@@ -1,7 +1,10 @@
 import { SportLeague } from '@/common/types/sport-league.type';
 import { Injectable } from '@nestjs/common';
 import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
-import { IEventSyncStrategy, EventSyncGroup } from '@/events/strategies/event-sync-strategy.interface';
+import {
+  IEventSyncStrategy,
+  EventSyncGroup,
+} from '@/events/strategies/event-sync-strategy.interface';
 
 @Injectable()
 export class NflEventSyncStrategy implements IEventSyncStrategy {
@@ -16,7 +19,11 @@ export class NflEventSyncStrategy implements IEventSyncStrategy {
     const sleeperWeek = isPost ? displayWeek - 18 : displayWeek;
     const seasonType = isPost ? 'post' : 'regular';
 
-    const schedule = await this.sleeperService.getNflSchedule(seasonYear, seasonType);
+    const schedule = await this.sleeperService.getScheduleForSport(
+      SportLeague.NFL,
+      seasonYear,
+      seasonType,
+    );
     // Canceled games (e.g. unused playoff placeholders) don't define the week
     const dates = schedule
       .filter((game) => game.week === sleeperWeek && game.status !== 'canceled')

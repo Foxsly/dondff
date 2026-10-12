@@ -34,7 +34,11 @@ export class NbaEventSyncStrategy implements IEventSyncStrategy {
       return [];
     }
 
-    const schedule = await this.sleeperService.getNbaSchedule(seasonYear, seasonType);
+    const schedule = await this.sleeperService.getScheduleForSport(
+      SportLeague.NBA,
+      seasonYear,
+      seasonType,
+    );
     return weeks.flatMap((week) => {
       const games = schedule.filter((game) => game.week === week && game.status !== 'canceled');
       if (games.length === 0) return [];
@@ -45,7 +49,7 @@ export class NbaEventSyncStrategy implements IEventSyncStrategy {
           events: games.map((game) => ({
             externalId: game.game_id,
             externalSource: 'SLEEPER',
-            name: `${game.away.team} @ ${game.home.team}`,
+            name: `${game.away} @ ${game.home}`,
             startDate: game.date,
             endDate: game.date,
           })),
