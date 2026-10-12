@@ -11,7 +11,7 @@ import projectionsFixture from './__fixtures__/sleeper-projections.transformed.t
 import stateFixture from './__fixtures__/sleeper-state.test.json';
 import rawStatsFixture from './__fixtures__/sleeper-stats.raw.test.json';
 import statsFixture from './__fixtures__/sleeper-stats.transformed.test.json';
-import { SleeperProjectionResponse, SleeperStatResponse } from './entities/sleeper.entity';
+import { SleeperNflStatResponse } from './entities/sleeper.entity';
 import { SleeperService } from './sleeper.service';
 
 describe('SleeperService', () => {
@@ -56,7 +56,7 @@ describe('SleeperService', () => {
   it('should return player projections with transformed dates and season', async () => {
     httpService.get.mockReturnValueOnce(of(mockAxiosResponse(mockRawProjectionResponse)));
 
-    const result: SleeperProjectionResponse = await service.getPlayerProjections('WR', 2025, 4);
+    const result: SleeperNflStatResponse = await service.getPlayerProjections('WR', 2025, 4);
     expect(
       result.map((e) => ({
         ...e,
@@ -70,7 +70,7 @@ describe('SleeperService', () => {
   it('should return player stats with defaults and transformed dates', async () => {
     httpService.get.mockReturnValueOnce(of(mockAxiosResponse(mockRawStatResponse)));
 
-    const result: SleeperStatResponse = await service.getPlayerStatistics('WR', 2025, 4);
+    const result: SleeperNflStatResponse = await service.getPlayerStatistics('WR', 2025, 4);
     expect(
       result.map((e) => ({
         ...e,

@@ -35,22 +35,14 @@ export interface ISleeperPlayerMetadata {
 // -----------------------------
 // Base Stats
 // -----------------------------
-export interface IBaseSleeperPlayerStats {
+export interface ISleeperNflPlayerStats {
   pts_std: number;
   pts_half_ppr: number;
   pts_ppr: number;
 }
 
-// Stats for "stat" endpoint
-export interface ISleeperPlayerStats extends IBaseSleeperPlayerStats {
-  pos_rank_std?: number & tags.Minimum<1>;
-  pos_rank_half_ppr?: number & tags.Minimum<1>;
-  pos_rank_ppr?: number & tags.Minimum<1>;
-}
-
-// Stats for "projection" endpoint
-export interface ISleeperPlayerProjectionStats extends IBaseSleeperPlayerStats {
-  pos_adp_dd_ppr?: number & tags.Minimum<1>;
+export interface ISleeperNbaPlayerStats {
+  pts_std: number;
 }
 
 // -----------------------------
@@ -75,8 +67,8 @@ export interface ISleeperPlayerEntry<TStats> {
 // -----------------------------
 // Responses
 // -----------------------------
-export type SleeperStatResponse = ISleeperPlayerEntry<ISleeperPlayerStats>[];
-export type SleeperProjectionResponse = ISleeperPlayerEntry<ISleeperPlayerProjectionStats>[];
+export type SleeperNflStatResponse = ISleeperPlayerEntry<ISleeperNflPlayerStats>[];
+export type SleeperNbaStatResponse = ISleeperPlayerEntry<ISleeperNbaPlayerStats>[];
 export type SleeperStatRequest = Pick<ISleeperPlayer, 'position'>;
 
 // -----------------------------
@@ -146,4 +138,3 @@ export interface ISleeperNbaStatLine {
   pts_std: number;
 }
 
-export type SleeperNbaScoredResponse = ISleeperPlayerEntry<ISleeperNbaStatLine>[];

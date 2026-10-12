@@ -9,10 +9,9 @@ import {
   ISleeperPlayerEntry,
   ISleeperScheduleGame,
   ISleeperState,
-  SleeperNbaScoredResponse,
-  SleeperProjectionResponse,
+  SleeperNbaStatResponse,
+  SleeperNflStatResponse,
   SleeperScheduleResponse,
-  SleeperStatResponse,
 } from './entities/sleeper.entity';
 
 /**
@@ -53,9 +52,9 @@ export class SleeperService {
   private readonly SCHEDULE_URL = 'https://api.sleeper.com/schedule';
 
   // Create transformer functions
-  private assertSleeperStats = typia.misc.createAssertPrune<SleeperStatResponse>();
-  private assertSleeperProjections = typia.misc.createAssertPrune<SleeperProjectionResponse>();
-  private assertSleeperNbaScored = typia.misc.createAssertPrune<SleeperNbaScoredResponse>();
+  private assertSleeperStats = typia.misc.createAssertPrune<SleeperNflStatResponse>();
+  private assertSleeperProjections = typia.misc.createAssertPrune<SleeperNflStatResponse>();
+  private assertSleeperNbaScored = typia.misc.createAssertPrune<SleeperNbaStatResponse>();
   private assertSleeperSchedule = typia.misc.createAssertPrune<SleeperScheduleResponse>();
   private assertSleeperState = typia.misc.createAssertPrune<ISleeperState>();
 
@@ -116,7 +115,7 @@ export class SleeperService {
     position: string,
     season: number,
     week: number,
-  ): Promise<SleeperProjectionResponse> {
+  ): Promise<SleeperNflStatResponse> {
     const url = `${this.BASE_URL}/projections/nfl/${season}/${week}?season_type=regular&position=${position}&order_by=pts_ppr`;
     const response$ = this.httpService.get(url);
     const response = await lastValueFrom(response$);
@@ -132,7 +131,7 @@ export class SleeperService {
     season: number,
     week: number,
     seasonType: string = 'regular',
-  ): Promise<SleeperStatResponse> {
+  ): Promise<SleeperNflStatResponse> {
     const url = `${this.BASE_URL}/stats/nfl/${season}/${week}?season_type=${seasonType}&position=${position}&order_by=pts_ppr`;
     const response$ = this.httpService.get(url);
     const response = await lastValueFrom(response$);
@@ -161,7 +160,7 @@ export class SleeperService {
     season: number,
     week: number,
     seasonType: 'regular' | 'post' = 'regular',
-  ): Promise<SleeperNbaScoredResponse> {
+  ): Promise<SleeperNbaStatResponse> {
     const url = `${this.BASE_URL}/projections/nba/${season}/${week}?season_type=${seasonType}`;
     const response$ = this.httpService.get(url);
     const response = await lastValueFrom(response$);
@@ -188,7 +187,7 @@ export class SleeperService {
     season: number,
     week: number,
     seasonType: 'regular' | 'post' = 'regular',
-  ): Promise<SleeperNbaScoredResponse> {
+  ): Promise<SleeperNbaStatResponse> {
     const url = `${this.BASE_URL}/stats/nba/${season}/${week}?season_type=${seasonType}`;
     const response$ = this.httpService.get(url);
     const response = await lastValueFrom(response$);

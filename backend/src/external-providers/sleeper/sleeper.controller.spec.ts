@@ -1,12 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { SleeperController } from './sleeper.controller';
-import { SleeperService } from './sleeper.service';
 import {
   ISleeperState,
-  SleeperProjectionResponse,
-  SleeperStatResponse,
+  SleeperNflStatResponse,
   SleeperStatRequest,
 } from './entities/sleeper.entity';
+import { SleeperController } from './sleeper.controller';
+import { SleeperService } from './sleeper.service';
 
 describe('SleeperController', () => {
   let controller: SleeperController;
@@ -21,9 +20,9 @@ describe('SleeperController', () => {
     display_week: 3,
   };
 
-  const mockProjectionResponse: SleeperProjectionResponse = [
+  const mockProjectionResponse: SleeperNflStatResponse = [
     {
-      stats: { pts_std: 15, pts_half_ppr: 18, pts_ppr: 20, pos_adp_dd_ppr: 5 },
+      stats: { pts_std: 15, pts_half_ppr: 18, pts_ppr: 20},
       week: 3,
       season: 2025,
       season_type: 'regular',
@@ -46,9 +45,9 @@ describe('SleeperController', () => {
     },
   ];
 
-  const mockStatResponse: SleeperStatResponse = [
+  const mockStatResponse: SleeperNflStatResponse = [
     {
-      stats: { pts_std: 10, pts_half_ppr: 12, pts_ppr: 14, pos_rank_std: 2 },
+      stats: { pts_std: 10, pts_half_ppr: 12, pts_ppr: 14},
       week: 4,
       season: 2025,
       season_type: 'regular',
