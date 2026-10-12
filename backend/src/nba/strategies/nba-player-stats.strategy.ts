@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
 import {
+  ISleeperNbaStatLine,
   ISleeperPlayerEntry,
-
   SleeperNbaPosition,
 } from '@/external-providers/sleeper/entities/sleeper.entity';
 import { IPlayerStatsStrategy } from '@/player-stats/strategies/player-stats-strategy.interface';
@@ -13,7 +13,6 @@ import {
 } from '@/player-stats/entities/player-stats.entity';
 import { EventGroup } from '@/events/entities/event-group.entity';
 import { Event } from '@/events/entities/event.entity';
-import { calculateNbaFantasyPoints } from '@/nba/nba-scoring.util';
 import { parseNbaWeekName } from '@/nba/nba-week.util';
 
 /** Which Sleeper positions fill each DOND roster slot. */
@@ -58,7 +57,6 @@ export class NbaPlayerStatsStrategy implements IPlayerStatsStrategy {
     const eligible = SLOT_POSITIONS[position] ?? [];
     return this.toWeekLines(
       projections.filter((row) => eligible.includes(row.player.position as SleeperNbaPosition)),
-      (row) => calculateNbaFantasyPoints(row.stats),
     ).map((line) => ({
       playerId: line.playerId,
       name: line.name,
@@ -83,12 +81,7 @@ export class NbaPlayerStatsStrategy implements IPlayerStatsStrategy {
   ): Promise<IPlayerStats[]> {
     const { seasonYear, seasonType, week } = parseNbaWeekName(eventGroup.name);
     const rows = await this.sleeperService.getNbaStatistics(seasonYear, week, seasonType);
-    // Sleeper omits pts_std when it is 0; scoring the stat line with the same
-    // weights gives that 0 and still scores a line if pts_std is ever missing.
-    return this.toWeekLines(
-      rows,
-      (row) => row.stats.pts_std ?? calculateNbaFantasyPoints(row.stats),
-    ).map((line) => ({
+    return this.toWeekLines(rows).map((line) => ({
       playerId: line.playerId,
       name: line.name,
       position: position as PlayerPosition,
@@ -98,13 +91,12 @@ export class NbaPlayerStatsStrategy implements IPlayerStatsStrategy {
     }));
   }
 
-  /** Collapse per-game rows into one line per player, keeping the best game. */
-  private toWeekLines<TStats>(
-    projections: ISleeperPlayerEntry<TStats>[],
-    score: (row: ISleeperPlayerEntry<TStats>) => number,
-  ): NbaWeekLine[] {
-    const byPlayer = new Map<string, ISleeperPlayerEntry<TStats>[]>();
-    for (const row of projections) {
+  /**
+   * Collapse per-game rows into one line per player, keeping the best game.
+   */
+  private toWeekLines(rows: ISleeperPlayerEntry<ISleeperNbaStatLine>[]): NbaWeekLine[] {
+    const byPlayer = new Map<string, ISleeperPlayerEntry<ISleeperNbaStatLine>[]>();
+    for (const row of rows) {
       byPlayer.set(row.player_id, [...(byPlayer.get(row.player_id) ?? []), row]);
     }
     return [...byPlayer.values()].map((games) => {
@@ -116,7 +108,7 @@ export class NbaPlayerStatsStrategy implements IPlayerStatsStrategy {
         team: lastGame.team,
         injuryStatus: lastGame.player.injury_status,
         oppTeam: sortedGames.map((game) => game.opponent).join(', '),
-        bestGame: Math.max(...sortedGames.map(score)),
+        bestGame: Math.max(...sortedGames.map((game) => game.stats.pts_std)),
       };
     });
   }

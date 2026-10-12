@@ -83,7 +83,14 @@ describe('SleeperService', () => {
 
   it('should return the NFL season schedule, keeping playoff placeholder rows', async () => {
     const schedule = [
-      { status: 'complete', date: '2026-01-10', home: 'CAR', week: 1, game_id: '202530105', away: 'LAR' },
+      {
+        status: 'complete',
+        date: '2026-01-10',
+        home: 'CAR',
+        week: 1,
+        game_id: '202530105',
+        away: 'LAR',
+      },
       {
         status: 'canceled',
         date: '2026-02-08',
@@ -114,6 +121,31 @@ describe('SleeperService', () => {
   });
 
   describe('NBA', () => {
+    const rawNbaProjection = (stats: Record<string, number>) => ({
+      status: null,
+      date: '2025-12-22',
+      stats,
+      category: 'proj',
+      last_modified: 1766994004815,
+      week: 10,
+      sport: 'nba',
+      season_type: 'regular',
+      season: '2025',
+      player: {
+        fantasy_positions: ['PG'],
+        first_name: 'Cade',
+        injury_status: null,
+        last_name: 'Cunningham',
+        metadata: { channel_id: '1' },
+        position: 'PG',
+      },
+      team: 'DET',
+      player_id: '2267',
+      opponent: 'POR',
+      updated_at: 1766994004815,
+      game_id: 'proj-game',
+    });
+
     it('should return NBA state pruned to the fields sync uses', async () => {
       httpService.get.mockReturnValueOnce(of(mockAxiosResponse(mockState)));
       const result = await service.getStateForSport(SportLeague.NBA);
@@ -123,7 +155,7 @@ describe('SleeperService', () => {
         season_type: mockState.season_type,
         display_week: mockState.display_week,
         league_season: mockState.league_season,
-        leg: mockState.leg
+        leg: mockState.leg,
       });
       expect(httpService.get).toHaveBeenCalledWith('https://api.sleeper.app/v1/state/nba');
     });
@@ -204,11 +236,16 @@ describe('SleeperService', () => {
       expect(result[0]).toMatchObject({
         season: 2025,
         team: 'DET',
-        player: { first_name: 'Cade', last_name: 'Cunningham', position: 'PG', fantasy_positions: ['PG'] },
+        player: {
+          first_name: 'Cade',
+          last_name: 'Cunningham',
+          position: 'PG',
+          fantasy_positions: ['PG'],
+        },
       });
-      // Pruned to the scoring fields (fga, sp, etc. are dropped)
+      // Pruned to just the scored total (box-score fields, fga, sp, etc. are dropped)
       expect(result[0].stats).toEqual({
-        pts: 27.89, reb: 6.73, ast: 7.92, stl: 1.51, blk: 0.7, to: 4.12, tpm: 2.55, dd: 0.34, td: 0.09,
+        pts_std: 30.69,
       });
     });
 
@@ -223,11 +260,92 @@ describe('SleeperService', () => {
       expect(result.map((e) => [e.player.last_name, e.date, e.stats.pts_std])).toEqual([
         ['Cunningham', new Date('2025-12-22'), 19.5],
         ['Cunningham', new Date('2025-12-23'), 35.5],
-        ['Curry', new Date('2025-12-22'), undefined],
+        ['Curry', new Date('2025-12-22'), 0],
       ]);
-      // DNP: Sleeper sends an empty stat line, passed through as-is
-      expect(result[2].stats).toEqual({});
+      // DNP: Sleeper sends an empty stat line with no pts_std; defaulted to 0
+      expect(result[2].stats).toEqual({ pts_std: 0 });
       expect(result[0].stats).not.toHaveProperty('pts_std_dfs');
+    });
+
+    it.each([
+      ['Cade Cunningham 2025-12-22', { pts: 14, reb: 6, ast: 9, stl: 1, to: 5, tpm: 1 }, 19.5],
+      [
+        'Cade Cunningham 2025-12-23 (double-double)',
+        { pts: 23, reb: 7, ast: 14, stl: 5, to: 9, tpm: 2, dd: 1 },
+        35.5,
+      ],
+      [
+        '56-point triple-double with every bonus',
+        {
+          pts: 56,
+          reb: 16,
+          ast: 15,
+          blk: 2,
+          to: 5,
+          tpm: 4,
+          dd: 1,
+          td: 1,
+          bonus_pt_40p: 1,
+          bonus_pt_50p: 1,
+        },
+        67,
+      ],
+    ])(
+      'scores a projected stat line with the pts_std weights (%s)',
+      async (_label, stats, expected) => {
+        httpService.get.mockReturnValueOnce(of(mockAxiosResponse([rawNbaProjection(stats)])));
+
+        const result = await service.getNbaProjections(2025, 10);
+
+        expect(result[0].stats.pts_std).toBe(expected);
+      },
+    );
+
+    it('ignores rebound/assist bonus fields, which are worth 0 in pts_std', async () => {
+      httpService.get.mockReturnValueOnce(
+        of(
+          mockAxiosResponse([
+            rawNbaProjection({
+              pts: 22,
+              reb: 1,
+              ast: 15,
+              stl: 2,
+              to: 1,
+              tpm: 1,
+              dd: 1,
+              bonus_ast_15p: 1,
+            }),
+          ]),
+        ),
+      );
+
+      const result = await service.getNbaProjections(2025, 10);
+
+      expect(result[0].stats.pts_std).toBe(31.5);
+    });
+
+    it('uses dd/td probabilities as expected value on projections, rounded to 2dp', async () => {
+      httpService.get.mockReturnValueOnce(
+        of(
+          mockAxiosResponse([
+            rawNbaProjection({
+              pts: 17.53,
+              reb: 5.28,
+              ast: 5.94,
+              stl: 0.8,
+              blk: 0.41,
+              to: 2.69,
+              tpm: 1.43,
+              dd: 0.16,
+              td: 0.03,
+            }),
+          ]),
+        ),
+      );
+
+      const result = await service.getNbaProjections(2025, 10);
+
+      expect(result[0].stats.pts_std).toBe(20.65);
     });
 
     it.each([

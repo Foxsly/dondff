@@ -114,10 +114,10 @@ export type SleeperNbaScheduleResponse = ISleeperScheduleGame<{
  * The box-score fields that feed Sleeper's default ("pts_std") scoring.
  * Projections hold fractional expected values; `dd`/`td` are probabilities.
  * Any field can be missing — Sleeper omits zero stats.
- * These are only used to calculate projections, since Sleeper's projection API
- * doesn't return a point projection for basketball/NBA
+ * These are the raw inputs to the scoring weights; the service prunes them
+ * away once it has computed the fantasy point total.
  */
-export interface ISleeperNbaStatLine {
+export interface ISleeperNbaBoxStats {
   pts?: number;
   reb?: number;
   ast?: number;
@@ -131,7 +131,7 @@ export interface ISleeperNbaStatLine {
   bonus_pt_50p?: number;
 }
 
-export interface ISleeperNbaGameStats extends ISleeperNbaStatLine {
+export interface ISleeperNbaGameStats extends ISleeperNbaBoxStats {
   /**
    * Sleeper's own fantasy score for the game. Sleeper omits it when the score
    * is 0 — a did-not-play row (`{}`) or one with only non-scoring stats.
@@ -139,6 +139,13 @@ export interface ISleeperNbaGameStats extends ISleeperNbaStatLine {
   pts_std?: number;
 }
 
-export type SleeperNbaProjectionResponse = ISleeperPlayerEntry<ISleeperNbaStatLine>[];
-export type SleeperNbaStatResponse = ISleeperPlayerEntry<ISleeperNbaGameStats>[];
+/**
+ * A scored NBA line, as returned by the service: just the fantasy point total.
+ * For projections the service computes it with Sleeper's pts_std weights; for
+ * actuals it carries Sleeper's own value, defaulted to 0 when omitted.
+ */
+export interface ISleeperNbaStatLine {
+  pts_std: number;
+}
 
+export type SleeperNbaScoredResponse = ISleeperPlayerEntry<ISleeperNbaStatLine>[];

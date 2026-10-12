@@ -28,14 +28,14 @@ const row = <TStats>(
       fantasy_positions: positions,
       position: positions[0],
       injury_status: null,
-      metadata: {}
+      metadata: {},
     },
     team: 'DET',
     opponent,
     game_id: `${playerId}-${date}`,
     date: new Date(date),
     last_modified: new Date(),
-    updated_at: new Date()
+    updated_at: new Date(),
   };
 };
 
@@ -54,15 +54,15 @@ describe('NbaPlayerStatsStrategy', () => {
     beforeEach(() => {
       sleeper.getNbaProjections.mockResolvedValue([
         // Given out of date order: oppTeam must still be chronological
-        row('cade', 'Cade Cunningham', ['PG'], '2025-12-26', 'MIA', { pts: 30 }), // 15
-        row('cade', 'Cade Cunningham', ['PG'], '2025-12-22', 'BOS', { pts: 20, ast: 10 }), // 20
-        row('jd', 'Jalen Duren', ['C', 'PF'], '2025-12-22', 'BOS', { pts: 10, reb: 12 }), // 17
-        row('ausar', 'Ausar Thompson', ['SF', 'SG'], '2025-12-22', 'BOS', { pts: 12 }), // 6
-        row('duncan', 'Duncan Robinson', ['SG', 'SF'], '2025-12-22', 'BOS', { pts: 15 }), // 7.5
+        row('cade', 'Cade Cunningham', ['PG'], '2025-12-26', 'MIA', { pts_std: 15 }),
+        row('cade', 'Cade Cunningham', ['PG'], '2025-12-22', 'BOS', { pts_std: 20 }),
+        row('jd', 'Jalen Duren', ['C', 'PF'], '2025-12-22', 'BOS', { pts_std: 17 }),
+        row('ausar', 'Ausar Thompson', ['SF', 'SG'], '2025-12-22', 'BOS', { pts_std: 6 }),
+        row('duncan', 'Duncan Robinson', ['SG', 'SF'], '2025-12-22', 'BOS', { pts_std: 7.5 }),
       ]);
     });
 
-    it('scores each projected game with pts_std and keeps the best game', async () => {
+    it('keeps the best projected game, using the pts_std the service scored', async () => {
       const result = await strategy.getProjections(2025, eventGroup, [], 'G');
 
       expect(sleeper.getNbaProjections).toHaveBeenCalledWith(2025, 10, 'regular');
@@ -125,20 +125,17 @@ describe('NbaPlayerStatsStrategy', () => {
       ]);
     });
 
-    it('scores a line without pts_std from its stats instead of as 0', async () => {
-      // Sleeper omits pts_std when it is 0 (DNP `{}`, or minutes with no scoring stats)
+    it('trusts the pts_std the service guarantees, including 0 for a DNP line', async () => {
       sleeper.getNbaStatistics.mockResolvedValue([
-        row('dnp', 'Bench Guard', ['PG'], '2025-12-22', 'BOS', {}),
-        row('quiet', 'Quiet Guard', ['SG'], '2025-12-22', 'BOS', { sp: 120, ast: 1, to: 1 }),
-        row('odd', 'Odd Guard', ['SG'], '2025-12-22', 'BOS', { pts: 30 }),
+        row('dnp', 'Bench Guard', ['PG'], '2025-12-22', 'BOS', { pts_std: 0 }),
+        row('active', 'Active Guard', ['SG'], '2025-12-22', 'BOS', { pts_std: 12 }),
       ]);
 
       const result = await strategy.getStatistics(2025, eventGroup, [], 'G');
 
       expect(result.map((p) => [p.playerId, p.points])).toEqual([
         ['dnp', 0],
-        ['quiet', 0],
-        ['odd', 15],
+        ['active', 12],
       ]);
     });
 

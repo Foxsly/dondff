@@ -4,15 +4,48 @@ import { Inject, Injectable } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
 import typia from 'typia';
 import {
+  ISleeperNbaBoxStats,
+  ISleeperNbaGameStats,
   ISleeperPlayerEntry,
   ISleeperState,
-  SleeperNbaProjectionResponse,
   SleeperNbaScheduleResponse,
-  SleeperNbaStatResponse,
+  SleeperNbaScoredResponse,
   SleeperNflScheduleResponse,
   SleeperProjectionResponse,
   SleeperStatResponse,
 } from './entities/sleeper.entity';
+
+/**
+ * Sleeper's default NBA points scoring ("pts_std"). Sleeper returns `pts_std`
+ * on actual stat lines but not on projections, so projections are scored here
+ * with the same weights. The weights reproduce Sleeper's `pts_std` exactly for
+ * completed games (rebound and assist bonuses are worth 0 in that format). On a
+ * projection, `dd`/`td` are probabilities, so they contribute their expected
+ * value; Sleeper does not project the 40/50-point bonuses, so those contribute
+ * nothing there.
+ */
+const NBA_STD_SCORING: Readonly<Record<keyof ISleeperNbaBoxStats, number>> = {
+  pts: 0.5,
+  reb: 1,
+  ast: 1,
+  stl: 2,
+  blk: 2,
+  to: -1,
+  tpm: 0.5,
+  dd: 1,
+  td: 2,
+  bonus_pt_40p: 2,
+  bonus_pt_50p: 2,
+};
+
+/** Fantasy points for one game's stat line, rounded to 2 decimal places. */
+const calculateNbaFantasyPoints = (stats: ISleeperNbaBoxStats): number => {
+  const total = (Object.keys(NBA_STD_SCORING) as (keyof ISleeperNbaBoxStats)[]).reduce(
+    (sum, stat) => sum + (stats[stat] ?? 0) * NBA_STD_SCORING[stat],
+    0,
+  );
+  return Math.round(total * 100) / 100;
+};
 
 @Injectable()
 export class SleeperService {
@@ -22,8 +55,7 @@ export class SleeperService {
   // Create transformer functions
   private assertSleeperStats = typia.misc.createAssertPrune<SleeperStatResponse>();
   private assertSleeperProjections = typia.misc.createAssertPrune<SleeperProjectionResponse>();
-  private assertSleeperNbaProjections = typia.misc.createAssertPrune<SleeperNbaProjectionResponse>();
-  private assertSleeperNbaStats = typia.misc.createAssertPrune<SleeperNbaStatResponse>();
+  private assertSleeperNbaScored = typia.misc.createAssertPrune<SleeperNbaScoredResponse>();
   private assertSleeperNflSchedule = typia.misc.createAssertPrune<SleeperNflScheduleResponse>();
   private assertSleeperNbaSchedule = typia.misc.createAssertPrune<SleeperNbaScheduleResponse>();
   private assertSleeperState = typia.misc.createAssertPrune<ISleeperState>();
@@ -132,34 +164,45 @@ export class SleeperService {
     season: number,
     week: number,
     seasonType: 'regular' | 'post' = 'regular',
-  ): Promise<SleeperNbaProjectionResponse> {
+  ): Promise<SleeperNbaScoredResponse> {
     const url = `${this.BASE_URL}/projections/nba/${season}/${week}?season_type=${seasonType}`;
     const response$ = this.httpService.get(url);
     const response = await lastValueFrom(response$);
-    return this.assertSleeperNbaProjections(
-      this.transformSleeperEntries(
-        response.data.filter(
-          (entry) => entry?.player?.position !== 'TEAM' && Object.keys(entry?.stats ?? {}).length > 0,
-        ),
+    const projections = this.transformSleeperEntries<ISleeperNbaBoxStats>(
+      response.data.filter(
+        (entry) => entry?.player?.position !== 'TEAM' && Object.keys(entry?.stats ?? {}).length > 0,
       ),
+    );
+    return this.assertSleeperNbaScored(
+      projections.map((row) => ({
+        ...row,
+        stats: { pts_std: calculateNbaFantasyPoints(row.stats) },
+      })),
     );
   }
 
   /**
    * Per-game statistics (one row per player per game) for an NBA week.
    * Team rows are dropped. Every row must carry a stat object; a player listed
-   * for a game they did not play has an empty one.
+   * for a game they did not play has an empty one. Sleeper omits `pts_std`
+   * when it is 0, so it is defaulted to 0 here and callers always get a number.
    */
   async getNbaStatistics(
     season: number,
     week: number,
     seasonType: 'regular' | 'post' = 'regular',
-  ): Promise<SleeperNbaStatResponse> {
+  ): Promise<SleeperNbaScoredResponse> {
     const url = `${this.BASE_URL}/stats/nba/${season}/${week}?season_type=${seasonType}`;
     const response$ = this.httpService.get(url);
     const response = await lastValueFrom(response$);
-    return this.assertSleeperNbaStats(
-      this.transformSleeperEntries(response.data.filter((entry) => entry?.player?.position !== 'TEAM')),
+    const rows = this.transformSleeperEntries<ISleeperNbaGameStats>(
+      response.data.filter((entry) => entry?.player?.position !== 'TEAM'),
+    );
+    return this.assertSleeperNbaScored(
+      rows.map((row) => ({
+        ...row,
+        stats: { pts_std: row.stats.pts_std ?? 0 },
+      })),
     );
   }
 
