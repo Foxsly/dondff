@@ -103,6 +103,10 @@ export interface ISleeperScheduleGame<TTeam> {
  */
 export type SleeperNflScheduleResponse = ISleeperScheduleGame<string>[];
 
+/**
+ * TODO transform this in sleeper.service.ts so that we can consolidate these
+ * types and simplify the service (e.g. one getScheduleForSport(SportLeague) method)
+ */
 export type SleeperNbaScheduleResponse = ISleeperScheduleGame<{
   team: string & tags.MinLength<2> & tags.MaxLength<3>;
 }>[];
