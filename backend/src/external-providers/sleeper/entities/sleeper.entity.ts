@@ -15,20 +15,21 @@ export interface ISleeperState {
 // -----------------------------
 // Player
 // -----------------------------
+export type SleeperNflPosition = 'QB' | 'RB' | 'FB' | 'WR' | 'TE' | 'K' | 'DEF' | 'DB';
+export type SleeperNbaPosition = 'PG' | 'SG' | 'SF' | 'PF' | 'C';
+
 export interface ISleeperPlayer {
-  fantasy_positions: (string & tags.Pattern<'^(QB|RB|FB|WR|TE|K|DEF|DB)$'>)[];
+  fantasy_positions: (SleeperNflPosition | SleeperNbaPosition)[];
   first_name: string & tags.MinLength<1>;
   last_name: string & tags.MinLength<1>;
-  position: string & tags.Pattern<'^(QB|RB|FB|WR|TE|K|DEF|DB)$'>;
-  // Ignore this team - players who have been cut would have a 'null' team
-  // The team on ISleeperPlayerEntry represents their team at the time of the game
-  // team: string & tags.MinLength<2> & tags.MaxLength<3>;
+  position: SleeperNflPosition | SleeperNbaPosition;
   injury_status: string | null;
-  metadata: ISleeperPlayerMetadata
+  metadata: ISleeperPlayerMetadata;
 }
 
 export interface ISleeperPlayerMetadata {
-  genius_id: string;
+  genius_id?: string;
+  channel_id?: string;
 }
 
 // -----------------------------
@@ -53,23 +54,19 @@ export interface ISleeperPlayerProjectionStats extends IBaseSleeperPlayerStats {
 }
 
 // -----------------------------
-// Shared entry
+// Base entry
 // -----------------------------
 export interface ISleeperPlayerEntry<TStats> {
   stats: TStats;
-
-  week: number & tags.Minimum<1> & tags.Maximum<25>;
+  week: number & tags.Minimum<1>;
   season: number & tags.Minimum<2000>;
   season_type: 'regular' | 'post' | 'pre';
-  sport: 'nfl';
+  sport: 'nba' | 'nfl';
   player_id: string & tags.MinLength<1>;
-
   player: ISleeperPlayer;
-
   team: string & tags.MinLength<2> & tags.MaxLength<3>;
   opponent: string & tags.MinLength<2> & tags.MaxLength<3>;
   game_id: string & tags.MinLength<1>;
-
   date: Date; // converted from YYYY-MM-DD string
   last_modified: Date; // converted from epoch ms
   updated_at: Date; // converted from epoch ms
@@ -94,7 +91,7 @@ export type SleeperStatRequest = Pick<ISleeperPlayer, 'position'>;
 export interface ISleeperScheduleGame<TTeam> {
   game_id: string & tags.MinLength<1>;
   date: string & tags.Format<'date'>;
-  week: number & tags.Type<'uint32'> & tags.Minimum<1>;
+  week: number & tags.Minimum<1>;
   status: string & tags.MinLength<1>;
   home: TTeam;
   away: TTeam;
@@ -109,3 +106,39 @@ export type SleeperNflScheduleResponse = ISleeperScheduleGame<string>[];
 export type SleeperNbaScheduleResponse = ISleeperScheduleGame<{
   team: string & tags.MinLength<2> & tags.MaxLength<3>;
 }>[];
+
+// -----------------------------
+// NBA Types
+// -----------------------------
+/**
+ * The box-score fields that feed Sleeper's default ("pts_std") scoring.
+ * Projections hold fractional expected values; `dd`/`td` are probabilities.
+ * Any field can be missing — Sleeper omits zero stats.
+ * These are only used to calculate projections, since Sleeper's projection API
+ * doesn't return a point projection for basketball/NBA
+ */
+export interface ISleeperNbaStatLine {
+  pts?: number;
+  reb?: number;
+  ast?: number;
+  stl?: number;
+  blk?: number;
+  to?: number;
+  tpm?: number;
+  dd?: number;
+  td?: number;
+  bonus_pt_40p?: number;
+  bonus_pt_50p?: number;
+}
+
+export interface ISleeperNbaGameStats extends ISleeperNbaStatLine {
+  /**
+   * Sleeper's own fantasy score for the game. Sleeper omits it when the score
+   * is 0 — a did-not-play row (`{}`) or one with only non-scoring stats.
+   */
+  pts_std?: number;
+}
+
+export type SleeperNbaProjectionResponse = ISleeperPlayerEntry<ISleeperNbaStatLine>[];
+export type SleeperNbaStatResponse = ISleeperPlayerEntry<ISleeperNbaGameStats>[];
+

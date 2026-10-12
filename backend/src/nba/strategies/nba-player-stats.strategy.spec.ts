@@ -1,9 +1,9 @@
 import { NbaPlayerStatsStrategy } from './nba-player-stats.strategy';
 import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
 import {
-  ISleeperNbaPlayerEntry,
+  ISleeperPlayerEntry,
   SleeperNbaPosition,
-} from '@/external-providers/sleeper/entities/sleeper-nba.entity';
+} from '@/external-providers/sleeper/entities/sleeper.entity';
 import { EventGroup } from '@/events/entities/event-group.entity';
 
 const row = <TStats>(
@@ -13,7 +13,7 @@ const row = <TStats>(
   date: string,
   opponent: string,
   stats: TStats,
-): ISleeperNbaPlayerEntry<TStats> => {
+): ISleeperPlayerEntry<TStats> => {
   const [first_name, last_name] = name.split(' ');
   return {
     stats,
@@ -28,11 +28,14 @@ const row = <TStats>(
       fantasy_positions: positions,
       position: positions[0],
       injury_status: null,
+      metadata: {}
     },
     team: 'DET',
     opponent,
     game_id: `${playerId}-${date}`,
-    date,
+    date: new Date(date),
+    last_modified: new Date(),
+    updated_at: new Date()
   };
 };
 

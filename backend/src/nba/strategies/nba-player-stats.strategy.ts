@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
 import {
-  ISleeperNbaPlayerEntry,
+  ISleeperPlayerEntry,
+
   SleeperNbaPosition,
-} from '@/external-providers/sleeper/entities/sleeper-nba.entity';
+} from '@/external-providers/sleeper/entities/sleeper.entity';
 import { IPlayerStatsStrategy } from '@/player-stats/strategies/player-stats-strategy.interface';
 import {
   IPlayerProjection,
@@ -56,7 +57,7 @@ export class NbaPlayerStatsStrategy implements IPlayerStatsStrategy {
     const projections = await this.sleeperService.getNbaProjections(season, week, seasonType);
     const eligible = SLOT_POSITIONS[position] ?? [];
     return this.toWeekLines(
-      projections.filter((row) => eligible.includes(row.player.position)),
+      projections.filter((row) => eligible.includes(row.player.position as SleeperNbaPosition)),
       (row) => calculateNbaFantasyPoints(row.stats),
     ).map((line) => ({
       playerId: line.playerId,
@@ -99,15 +100,15 @@ export class NbaPlayerStatsStrategy implements IPlayerStatsStrategy {
 
   /** Collapse per-game rows into one line per player, keeping the best game. */
   private toWeekLines<TStats>(
-    projections: ISleeperNbaPlayerEntry<TStats>[],
-    score: (row: ISleeperNbaPlayerEntry<TStats>) => number,
+    projections: ISleeperPlayerEntry<TStats>[],
+    score: (row: ISleeperPlayerEntry<TStats>) => number,
   ): NbaWeekLine[] {
-    const byPlayer = new Map<string, ISleeperNbaPlayerEntry<TStats>[]>();
+    const byPlayer = new Map<string, ISleeperPlayerEntry<TStats>[]>();
     for (const row of projections) {
       byPlayer.set(row.player_id, [...(byPlayer.get(row.player_id) ?? []), row]);
     }
     return [...byPlayer.values()].map((games) => {
-      const sortedGames = [...games].sort((a, b) => a.date.localeCompare(b.date));
+      const sortedGames = [...games].sort((a, b) => a.date.getTime() - b.date.getTime());
       const lastGame = sortedGames[sortedGames.length - 1];
       return {
         playerId: lastGame.player_id,

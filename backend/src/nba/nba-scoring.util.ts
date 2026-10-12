@@ -10,7 +10,7 @@
  *
  * Pure stateless functions — no NestJS dependencies.
  */
-import { ISleeperNbaStatLine } from '@/external-providers/sleeper/entities/sleeper-nba.entity';
+import { ISleeperNbaStatLine } from '@/external-providers/sleeper/entities/sleeper.entity';
 
 export const NBA_STD_SCORING: Readonly<Record<keyof ISleeperNbaStatLine, number>> = {
   pts: 0.5,

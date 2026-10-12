@@ -198,8 +198,8 @@ describe('SleeperService', () => {
         'https://api.sleeper.app/projections/nba/2025/10?season_type=regular',
       );
       expect(result.map((e) => [e.player_id, e.date, e.game_id])).toEqual([
-        ['2267', '2025-12-22', '1261814776841895936'],
-        ['2267', '2025-12-23', '1261814785209532416'],
+        ['2267', new Date('2025-12-22'), '1261814776841895936'],
+        ['2267', new Date('2025-12-23'), '1261814785209532416'],
       ]);
       expect(result[0]).toMatchObject({
         season: 2025,
@@ -221,9 +221,9 @@ describe('SleeperService', () => {
         'https://api.sleeper.app/stats/nba/2025/10?season_type=regular',
       );
       expect(result.map((e) => [e.player.last_name, e.date, e.stats.pts_std])).toEqual([
-        ['Cunningham', '2025-12-22', 19.5],
-        ['Cunningham', '2025-12-23', 35.5],
-        ['Curry', '2025-12-22', undefined],
+        ['Cunningham', new Date('2025-12-22'), 19.5],
+        ['Cunningham', new Date('2025-12-23'), 35.5],
+        ['Curry', new Date('2025-12-22'), undefined],
       ]);
       // DNP: Sleeper sends an empty stat line, passed through as-is
       expect(result[2].stats).toEqual({});
@@ -243,7 +243,7 @@ describe('SleeperService', () => {
     it('should reject an unexpected response shape instead of returning partial data', async () => {
       const [first] = rawNbaStatsFixture;
       httpService.get.mockReturnValueOnce(
-        of(mockAxiosResponse([{ ...first, player: { ...first.player, position: 'QB' } }])),
+        of(mockAxiosResponse([{ ...first, player: { ...first.player, position: '1B' } }])),
       );
 
       await expect(service.getNbaStatistics(2025, 10)).rejects.toThrow();

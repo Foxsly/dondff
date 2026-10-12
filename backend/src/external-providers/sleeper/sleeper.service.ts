@@ -1,20 +1,18 @@
 import { SportLeague } from '@/common/types/sport-league.type';
-import { Inject, Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
+import { Inject, Injectable } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
+import typia from 'typia';
 import {
   ISleeperPlayerEntry,
   ISleeperState,
-  SleeperProjectionResponse,
+  SleeperNbaProjectionResponse,
   SleeperNbaScheduleResponse,
+  SleeperNbaStatResponse,
   SleeperNflScheduleResponse,
+  SleeperProjectionResponse,
   SleeperStatResponse,
 } from './entities/sleeper.entity';
-import {
-  SleeperNbaProjectionResponse,
-  SleeperNbaStatResponse,
-} from './entities/sleeper-nba.entity';
-import typia from 'typia';
 
 @Injectable()
 export class SleeperService {
@@ -139,7 +137,7 @@ export class SleeperService {
     const response$ = this.httpService.get(url);
     const response = await lastValueFrom(response$);
     return this.assertSleeperNbaProjections(
-      this.transformNbaEntries(
+      this.transformSleeperEntries(
         response.data.filter(
           (entry) => entry?.player?.position !== 'TEAM' && Object.keys(entry?.stats ?? {}).length > 0,
         ),
@@ -161,12 +159,8 @@ export class SleeperService {
     const response$ = this.httpService.get(url);
     const response = await lastValueFrom(response$);
     return this.assertSleeperNbaStats(
-      this.transformNbaEntries(response.data.filter((entry) => entry?.player?.position !== 'TEAM')),
+      this.transformSleeperEntries(response.data.filter((entry) => entry?.player?.position !== 'TEAM')),
     );
-  }
-
-  private transformNbaEntries(raw: any[]): unknown[] {
-    return raw.map((entry) => ({ ...entry, season: Number(entry.season) }));
   }
 
   /**

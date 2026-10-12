@@ -20,7 +20,8 @@
       "position": "WR",
       "injury_status": null,
       "metadata": {
-        "genius_id": "proj-9493"
+        "genius_id": "proj-9493",
+        "channel_id": "1113708701430083584"
       }
     },
     "team": "LAR",
@@ -51,7 +52,8 @@
       "position": "WR",
       "injury_status": null,
       "metadata": {
-        "genius_id": "proj-9488"
+        "genius_id": "proj-9488",
+        "channel_id": "1113708722657456128"
       }
     },
     "team": "SEA",
@@ -82,7 +84,8 @@
       "position": "WR",
       "injury_status": null,
       "metadata": {
-        "genius_id": "proj-7547"
+        "genius_id": "proj-7547",
+        "channel_id": "1113708810284855296"
       }
     },
     "team": "DET",
@@ -113,7 +116,8 @@
       "position": "WR",
       "injury_status": null,
       "metadata": {
-        "genius_id": "proj-7569"
+        "genius_id": "proj-7569",
+        "channel_id": "1113708788407365632"
       }
     },
     "team": "HOU",
@@ -144,7 +148,8 @@
       "position": "WR",
       "injury_status": null,
       "metadata": {
-        "genius_id": "proj-7564"
+        "genius_id": "proj-7564",
+        "channel_id": "1113708809265639424"
       }
     },
     "team": "CIN",

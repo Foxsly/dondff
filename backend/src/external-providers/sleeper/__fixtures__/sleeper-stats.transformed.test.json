@@ -22,7 +22,8 @@
       "position": "WR",
       "injury_status": null,
       "metadata": {
-        "genius_id": "stats-7547"
+        "genius_id": "stats-7547",
+        "channel_id": "1113708810284855296"
       }
     },
     "team": "DET",
@@ -55,7 +56,8 @@
       "position": "WR",
       "injury_status": null,
       "metadata": {
-        "genius_id": "stats-7564"
+        "genius_id": "stats-7564",
+        "channel_id": "1113708809265639424"
       }
     },
     "team": "CIN",
@@ -89,7 +91,8 @@
       "position": "WR",
       "injury_status": null,
       "metadata": {
-        "genius_id": "stats-2530"
+        "genius_id": "stats-2530",
+        "channel_id": "1221352995866812416"
       }
     },
     "team": "JAX",
@@ -122,7 +125,8 @@
       "position": "WR",
       "injury_status": "IR",
       "metadata": {
-        "genius_id": "stats-0222"
+        "genius_id": "stats-0222",
+        "channel_id": "1113708797341233152"
       }
     },
     "team": "GB",
@@ -155,7 +159,8 @@
       "position": "WR",
       "injury_status": null,
       "metadata": {
-        "genius_id": "stats-9495"
+        "genius_id": "stats-9495",
+        "channel_id": "1113708728659505152"
       }
     },
     "team": "PIT",
@@ -188,7 +193,8 @@
       "position": "FB",
       "injury_status": null,
       "metadata": {
-        "genius_id": "stats-1379"
+        "genius_id": "stats-1379",
+        "channel_id": "1113708876684881921"
       }
     },
     "team": "SF",
@@ -221,7 +227,8 @@
       "position": "TE",
       "injury_status": "PUP",
       "metadata": {
-        "genius_id": "stats-4381"
+        "genius_id": "stats-4381",
+        "channel_id": "1113708683042254848"
       }
     },
     "team": "NO",
@@ -254,7 +261,8 @@
       "position": "QB",
       "injury_status": null,
       "metadata": {
-        "genius_id": "stats-3163"
+        "genius_id": "stats-3163",
+        "channel_id": "1113708813946482688"
       }
     },
     "team": "DET",
@@ -287,7 +295,8 @@
       "position": "K",
       "injury_status": null,
       "metadata": {
-        "genius_id": "stats-1539"
+        "genius_id": "stats-1539",
+        "channel_id": "1113708811308265472"
       }
     },
     "team": "DET",
