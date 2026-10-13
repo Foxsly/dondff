@@ -1,9 +1,6 @@
 [
   {
     "stats": {
-      "pos_rank_std": 1,
-      "pos_rank_half_ppr": 1,
-      "pos_rank_ppr": 1,
       "pts_std": 30.2,
       "pts_half_ppr": 34.7,
       "pts_ppr": 39.2
@@ -35,9 +32,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 4,
-      "pos_rank_half_ppr": 3,
-      "pos_rank_ppr": 3,
       "pts_std": 22.5,
       "pts_half_ppr": 29.5,
       "pts_ppr": 36.5
@@ -69,9 +63,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 88,
-      "pos_rank_half_ppr": 82,
-      "pos_rank_ppr": 78,
       "pts_std": 2.2,
       "pts_half_ppr": 3.7,
       "pts_ppr": 5.2
@@ -104,9 +95,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 999,
-      "pos_rank_half_ppr": 999,
-      "pos_rank_ppr": 999,
       "pts_std": 0,
       "pts_half_ppr": 0,
       "pts_ppr": 0
@@ -138,9 +126,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 999,
-      "pos_rank_half_ppr": 999,
-      "pos_rank_ppr": 999,
       "pts_std": 0,
       "pts_half_ppr": 0,
       "pts_ppr": 0
@@ -172,9 +157,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 999,
-      "pos_rank_half_ppr": 999,
-      "pos_rank_ppr": 999,
       "pts_std": 3.2,
       "pts_half_ppr": 4.2,
       "pts_ppr": 5.2
@@ -206,9 +188,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 999,
-      "pos_rank_half_ppr": 999,
-      "pos_rank_ppr": 999,
       "pts_std": 0,
       "pts_half_ppr": 0,
       "pts_ppr": 0
@@ -240,9 +219,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 21,
-      "pos_rank_half_ppr": 21,
-      "pos_rank_ppr": 21,
       "pts_std": 11.9,
       "pts_half_ppr": 11.9,
       "pts_ppr": 11.9
@@ -274,9 +250,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 999,
-      "pos_rank_half_ppr": 999,
-      "pos_rank_ppr": 999,
       "pts_std": 7,
       "pts_half_ppr": 7,
       "pts_ppr": 7

@@ -1,7 +1,6 @@
 [
   {
     "stats": {
-      "pos_adp_dd_ppr": 1,
       "pts_std": 13.29,
       "pts_half_ppr": 17.14,
       "pts_ppr": 21
@@ -33,7 +32,6 @@
   },
   {
     "stats": {
-      "pos_adp_dd_ppr": 2,
       "pts_std": 12.05,
       "pts_half_ppr": 15.53,
       "pts_ppr": 19.01
@@ -65,7 +63,6 @@
   },
   {
     "stats": {
-      "pos_adp_dd_ppr": 3,
       "pts_std": 12.16,
       "pts_half_ppr": 15.26,
       "pts_ppr": 18.36
@@ -97,7 +94,6 @@
   },
   {
     "stats": {
-      "pos_adp_dd_ppr": 4,
       "pts_std": 11.28,
       "pts_half_ppr": 14.23,
       "pts_ppr": 17.19
@@ -129,7 +125,6 @@
   },
   {
     "stats": {
-      "pos_adp_dd_ppr": 7,
       "pts_std": 10.73,
       "pts_half_ppr": 13.38,
       "pts_ppr": 16.02
