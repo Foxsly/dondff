@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
 import {
-  ISleeperNbaStatLine,
+  ISleeperNbaPlayerStats,
   ISleeperPlayerEntry,
   SleeperNbaPosition,
 } from '@/external-providers/sleeper/entities/sleeper.entity';
@@ -94,8 +94,8 @@ export class NbaPlayerStatsStrategy implements IPlayerStatsStrategy {
   /**
    * Collapse per-game rows into one line per player, keeping the best game.
    */
-  private toWeekLines(rows: ISleeperPlayerEntry<ISleeperNbaStatLine>[]): NbaWeekLine[] {
-    const byPlayer = new Map<string, ISleeperPlayerEntry<ISleeperNbaStatLine>[]>();
+  private toWeekLines(rows: ISleeperPlayerEntry<ISleeperNbaPlayerStats>[]): NbaWeekLine[] {
+    const byPlayer = new Map<string, ISleeperPlayerEntry<ISleeperNbaPlayerStats>[]>();
     for (const row of rows) {
       byPlayer.set(row.player_id, [...(byPlayer.get(row.player_id) ?? []), row]);
     }

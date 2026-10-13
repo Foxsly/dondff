@@ -4,8 +4,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
 import typia from 'typia';
 import {
-  ISleeperNbaBoxStats,
-  ISleeperNbaGameStats,
   ISleeperPlayerEntry,
   ISleeperScheduleGame,
   ISleeperState,
@@ -13,6 +11,35 @@ import {
   SleeperNflStatResponse,
   SleeperScheduleResponse,
 } from './entities/sleeper.entity';
+
+/**
+ * The raw NBA box-score fields that feed Sleeper's default ("pts_std")
+ * scoring. Projections hold fractional expected values; `dd`/`td` are
+ * probabilities. Any field can be missing — Sleeper omits zero stats.
+ * These are the raw inputs to the scoring weights; they are pruned away once
+ * the fantasy point total has been computed.
+ */
+interface ISleeperNbaBoxStats {
+  pts?: number;
+  reb?: number;
+  ast?: number;
+  stl?: number;
+  blk?: number;
+  to?: number;
+  tpm?: number;
+  dd?: number;
+  td?: number;
+  bonus_pt_40p?: number;
+  bonus_pt_50p?: number;
+}
+
+interface ISleeperNbaGameStats extends ISleeperNbaBoxStats {
+  /**
+   * Sleeper's own fantasy score for the game. Sleeper omits it when the score
+   * is 0 — a did-not-play row (`{}`) or one with only non-scoring stats.
+   */
+  pts_std?: number;
+}
 
 /**
  * Sleeper's default NBA points scoring ("pts_std"). Sleeper returns `pts_std`
