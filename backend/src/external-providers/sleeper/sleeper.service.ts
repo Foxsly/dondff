@@ -4,6 +4,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
 import typia from 'typia';
 import {
+  ISleeperNbaPlayerStats,
   ISleeperPlayerEntry,
   ISleeperScheduleGame,
   ISleeperState,
@@ -31,14 +32,6 @@ interface ISleeperNbaBoxStats {
   td?: number;
   bonus_pt_40p?: number;
   bonus_pt_50p?: number;
-}
-
-interface ISleeperNbaGameStats extends ISleeperNbaBoxStats {
-  /**
-   * Sleeper's own fantasy score for the game. Sleeper omits it when the score
-   * is 0 — a did-not-play row (`{}`) or one with only non-scoring stats.
-   */
-  pts_std?: number;
 }
 
 /**
@@ -218,7 +211,7 @@ export class SleeperService {
     const url = `${this.BASE_URL}/stats/nba/${season}/${week}?season_type=${seasonType}`;
     const response$ = this.httpService.get(url);
     const response = await lastValueFrom(response$);
-    const rows = this.transformSleeperEntries<ISleeperNbaGameStats>(
+    const rows = this.transformSleeperEntries<ISleeperNbaPlayerStats>(
       response.data.filter((entry) => entry?.player?.position !== 'TEAM'),
     );
     return this.assertSleeperNbaScored(
