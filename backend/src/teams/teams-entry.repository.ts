@@ -40,9 +40,15 @@ export abstract class TeamsEntryRepository {
     offer: Omit<ITeamEntryOffer, 'offerId'>,
   ): Promise<ITeamEntryOffer>;
 
+  /**
+   * Move an offer to `status`, but only if it is still `from` (default
+   * 'pending'). Returns null when it is not, so concurrent accept/reject
+   * requests cannot both act on the same offer.
+   */
   abstract updateOfferStatus(
     offerId: string,
     status: TeamEntryOfferStatus,
+    from?: TeamEntryOfferStatus,
   ): Promise<ITeamEntryOffer | null>;
 
   abstract appendEvent(event: Omit<ITeamEntryEvent, 'eventId'>): Promise<ITeamEntryEvent>;
@@ -164,11 +170,13 @@ export class DatabaseTeamsEntryRepository extends TeamsEntryRepository {
   async updateOfferStatus(
     offerId: string,
     status: TeamEntryOfferStatus,
+    from: TeamEntryOfferStatus = 'pending',
   ): Promise<ITeamEntryOffer | null> {
     const row = await this.db
       .updateTable('teamEntryOffer')
       .set({ status })
       .where('offerId', '=', offerId)
+      .where('status', '=', from)
       .returningAll()
       .executeTakeFirst();
 

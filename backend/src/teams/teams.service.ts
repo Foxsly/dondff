@@ -14,7 +14,7 @@ import { ITeamPlayer, TeamPlayer } from '@/teams/entities/team-player.entity';
 import { ITeamStatus } from '@/teams/entities/team-status.entity';
 import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
 import { TeamsRepository } from '@/teams/teams.repository';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   ITeamEntry,
   ITeamEntryAudit,
@@ -77,7 +77,13 @@ export class TeamsService {
   }
 
   async upsertTeamPlayer(teamId: string, dto: ITeamPlayer): Promise<TeamPlayer> {
-    return this.teamsRepository.upsertTeamPlayer(teamId, dto);
+    const teamPlayer = await this.teamsRepository.upsertTeamPlayer(teamId, dto);
+    if (!teamPlayer) {
+      throw new ConflictException(
+        `Player ${dto.playerName} (${dto.playerId}) is already on team ${teamId} at another position`,
+      );
+    }
+    return teamPlayer;
   }
 
   async getTeamEntry(teamId: string, position: string): Promise<ITeamEntry> {
@@ -420,7 +426,8 @@ export class TeamsService {
       status,
     );
     if (!updatedOffer) {
-      throw new NotFoundException(`Could not update offer with id ${currentOffer.offerId}`);
+      // Another request accepted or rejected this offer in the meantime
+      throw new ConflictException(`Offer ${currentOffer.offerId} is no longer pending`);
     }
     return updatedOffer;
   }
@@ -480,18 +487,28 @@ export class TeamsService {
 
   async acceptOffer(teamId: string, position: string): Promise<TeamEntryOfferResponseDto> {
     const teamEntry: ITeamEntry = await this.getTeamEntry(teamId, position);
-    const updatedOffer = await this.updateOfferStatus(teamId, position, 'accepted');
+    // Accepting is a conditional pending → accepted update, so a concurrent
+    // reject can't swap the offer out from under us; the player assigned is
+    // the one on the row this call accepted.
+    const acceptedOffer = await this.updateOfferStatus(teamId, position, 'accepted');
+    try {
+      await this.upsertTeamPlayer(teamId, {
+        playerId: acceptedOffer.playerId,
+        playerName: acceptedOffer.playerName,
+        projectedPoints: acceptedOffer.projectedPoints,
+        position: position,
+        teamId: teamId,
+      });
+    } catch (err) {
+      // Player already on the team elsewhere: put the offer back so the game
+      // is left as it was.
+      await this.teamsEntryRepository.updateOfferStatus(acceptedOffer.offerId, 'pending', 'accepted');
+      throw err;
+    }
     const audits = await this.teamsEntryRepository.findCurrentAuditsForEntry(teamEntry.teamEntryId);
     await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, { status: 'finished' });
-    await this.upsertTeamPlayer(teamId, {
-      playerId: updatedOffer.playerId,
-      playerName: updatedOffer.playerName,
-      projectedPoints: updatedOffer.projectedPoints,
-      position: position,
-      teamId: teamId,
-    });
     return {
-      offer: this.addTeamsToOffer(updatedOffer),
+      offer: this.addTeamsToOffer(acceptedOffer),
       boxes: audits,
     };
   }
@@ -525,14 +542,6 @@ export class TeamsService {
     }
 
     const lastNonSelectedBox = nonSelectedBoxes[0];
-
-    // Update the status based on the decision
-    const newStatus: TeamEntryBoxStatus = decision === 'keep' ? 'eliminated' : 'swapped';
-    await this.teamsEntryRepository.updateAuditStatus(lastNonSelectedBox.auditId, newStatus);
-
-    // Update team entry status to finished
-    await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, { status: 'finished' });
-    // Set player on teamPlayer
     const finalPlayer =
       decision === 'keep'
         ? audits.find((audit) => audit.boxStatus === 'selected')
@@ -542,6 +551,8 @@ export class TeamsService {
       throw new Error(`Could not save final player. Decision: ${decision}`);
     }
 
+    // Assign first: if the player is already on the team elsewhere this throws
+    // before any box or the entry changes, leaving the game as it was.
     await this.upsertTeamPlayer(teamId, {
       playerId: finalPlayer.playerId,
       playerName: finalPlayer.playerName,
@@ -549,6 +560,13 @@ export class TeamsService {
       position: position,
       teamId: teamId,
     });
+
+    // Update the status based on the decision
+    const newStatus: TeamEntryBoxStatus = decision === 'keep' ? 'eliminated' : 'swapped';
+    await this.teamsEntryRepository.updateAuditStatus(lastNonSelectedBox.auditId, newStatus);
+
+    // Update team entry status to finished
+    await this.teamsEntryRepository.updateEntry(teamEntry.teamEntryId, { status: 'finished' });
 
     // Return all boxes with updated statuses
     const updatedAudits = await this.teamsEntryRepository.findCurrentAuditsForEntry(

@@ -1,13 +1,17 @@
+import { SportLeague } from '@/common/types/sport-league.type';
 import { Injectable } from '@nestjs/common';
 import { SleeperService } from '@/external-providers/sleeper/sleeper.service';
-import { IEventSyncStrategy, EventSyncGroup } from '@/events/strategies/event-sync-strategy.interface';
+import {
+  IEventSyncStrategy,
+  EventSyncGroup,
+} from '@/events/strategies/event-sync-strategy.interface';
 
 @Injectable()
 export class NflEventSyncStrategy implements IEventSyncStrategy {
   constructor(private readonly sleeperService: SleeperService) {}
 
   async fetchSyncData(): Promise<EventSyncGroup[]> {
-    const nflState = await this.sleeperService.getNflState();
+    const nflState = await this.sleeperService.getStateForSport(SportLeague.NFL);
     const displayWeek = nflState.week;
     const seasonYear = Number(nflState.season);
 
@@ -15,11 +19,15 @@ export class NflEventSyncStrategy implements IEventSyncStrategy {
     const sleeperWeek = isPost ? displayWeek - 18 : displayWeek;
     const seasonType = isPost ? 'post' : 'regular';
 
-    const dates = await this.sleeperService.getNflWeekGameDates(
+    const schedule = await this.sleeperService.getScheduleForSport(
+      SportLeague.NFL,
       seasonYear,
-      sleeperWeek,
       seasonType,
     );
+    // Canceled games (e.g. unused playoff placeholders) don't define the week
+    const dates = schedule
+      .filter((game) => game.week === sleeperWeek && game.status !== 'canceled')
+      .map((game) => game.date);
     if (dates.length === 0) return [];
 
     const sorted = [...dates].sort();

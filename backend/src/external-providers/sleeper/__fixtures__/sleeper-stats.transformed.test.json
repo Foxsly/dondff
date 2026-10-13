@@ -1,9 +1,6 @@
 [
   {
     "stats": {
-      "pos_rank_std": 1,
-      "pos_rank_half_ppr": 1,
-      "pos_rank_ppr": 1,
       "pts_std": 30.2,
       "pts_half_ppr": 34.7,
       "pts_ppr": 39.2
@@ -22,7 +19,8 @@
       "position": "WR",
       "injury_status": null,
       "metadata": {
-        "genius_id": "stats-7547"
+        "genius_id": "stats-7547",
+        "channel_id": "1113708810284855296"
       }
     },
     "team": "DET",
@@ -34,9 +32,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 4,
-      "pos_rank_half_ppr": 3,
-      "pos_rank_ppr": 3,
       "pts_std": 22.5,
       "pts_half_ppr": 29.5,
       "pts_ppr": 36.5
@@ -55,7 +50,8 @@
       "position": "WR",
       "injury_status": null,
       "metadata": {
-        "genius_id": "stats-7564"
+        "genius_id": "stats-7564",
+        "channel_id": "1113708809265639424"
       }
     },
     "team": "CIN",
@@ -67,9 +63,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 88,
-      "pos_rank_half_ppr": 82,
-      "pos_rank_ppr": 78,
       "pts_std": 2.2,
       "pts_half_ppr": 3.7,
       "pts_ppr": 5.2
@@ -89,7 +82,8 @@
       "position": "WR",
       "injury_status": null,
       "metadata": {
-        "genius_id": "stats-2530"
+        "genius_id": "stats-2530",
+        "channel_id": "1221352995866812416"
       }
     },
     "team": "JAX",
@@ -101,9 +95,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 999,
-      "pos_rank_half_ppr": 999,
-      "pos_rank_ppr": 999,
       "pts_std": 0,
       "pts_half_ppr": 0,
       "pts_ppr": 0
@@ -122,7 +113,8 @@
       "position": "WR",
       "injury_status": "IR",
       "metadata": {
-        "genius_id": "stats-0222"
+        "genius_id": "stats-0222",
+        "channel_id": "1113708797341233152"
       }
     },
     "team": "GB",
@@ -134,9 +126,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 999,
-      "pos_rank_half_ppr": 999,
-      "pos_rank_ppr": 999,
       "pts_std": 0,
       "pts_half_ppr": 0,
       "pts_ppr": 0
@@ -155,7 +144,8 @@
       "position": "WR",
       "injury_status": null,
       "metadata": {
-        "genius_id": "stats-9495"
+        "genius_id": "stats-9495",
+        "channel_id": "1113708728659505152"
       }
     },
     "team": "PIT",
@@ -167,9 +157,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 999,
-      "pos_rank_half_ppr": 999,
-      "pos_rank_ppr": 999,
       "pts_std": 3.2,
       "pts_half_ppr": 4.2,
       "pts_ppr": 5.2
@@ -188,7 +175,8 @@
       "position": "FB",
       "injury_status": null,
       "metadata": {
-        "genius_id": "stats-1379"
+        "genius_id": "stats-1379",
+        "channel_id": "1113708876684881921"
       }
     },
     "team": "SF",
@@ -200,9 +188,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 999,
-      "pos_rank_half_ppr": 999,
-      "pos_rank_ppr": 999,
       "pts_std": 0,
       "pts_half_ppr": 0,
       "pts_ppr": 0
@@ -221,7 +206,8 @@
       "position": "TE",
       "injury_status": "PUP",
       "metadata": {
-        "genius_id": "stats-4381"
+        "genius_id": "stats-4381",
+        "channel_id": "1113708683042254848"
       }
     },
     "team": "NO",
@@ -233,9 +219,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 21,
-      "pos_rank_half_ppr": 21,
-      "pos_rank_ppr": 21,
       "pts_std": 11.9,
       "pts_half_ppr": 11.9,
       "pts_ppr": 11.9
@@ -254,7 +237,8 @@
       "position": "QB",
       "injury_status": null,
       "metadata": {
-        "genius_id": "stats-3163"
+        "genius_id": "stats-3163",
+        "channel_id": "1113708813946482688"
       }
     },
     "team": "DET",
@@ -266,9 +250,6 @@
   },
   {
     "stats": {
-      "pos_rank_std": 999,
-      "pos_rank_half_ppr": 999,
-      "pos_rank_ppr": 999,
       "pts_std": 7,
       "pts_half_ppr": 7,
       "pts_ppr": 7
@@ -287,7 +268,8 @@
       "position": "K",
       "injury_status": null,
       "metadata": {
-        "genius_id": "stats-1539"
+        "genius_id": "stats-1539",
+        "channel_id": "1113708811308265472"
       }
     },
     "team": "DET",

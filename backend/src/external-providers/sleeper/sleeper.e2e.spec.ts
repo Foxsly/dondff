@@ -34,8 +34,14 @@ describe('Sleeper (e2e)', () => {
 
     const res = await request(app.getHttpServer()).get('/sleeper/state').expect(200);
 
-    // Remove `season_has_scores` and `season_start_date` from the expected object
-    const { season_has_scores, season_start_date, ...expected } = stateResponse;
+    // Fields not on ISleeperState are pruned from the response
+    const {
+      season_has_scores,
+      season_start_date,
+      previous_season,
+      league_create_season,
+      ...expected
+    } = stateResponse;
     expect(res.body).toEqual(expected);
   });
 

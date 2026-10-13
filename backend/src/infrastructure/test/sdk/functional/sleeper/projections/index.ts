@@ -9,7 +9,7 @@ import type { IConnection } from "@nestia/fetcher";
 import { PlainFetcher } from "@nestia/fetcher/lib/PlainFetcher";
 import type { Primitive, Resolved } from "typia";
 
-import type { SleeperProjectionResponse } from "@/external-providers/sleeper/entities/sleeper.entity";
+import type { SleeperNflStatResponse } from "@/external-providers/sleeper/entities/sleeper.entity";
 
 /**
  * @controller SleeperController.getProjections
@@ -31,7 +31,7 @@ export async function getProjections(
 }
 export namespace getProjections {
   export type Query = Resolved<SleeperStatRequest>;
-  export type Output = Primitive<SleeperProjectionResponse>;
+  export type Output = Primitive<SleeperNflStatResponse>;
 
   export const METADATA = {
     method: "GET",

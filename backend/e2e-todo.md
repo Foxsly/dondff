@@ -99,21 +99,48 @@ This document tracks remaining and current **end-to-end (E2E)** coverage across 
 
 ## Events (`src/events/events.e2e.spec.ts`)
 
-> Covers the `EventSyncGroup` strategies (NFL/Golf/World Cup) via `GET /event-groups/:sportLeague` (each GET re-syncs, so Sleeper/FIFA/FanDuel/ESPN upstreams are re-mocked per request).
+> Covers the `EventSyncGroup` strategies (NFL/Golf/World Cup; NBA lives in `src/nba/nba.e2e.spec.ts`) via `GET /event-groups/:sportLeague` (each GET re-syncs, so Sleeper/FIFA/FanDuel/ESPN upstreams are re-mocked per request).
 
 ### ✅ Covered
-- [x] `GET /event-groups/NFL` — happy path: syncs NFL from Sleeper (state + scores mocked), persists min/max game dates from `batch_scores` as `event.startDate`/`endDate`.
+- [x] `GET /event-groups/NFL` — happy path: syncs NFL from Sleeper (state + season schedule mocked), persists min/max dates of the week's non-canceled games as `event.startDate`/`endDate`; other weeks and canceled games ignored.
+- [x] `GET /event-groups/NFL` — malformed schedule (game without `date`) → 500 error contract; no group created.
 - [x] `GET /event-groups/NFL` — idempotency: second call does not duplicate event groups/events.
 - [x] `GET /event-groups/NFL` — multiple weeks in the same season merge into one event group.
-- [x] `GET /event-groups/NFL` — empty scores (no games scheduled) → no event group created.
+- [x] `GET /event-groups/NFL` — week with only canceled games → no event group created.
 - [x] `GET /event-groups/NFL/with-dates` — future-week dates → `status: 'PENDING'`.
 - [x] `GET /event-groups/GOLF` — sync from FanDuel (post events) + ESPN (start/end dates), verify merged event group.
 - [x] `GET /event-groups/WORLDCUP` — sync events from FIFA (start/end dates from fixture).
-- [x] `GET /event-groups/NBA` — unknown `sportLeague` → 500 (strategy registry miss).
+- [x] `GET /event-groups/NHL` — unknown `sportLeague` → 500 (strategy registry miss).
 
 ### ⏭️ Remaining / Next Up
 - [ ] Verify `status` (PENDING/PLAYING/FINISHED) transitions across date ranges (only PENDING for future dates covered so far).
 - [ ] Upstream errors (Sleeper/FIFA timeouts or 4xx/5xx) propagate cleanly.
+
+---
+
+## NBA (`src/nba/nba.e2e.spec.ts`)
+
+> Sleeper NBA upstreams (state, season schedule, per-game projections/stats) mocked with nock.
+
+### ✅ Covered
+- [x] `GET /event-groups/NBA` — syncs current + next Sleeper week; one group per week ("NBA 2025-26 Week 10"), one event per game; canceled games skipped; empty next week → no group.
+- [x] `GET /event-groups/NBA` — malformed schedule (game without `week`) → 500 error contract; no group created.
+- [x] `GET /event-groups/NBA` — Sleeper state unavailable → 500 error contract.
+- [x] `POST /leagues` (NBA) → `GET /leagues/:id/positions` — defaults G 64 / F 64 / C 32.
+- [x] `GET /players/projections/:year/:eventGroupId/F?sportLeague=NBA` — best projected game per player; players pooled by primary position only (SF/SG → F only, C/PF → C only); empty projections dropped.
+- [x] `GET /players/projections/...` — NBA group whose name is not a Sleeper week → 500.
+- [x] `GET /teams/:teamId/cases?position=F` — player drafted at another slot excluded from the board; boxes hide player ids.
+- [x] `GET /leagues/:id/teams?eventGroupId=` — finished week scores best actual game per drafted player; DNP → 0; team rows ignored.
+- [x] `PUT /teams/:teamId/players` — player already filling another slot → 409 (stands in for a mid-week primary-position change); lineup unchanged.
+- [x] `POST /teams/:teamId/offers` (keep) — case holding an already-drafted player → 409; board and entry unchanged.
+- [x] `POST /teams/:teamId/offers/accept` — offered player already on the team elsewhere → 409; offer put back to pending, entry not finished.
+- [x] `POST /teams/:teamId/offers/accept` sent twice at once → accepted once; lineup holds the offered player.
+- [x] `TeamsEntryRepository.updateOfferStatus` — a stale accept of an offer a reject already moved on returns null and changes nothing (the interleaving HTTP-over-PGlite cannot produce).
+- [x] Simultaneous `PUT /teams/:teamId/players` of one player to two slots → exactly one 200, one 409 (PGlite serialises transactions, so this does not exercise row-lock contention).
+
+### ⏭️ Remaining / Next Up
+- [ ] Playoff weeks (`season_type=post`) through the HTTP layer (unit-tested only).
+- [ ] `POST /events` without `externalEventId`/`externalEventSource` returns 500 (pre-existing, all sports; cause unverified).
 
 ---
 

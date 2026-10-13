@@ -2,7 +2,7 @@ import { SportLeague } from '@/common/types/sport-league.type';
 import { TeamsEntryRepository } from '@/teams/teams-entry.repository';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeamsService } from './teams.service';
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { ITeam, Team, CreateTeamDto, UpdateTeamDto } from './entities/team.entity';
 import { TeamsRepository } from '@/teams/teams.repository';
 import { LeaguesService } from '@/leagues/leagues.service';
@@ -431,5 +431,122 @@ describe('TeamsService — golf shared pool exclusion', () => {
       expect(insertedPlayerIds).not.toContain('player-5');
       expect(insertedCases).toHaveLength(10);
     });
+  });
+
+  describe('assigning the drafted player', () => {
+    const offer = {
+      offerId: 'offer-1',
+      teamEntryId: 'entry-GOLF_PLAYER_2',
+      playerId: 'player-1',
+      playerName: 'Golfer 1',
+      projectedPoints: 100,
+      injuryStatus: null,
+      status: 'pending' as const,
+    };
+    const audit = (boxNumber: number, playerId: string, boxStatus: string) => ({
+      auditId: `audit-${boxNumber}`,
+      teamEntryId: 'entry-GOLF_PLAYER_2',
+      resetNumber: 0,
+      boxNumber,
+      playerId,
+      playerName: playerId,
+      projectedPoints: 50,
+      injuryStatus: null,
+      boxStatus,
+    });
+
+    beforeEach(() => {
+      entryRepo.findLatestEntryForTeamPosition.mockResolvedValue({
+        ...mockTeamEntry('GOLF_PLAYER_2'),
+        selectedBox: 1,
+        status: 'playing',
+      } as any);
+    });
+
+    it('rejects a player already on the team at another position with 409', async () => {
+      teamsRepo.upsertTeamPlayer.mockResolvedValue(null);
+
+      await expect(
+        service.upsertTeamPlayer('golf-team-1', {
+          teamId: 'golf-team-1',
+          position: 'GOLF_PLAYER_2',
+          playerId: 'player-1',
+          playerName: 'Golfer 1',
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('accepting an offer for an already-drafted player puts the offer back and changes nothing else', async () => {
+      entryRepo.getCurrentOffer.mockResolvedValue(offer as any);
+      entryRepo.updateOfferStatus.mockResolvedValue({ ...offer, status: 'accepted' } as any);
+      teamsRepo.upsertTeamPlayer.mockResolvedValue(null);
+
+      await expect(service.acceptOffer('golf-team-1', 'GOLF_PLAYER_2')).rejects.toThrow(
+        ConflictException,
+      );
+      expect(entryRepo.updateOfferStatus.mock.calls).toEqual([
+        ['offer-1', 'accepted'],
+        ['offer-1', 'pending', 'accepted'],
+      ]);
+      expect(entryRepo.updateEntry).not.toHaveBeenCalled();
+    });
+
+    it('accepting loses cleanly to a reject that already took the offer', async () => {
+      // Read as pending, but a concurrent reject moved it on before our conditional update
+      entryRepo.getCurrentOffer.mockResolvedValue(offer as any);
+      entryRepo.updateOfferStatus.mockResolvedValue(null);
+
+      await expect(service.acceptOffer('golf-team-1', 'GOLF_PLAYER_2')).rejects.toThrow(
+        ConflictException,
+      );
+      expect(teamsRepo.upsertTeamPlayer).not.toHaveBeenCalled();
+      expect(entryRepo.updateEntry).not.toHaveBeenCalled();
+    });
+
+    it('accepting assigns the player on the accepted row, then finishes the entry', async () => {
+      entryRepo.getCurrentOffer.mockResolvedValue(offer as any);
+      entryRepo.updateOfferStatus.mockResolvedValue({ ...offer, status: 'accepted' } as any);
+      teamsRepo.upsertTeamPlayer.mockResolvedValue({} as any);
+      entryRepo.findCurrentAuditsForEntry.mockResolvedValue([]);
+      (playerStatsService as any).getTeamAndOpponentForPlayer = jest.fn();
+
+      await service.acceptOffer('golf-team-1', 'GOLF_PLAYER_2');
+
+      expect(entryRepo.getCurrentOffer).toHaveBeenCalledTimes(1);
+      expect(teamsRepo.upsertTeamPlayer).toHaveBeenCalledWith(
+        'golf-team-1',
+        expect.objectContaining({ position: 'GOLF_PLAYER_2', playerId: 'player-1' }),
+      );
+      expect(entryRepo.updateOfferStatus.mock.invocationCallOrder[0]).toBeLessThan(
+        teamsRepo.upsertTeamPlayer.mock.invocationCallOrder[0],
+      );
+      expect(teamsRepo.upsertTeamPlayer.mock.invocationCallOrder[0]).toBeLessThan(
+        entryRepo.updateEntry.mock.invocationCallOrder[0],
+      );
+      expect(entryRepo.updateEntry).toHaveBeenCalledWith('entry-GOLF_PLAYER_2', {
+        status: 'finished',
+      });
+    });
+
+    it.each(['keep', 'swap'] as const)(
+      'a final %s of an already-drafted player changes no box or entry',
+      async (decision) => {
+        entryRepo.findCurrentAuditsForEntry.mockResolvedValue([
+          audit(1, 'player-1', 'selected'),
+          audit(2, 'player-2', 'available'),
+        ] as any);
+        teamsRepo.upsertTeamPlayer.mockResolvedValue(null);
+
+        await expect(
+          service.handleFinalOffer('golf-team-1', 'GOLF_PLAYER_2', decision),
+        ).rejects.toThrow(ConflictException);
+        expect(teamsRepo.upsertTeamPlayer).toHaveBeenCalledWith(
+          'golf-team-1',
+          expect.objectContaining({ playerId: decision === 'keep' ? 'player-1' : 'player-2' }),
+        );
+        expect(entryRepo.updateAuditStatus).not.toHaveBeenCalled();
+        expect(entryRepo.updateEntry).not.toHaveBeenCalled();
+      },
+    );
   });
 });

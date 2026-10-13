@@ -2,6 +2,7 @@ import { DatabaseModule } from '@/infrastructure/database/database.module';
 import { NflModule } from '@/nfl/nfl.module';
 import { GolfModule } from '@/golf/golf.module';
 import { WorldCupModule } from '@/world-cup/world-cup.module';
+import { NbaModule } from '@/nba/nba.module';
 import { Module } from '@nestjs/common';
 import { EventGroupsController, EventsController } from './events.controller';
 import { DatabaseEventsRepository, EventsRepository } from './events.repository';
@@ -18,7 +19,7 @@ import { EventSyncStrategyRegistry } from './strategies/event-sync-strategy.regi
       useClass: DatabaseEventsRepository,
     },
   ],
-  imports: [DatabaseModule, NflModule, GolfModule, WorldCupModule],
+  imports: [DatabaseModule, NflModule, GolfModule, WorldCupModule, NbaModule],
   exports: [EventsService],
 })
 export class EventsModule {}

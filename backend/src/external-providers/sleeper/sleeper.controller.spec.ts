@@ -1,12 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { SleeperController } from './sleeper.controller';
-import { SleeperService } from './sleeper.service';
 import {
   ISleeperState,
-  SleeperProjectionResponse,
-  SleeperStatResponse,
+  SleeperNflStatResponse,
   SleeperStatRequest,
 } from './entities/sleeper.entity';
+import { SleeperController } from './sleeper.controller';
+import { SleeperService } from './sleeper.service';
 
 describe('SleeperController', () => {
   let controller: SleeperController;
@@ -16,16 +15,14 @@ describe('SleeperController', () => {
     week: 3,
     season_type: 'regular',
     season: '2025',
-    previous_season: '2024',
     leg: 3,
     league_season: '2025',
-    league_create_season: '2020',
     display_week: 3,
   };
 
-  const mockProjectionResponse: SleeperProjectionResponse = [
+  const mockProjectionResponse: SleeperNflStatResponse = [
     {
-      stats: { pts_std: 15, pts_half_ppr: 18, pts_ppr: 20, pos_adp_dd_ppr: 5 },
+      stats: { pts_std: 15, pts_half_ppr: 18, pts_ppr: 20},
       week: 3,
       season: 2025,
       season_type: 'regular',
@@ -48,9 +45,9 @@ describe('SleeperController', () => {
     },
   ];
 
-  const mockStatResponse: SleeperStatResponse = [
+  const mockStatResponse: SleeperNflStatResponse = [
     {
-      stats: { pts_std: 10, pts_half_ppr: 12, pts_ppr: 14, pos_rank_std: 2 },
+      stats: { pts_std: 10, pts_half_ppr: 12, pts_ppr: 14},
       week: 4,
       season: 2025,
       season_type: 'regular',
@@ -80,7 +77,7 @@ describe('SleeperController', () => {
         {
           provide: SleeperService,
           useValue: {
-            getNflState: jest.fn(),
+            getStateForSport: jest.fn(),
             getPlayerProjections: jest.fn(),
             getPlayerStatistics: jest.fn(),
           },
@@ -94,11 +91,11 @@ describe('SleeperController', () => {
 
   describe('getState', () => {
     it('should return NFL state', async () => {
-      service.getNflState.mockResolvedValue(mockState);
+      service.getStateForSport.mockResolvedValue(mockState);
 
       const result = await controller.getState();
 
-      expect(service.getNflState).toHaveBeenCalled();
+      expect(service.getStateForSport).toHaveBeenCalled();
       expect(result).toEqual(mockState);
     });
   });
