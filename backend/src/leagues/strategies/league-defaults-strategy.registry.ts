@@ -4,6 +4,7 @@ import { ILeagueDefaultsStrategy } from './league-defaults-strategy.interface';
 import { NflLeagueDefaultsStrategy } from '@/nfl/strategies/nfl-league-defaults.strategy';
 import { GolfLeagueDefaultsStrategy } from '@/golf/strategies/golf-league-defaults.strategy';
 import { WorldCupLeagueDefaultsStrategy } from '@/world-cup/strategies/world-cup-league-defaults.strategy';
+import { NbaLeagueDefaultsStrategy } from '@/nba/strategies/nba-league-defaults.strategy';
 
 @Injectable()
 export class LeagueDefaultsStrategyRegistry {
@@ -13,11 +14,13 @@ export class LeagueDefaultsStrategyRegistry {
     nfl: NflLeagueDefaultsStrategy,
     golf: GolfLeagueDefaultsStrategy,
     worldCup: WorldCupLeagueDefaultsStrategy,
+    nba: NbaLeagueDefaultsStrategy,
   ) {
     this.strategies = new Map<SportLeague, ILeagueDefaultsStrategy>([
       [SportLeague.NFL, nfl],
       [SportLeague.GOLF, golf],
       [SportLeague.WORLDCUP, worldCup],
+      [SportLeague.NBA, nba],
     ]);
   }
 

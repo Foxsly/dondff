@@ -4,6 +4,7 @@ import { IPlayerStatsStrategy } from './player-stats-strategy.interface';
 import { NflPlayerStatsStrategy } from '@/nfl/strategies/nfl-player-stats.strategy';
 import { GolfPlayerStatsStrategy } from '@/golf/strategies/golf-player-stats.strategy';
 import { WorldCupPlayerStatsStrategy } from '@/world-cup/strategies/world-cup-player-stats.strategy';
+import { NbaPlayerStatsStrategy } from '@/nba/strategies/nba-player-stats.strategy';
 
 @Injectable()
 export class PlayerStatsStrategyRegistry {
@@ -13,11 +14,13 @@ export class PlayerStatsStrategyRegistry {
     nfl: NflPlayerStatsStrategy,
     golf: GolfPlayerStatsStrategy,
     worldCup: WorldCupPlayerStatsStrategy,
+    nba: NbaPlayerStatsStrategy,
   ) {
     this.strategies = new Map<SportLeague, IPlayerStatsStrategy>([
       [SportLeague.NFL, nfl],
       [SportLeague.GOLF, golf],
       [SportLeague.WORLDCUP, worldCup],
+      [SportLeague.NBA, nba],
     ]);
   }
 

@@ -9,7 +9,7 @@ export class SleeperController {
 
   @TypedRoute.Get('state')
   getState() {
-    return this.sleeperService.getNflState();
+    return this.sleeperService.getStateForSport();
   }
 
   @TypedRoute.Get('projections/:year/:week')

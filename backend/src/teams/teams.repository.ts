@@ -12,7 +12,12 @@ export abstract class TeamsRepository {
   abstract findOne(id: string): Promise<ITeam | null>;
   abstract update(id: string, team: Partial<Team>): Promise<Team | null>;
   abstract remove(id: string): Promise<boolean>;
-  abstract upsertTeamPlayer(teamId: string, dto: ITeamPlayer): Promise<TeamPlayer>;
+  /**
+   * Set the player for a team slot. Returns null, writing nothing, when the
+   * player already fills a different slot on the team — a team never holds the
+   * same player twice.
+   */
+  abstract upsertTeamPlayer(teamId: string, dto: ITeamPlayer): Promise<TeamPlayer | null>;
   abstract updatePlayerActualPoints(teamId: string, position: string, actualPoints: number): Promise<void>;
   abstract findTeamsByEventGroup(eventGroupId: string): Promise<ITeam[]>;
 }
@@ -79,34 +84,49 @@ export class DatabaseTeamsRepository extends TeamsRepository {
     return (result?.numDeletedRows ?? 0n) > 0n;
   }
 
-  async upsertTeamPlayer(teamId: string, dto: ITeamPlayer): Promise<TeamPlayer> {
-    await this.db
-      .insertInto('teamPlayer')
-      .values({
-        teamId,
-        position: dto.position,
-        playerId: dto.playerId,
-        playerName: dto.playerName,
-        ...(dto.projectedPoints && {projectedPoints: dto.projectedPoints}),
-        ...(dto.actualPoints && {actualPoints: dto.actualPoints}),
-      })
-      .onConflict((oc) =>
-        oc.columns(['teamId', 'position']).doUpdateSet({
+  async upsertTeamPlayer(teamId: string, dto: ITeamPlayer): Promise<TeamPlayer | null> {
+    return this.db.transaction().execute(async (trx) => {
+      // Lock the team row so concurrent slot assignments for this team run one
+      // at a time; otherwise two slots could both pass the check below.
+      await trx.selectFrom('team').select('teamId').where('teamId', '=', teamId).forUpdate().execute();
+
+      const otherSlot = await trx
+        .selectFrom('teamPlayer')
+        .select('position')
+        .where('teamId', '=', teamId)
+        .where('playerId', '=', dto.playerId)
+        .where('position', '!=', dto.position)
+        .executeTakeFirst();
+      if (otherSlot) return null;
+
+      await trx
+        .insertInto('teamPlayer')
+        .values({
+          teamId,
+          position: dto.position,
           playerId: dto.playerId,
           playerName: dto.playerName,
           ...(dto.projectedPoints && {projectedPoints: dto.projectedPoints}),
-        }),
-      )
-      .execute();
+          ...(dto.actualPoints && {actualPoints: dto.actualPoints}),
+        })
+        .onConflict((oc) =>
+          oc.columns(['teamId', 'position']).doUpdateSet({
+            playerId: dto.playerId,
+            playerName: dto.playerName,
+            ...(dto.projectedPoints && {projectedPoints: dto.projectedPoints}),
+          }),
+        )
+        .execute();
 
-    const row = await this.db
-      .selectFrom('teamPlayer')
-      .selectAll()
-      .where('teamId', '=', teamId)
-      .where('position', '=', dto.position)
-      .executeTakeFirstOrThrow();
+      const row = await trx
+        .selectFrom('teamPlayer')
+        .selectAll()
+        .where('teamId', '=', teamId)
+        .where('position', '=', dto.position)
+        .executeTakeFirstOrThrow();
 
-    return row as TeamPlayer;
+      return row as TeamPlayer;
+    });
   }
 
   async updatePlayerActualPoints(teamId: string, position: string, actualPoints: number): Promise<void> {

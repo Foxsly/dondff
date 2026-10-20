@@ -4,6 +4,7 @@ import { IEventSyncStrategy } from './event-sync-strategy.interface';
 import { NflEventSyncStrategy } from '@/nfl/strategies/nfl-event-sync.strategy';
 import { GolfEventSyncStrategy } from '@/golf/strategies/golf-event-sync.strategy';
 import { WorldCupEventSyncStrategy } from '@/world-cup/strategies/world-cup-event-sync.strategy';
+import { NbaEventSyncStrategy } from '@/nba/strategies/nba-event-sync.strategy';
 
 @Injectable()
 export class EventSyncStrategyRegistry {
@@ -13,11 +14,13 @@ export class EventSyncStrategyRegistry {
     nfl: NflEventSyncStrategy,
     golf: GolfEventSyncStrategy,
     worldCup: WorldCupEventSyncStrategy,
+    nba: NbaEventSyncStrategy,
   ) {
     this.strategies = new Map<SportLeague, IEventSyncStrategy>([
       [SportLeague.NFL, nfl],
       [SportLeague.GOLF, golf],
       [SportLeague.WORLDCUP, worldCup],
+      [SportLeague.NBA, nba],
     ]);
   }
 

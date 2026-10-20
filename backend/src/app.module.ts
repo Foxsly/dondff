@@ -16,6 +16,7 @@ import { FifaModule } from './external-providers/fifa/fifa.module';
 import { GolfModule } from './golf/golf.module';
 import { NflModule } from './nfl/nfl.module';
 import { WorldCupModule } from './world-cup/world-cup.module';
+import { NbaModule } from '@/nba/nba.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { WorldCupModule } from './world-cup/world-cup.module';
     NflModule,
     GolfModule,
     WorldCupModule,
+    NbaModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

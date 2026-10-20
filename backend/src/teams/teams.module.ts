@@ -7,6 +7,7 @@ import { PlayerStatsModule } from '@/player-stats/player-stats.module';
 import { NflModule } from '@/nfl/nfl.module';
 import { GolfModule } from '@/golf/golf.module';
 import { WorldCupModule } from '@/world-cup/world-cup.module';
+import { NbaModule } from '@/nba/nba.module';
 import { DatabaseTeamsEntryRepository, TeamsEntryRepository } from '@/teams/teams-entry.repository';
 import { TeamsController } from './teams.controller';
 import { DatabaseTeamsRepository, TeamsRepository } from './teams.repository';
@@ -31,7 +32,7 @@ import { TeamsGameStrategyRegistry } from './strategies/teams-game-strategy.regi
       useClass: DatabaseTeamsEntryRepository,
     },
   ],
-  imports: [DatabaseModule, forwardRef(() => LeaguesModule), PlayerStatsModule, EventsModule, NflModule, GolfModule, WorldCupModule],
+  imports: [DatabaseModule, forwardRef(() => LeaguesModule), PlayerStatsModule, EventsModule, NflModule, GolfModule, WorldCupModule, NbaModule],
   exports: [TeamsService],
 })
 export class TeamsModule {}

@@ -26,6 +26,15 @@ The exact schemas live in code; this document describes their responsibilities.
 - `teamEntryEvent`
   - Append-only event stream for state transitions (selection, elimination, offer actions, reveal, finalize).
 
+## Per-sport differences
+
+The case flow below is the same for every sport. What differs per sport — which players
+fill a pool, how many cases there are, what a case's amount means and how a lineup is
+scored — comes from the sport strategies described in `ARCHITECTURE.md` ("Sport
+strategies"). For example, an NBA amount is the player's single best fantasy game of the
+week (projected while playing, actual when scored), and a player drafted at one NBA slot
+cannot be drafted again at another.
+
 ## Game state model
 
 ### Entry status
