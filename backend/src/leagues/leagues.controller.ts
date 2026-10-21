@@ -4,6 +4,7 @@ import type {
   ILeagueSettingsPosition,
 } from '@/leagues/entities/league-settings.entity';
 import type { CreateLeagueDto, League, UpdateLeagueDto } from '@/leagues/entities/league.entity';
+import type { ISeasonHighlights } from '@/leagues/entities/season-highlights.entity';
 import { ITeam } from '@/teams/entities/team.entity';
 import { TeamsService } from '@/teams/teams.service';
 import { TypedBody, TypedParam, TypedRoute } from '@nestia/core';
@@ -91,6 +92,18 @@ export class LeaguesController {
       await this.teamsService.calculateAndPersistScores(eventGroupId);
     }
     return this.leaguesService.getLeagueTeams(leagueId, season, eventGroupId);
+  }
+
+  /**
+   * Season highlights: best lineup, best score per position and per-user stats.
+   * Scores any finished-but-unscored weeks in the season first.
+   */
+  @TypedRoute.Get(':id/seasons/:season/highlights')
+  getSeasonHighlights(
+    @TypedParam('id') leagueId: string,
+    @TypedParam('season') season: number,
+  ): Promise<ISeasonHighlights> {
+    return this.teamsService.getSeasonHighlights(leagueId, season);
   }
 
   /**

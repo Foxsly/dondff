@@ -1,4 +1,5 @@
 import { IConnection } from '@nestia/fetcher';
+import request from 'supertest';
 import * as Leagues from '@/infrastructure/test/sdk/functional/leagues';
 import { closeTestApp, createTestApp, getBaseUrl } from '@/infrastructure/test/app.factory';
 import { INestApplication } from '@nestjs/common';
@@ -10,6 +11,8 @@ import {
   resetDatabase,
   ensureLeagueUsers,
   ensureLeagueSettingsVersion,
+  ensureEventGroup,
+  ensureLeagueWithOwner,
 } from '@/infrastructure/test/factories';
 
 describe('Leagues E2E', () => {
@@ -460,6 +463,158 @@ describe('Leagues E2E', () => {
       // expect(names).toEqual(['Alpha', 'Beta']);
       //
       // If players are embedded, assert shape (ids, positions, etc.).
+    });
+  });
+
+  //
+  // 7) GET /leagues/:id/seasons/:season/highlights
+  //
+  describe('GET /leagues/:id/seasons/:season/highlights', () => {
+    const SEASON = 2025;
+
+    const createWeek = async (name: string, date: string) => {
+      const group = await ensureEventGroup(conn, { name, seasonYear: SEASON });
+      await request(app.getHttpServer())
+        .post('/events')
+        .send({
+          eventGroupId: group.eventGroupId,
+          name: `${name} game`,
+          startDate: date,
+          endDate: date,
+          externalEventId: `${name}-${date}`,
+          externalEventSource: 'SLEEPER',
+        })
+        .expect(201);
+      return group.eventGroupId;
+    };
+
+    // Scores are seeded directly so finished weeks are already fully scored
+    // and calculateAndPersistScores never reaches the stats provider.
+    const createTeam = async (
+      leagueId: string,
+      userId: string,
+      eventGroupId: string,
+      players: Array<{ position: string; actualPoints?: number }>,
+    ) => {
+      const team = await request(app.getHttpServer())
+        .post('/teams')
+        .send({ leagueId, userId, seasonYear: SEASON, eventGroupId })
+        .expect(201);
+      for (const player of players) {
+        await request(app.getHttpServer())
+          .put(`/teams/${team.body.teamId}/players`)
+          .send({
+            teamId: team.body.teamId,
+            position: player.position,
+            playerId: `${player.position}-${userId.slice(0, 8)}-${eventGroupId.slice(0, 8)}`,
+            playerName: `${player.position} of ${userId.slice(0, 4)}`,
+            projectedPoints: 10,
+            ...(player.actualPoints != null && { actualPoints: player.actualPoints }),
+          })
+          .expect(200);
+      }
+      return team.body.teamId as string;
+    };
+
+    it('ranks lineups, positions and users across finished weeks, crediting ties', async () => {
+      const league = await ensureLeague(conn);
+      const positions = await request(app.getHttpServer())
+        .get(`/leagues/${league.leagueId}/positions`)
+        .expect(200);
+      expect(positions.body.map((p: any) => p.position)).toEqual(['RB', 'WR']);
+
+      const { users } = await ensureLeagueUsers(conn, league.leagueId, [
+        { role: 'owner' },
+        { role: 'member' },
+        { role: 'member' },
+      ]);
+      const [alice, bob, carol] = users.map((u) => u.user.userId as string);
+
+      const week1 = await createWeek('1', '2025-09-07');
+      const week2 = await createWeek('2', '2025-09-14');
+      const week3 = await createWeek('3', '2099-09-14');
+
+      // Week 1: Alice and Bob tie at 30; Carol never finished her lineup.
+      await createTeam(league.leagueId, alice, week1, [
+        { position: 'RB', actualPoints: 20 },
+        { position: 'WR', actualPoints: 10 },
+      ]);
+      await createTeam(league.leagueId, bob, week1, [
+        { position: 'RB', actualPoints: 15 },
+        { position: 'WR', actualPoints: 15 },
+      ]);
+      await createTeam(league.leagueId, carol, week1, [{ position: 'RB', actualPoints: 25 }]);
+      // Week 2: Alice wins outright with the season-best lineup.
+      const aliceWeek2 = await createTeam(league.leagueId, alice, week2, [
+        { position: 'RB', actualPoints: 8 },
+        { position: 'WR', actualPoints: 30.5 },
+      ]);
+      await createTeam(league.leagueId, bob, week2, [
+        { position: 'RB', actualPoints: 12 },
+        { position: 'WR', actualPoints: 12 },
+      ]);
+      // Week 3 is upcoming: counts as played, never scored.
+      await createTeam(league.leagueId, alice, week3, [{ position: 'RB' }, { position: 'WR' }]);
+
+      const res = await request(app.getHttpServer())
+        .get(`/leagues/${league.leagueId}/seasons/${SEASON}/highlights`)
+        .expect(200);
+
+      expect(res.body.seasonYear).toBe(SEASON);
+      expect(res.body.finishedEventGroups).toBe(2);
+      expect(res.body.topLineup).toMatchObject({
+        teamId: aliceWeek2,
+        userId: alice,
+        eventGroupId: week2,
+        eventGroupName: '2',
+        totalPoints: 38.5,
+      });
+      expect(res.body.topLineup.players.map((p: any) => [p.position, p.actualPoints])).toEqual([
+        ['RB', 8],
+        ['WR', 30.5],
+      ]);
+      // Carol's lone RB score still counts as an individual highlight.
+      expect(
+        res.body.topByPosition.map((p: any) => [p.position, p.actualPoints, p.userId, p.eventGroupId]),
+      ).toEqual([
+        ['RB', 25, carol, week1],
+        ['WR', 30.5, alice, week2],
+      ]);
+      expect(res.body.userStats).toEqual([
+        { userId: alice, weeksPlayed: 3, wins: 2, totalPoints: 68.5, averagePoints: 34.25, bestScore: 38.5 },
+        { userId: bob, weeksPlayed: 2, wins: 1, totalPoints: 54, averagePoints: 27, bestScore: 30 },
+        { userId: carol, weeksPlayed: 0, wins: 0, totalPoints: 0, averagePoints: null, bestScore: null },
+      ]);
+    });
+
+    it('returns empty highlights for a season with no teams', async () => {
+      const { league, owner } = await ensureLeagueWithOwner(conn);
+      const res = await request(app.getHttpServer())
+        .get(`/leagues/${league.leagueId}/seasons/${SEASON}/highlights`)
+        .expect(200);
+      expect(res.body).toEqual({
+        seasonYear: SEASON,
+        finishedEventGroups: 0,
+        topLineup: null,
+        topByPosition: [],
+        userStats: [
+          { userId: owner.userId, weeksPlayed: 0, wins: 0, totalPoints: 0, averagePoints: null, bestScore: null },
+        ],
+      });
+    });
+
+    it('returns 404 for an unknown league', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/leagues/${crypto.randomUUID()}/seasons/${SEASON}/highlights`)
+        .expect(404);
+      expect(res.body.statusCode).toBe(404);
+    });
+
+    it('returns 400 for a non-numeric season', async () => {
+      const league = await ensureLeague(conn);
+      await request(app.getHttpServer())
+        .get(`/leagues/${league.leagueId}/seasons/abc/highlights`)
+        .expect(400);
     });
   });
 });

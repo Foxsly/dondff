@@ -111,3 +111,42 @@ export interface TeamUser {
   userId: string;
   user: User;
 }
+
+// ─── Season highlights ────────────────────────────────────────────────────────
+
+/** Mirrors backend `ISeasonHighlights` (GET /leagues/:id/seasons/:season/highlights). */
+export interface SeasonHighlights {
+  seasonYear: number;
+  finishedEventGroups: number;
+  topLineup: SeasonLineupHighlight | null;
+  topByPosition: SeasonPlayerHighlight[];
+  userStats: SeasonUserStats[];
+}
+
+export interface SeasonLineupHighlight {
+  teamId: string;
+  userId: string;
+  eventGroupId: string;
+  eventGroupName: string;
+  totalPoints: number;
+  players: { position: string; playerId: string; playerName: string; actualPoints?: number | null }[];
+}
+
+export interface SeasonPlayerHighlight {
+  position: string;
+  playerId: string;
+  playerName: string;
+  userId: string;
+  eventGroupId: string;
+  eventGroupName: string;
+  actualPoints: number;
+}
+
+export interface SeasonUserStats {
+  userId: string;
+  weeksPlayed: number;
+  wins: number;
+  totalPoints: number;
+  averagePoints: number | null;
+  bestScore: number | null;
+}

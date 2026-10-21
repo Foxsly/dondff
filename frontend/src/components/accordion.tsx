@@ -47,6 +47,18 @@ const formatDateRange = (
   return startLabel === endLabel ? startLabel : `${startLabel} – ${endLabel}`;
 };
 
+/**
+ * NFL weeks are bare numbers ("3") and need the "Week" prefix to read as
+ * anything; golf and World Cup events already carry a full name ("The Open",
+ * "World Cup Group Stage – Matchday 1") and must not get one.
+ *
+ * Keyed off the shape of the label rather than the sport: the old check was
+ * `eventLabel === 'Event'`, which covered golf but left World Cup rendering
+ * as "Round World Cup Group Stage – Matchday 1".
+ */
+export const formatEventGroupTitle = (label: string, eventLabel = 'Week'): string =>
+  /^\d+$/.test(String(label).trim()) ? `${eventLabel} ${label}` : label;
+
 const EventAccordion: React.FC<AccordionProps> = ({
   eventGroup,
   leagueId,
@@ -56,17 +68,7 @@ const EventAccordion: React.FC<AccordionProps> = ({
 }) => {
   const { sportConfig } = useLeague();
 
-  // NFL weeks are bare numbers ("3") and need the "Week" prefix to read as
-  // anything; golf and World Cup events already carry a full name ("The Open",
-  // "World Cup Group Stage – Matchday 1") and must not get one.
-  //
-  // Keyed off the shape of the label rather than the sport: the old check was
-  // `eventLabel === 'Event'`, which covered golf but left World Cup rendering
-  // as "Round World Cup Group Stage – Matchday 1".
-  const isNumericLabel = /^\d+$/.test(String(eventGroup.label).trim());
-  const title = isNumericLabel
-    ? `${sportConfig?.eventLabel ?? 'Week'} ${eventGroup.label}`
-    : eventGroup.label;
+  const title = formatEventGroupTitle(eventGroup.label, sportConfig?.eventLabel);
 
   const status = eventGroup.status ? STATUS_BADGE[eventGroup.status] : undefined;
   const dateRange = formatDateRange(eventGroup.startDate, eventGroup.endDate);

@@ -32,9 +32,11 @@ This document tracks remaining and current **end-to-end (E2E)** coverage across 
 - [x] Settings **burst writes** — latest remains the truly newest version.
 - [x] Settings **enum validation & temporal ordering** — invalid enum rejected; `latest` returns newest via `createdAt desc` (and `leagueSettingsId` tie-break).
 - [x] `GET /leagues/:id/positions` — returns server-seeded default positions from `league_settings_position`.
+- [x] `GET /leagues/:id/seasons/:season/highlights` — top lineup, best per position, per-user played/wins (ties credit everyone; incomplete lineups unscored; upcoming weeks count as played); empty season; 404 unknown league; 400 non-numeric season.
 
 ### ⏭️ Remaining / Next Up
 - [ ] `GET /leagues` — sorting/pagination semantics (when implemented).
+- [ ] `GET /leagues/:id/seasons/:season/highlights` — finished week with unscored players (provider scoring via `nock`).
 - [ ] `PATCH /leagues/:id` — additional validation: whitespace-only names; overly long names; unchanged name (no-op behavior).
 - [ ] Users add **idempotency policy** for duplicate `PUT /:id/users`:
     - [ ] Duplicate with **same role** ⇒ no change (document behavior; status vs silent no-op).
