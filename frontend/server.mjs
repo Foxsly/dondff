@@ -1,7 +1,6 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
-import url from "node:url";
 
 const port = process.env.PORT || 3000;
 const baseDir = path.join(
@@ -24,7 +23,7 @@ const mimeTypes = {
 };
 
 const server = http.createServer((req, res) => {
-  const requestUrl = url.parse(req.url || "/");
+  const requestUrl = new URL(req.url || "/", "http://localhost");
   let pathname = requestUrl.pathname || "/";
 
   // 👉 SPECIAL CASE: runtime config
