@@ -6,7 +6,7 @@
 # ==========================================================
 
 # ---------- Stage 1: Builder ----------
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 
 # Install dependencies
@@ -21,7 +21,7 @@ COPY src ./src
 RUN npm run build
 
 # ---------- Stage 2: Prod deps only ----------
-FROM node:20-alpine AS prod-deps
+FROM node:24-alpine AS prod-deps
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
@@ -29,7 +29,7 @@ COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev --omit=optional --ignore-scripts
 
 # ---------- Stage 3: Distroless runtime ----------
-FROM gcr.io/distroless/nodejs20-debian12:nonroot AS runner
+FROM gcr.io/distroless/nodejs24-debian12:nonroot AS runner
 # Non-root user
 USER 65532:65532
 WORKDIR /app
