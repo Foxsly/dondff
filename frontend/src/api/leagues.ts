@@ -1,5 +1,5 @@
 import { request } from './client';
-import type { League, LeagueMember, LeaguePosition, SportLeague } from '../types';
+import type { League, LeagueMember, LeaguePosition, SeasonHighlights, SportLeague } from '../types';
 
 export const getLeague = (leagueId: string) =>
   request<League>(`/leagues/${leagueId}`);
@@ -39,3 +39,6 @@ export const getLeagueTeams = (leagueId: string, params?: { season?: string | nu
 
 export const getLeaguePositions: (leagueId: string) => Promise<LeaguePosition[]> = (leagueId: string) =>
   request<LeaguePosition[]>(`/leagues/${leagueId}/positions`);
+
+export const getSeasonHighlights = (leagueId: string, season: string | number) =>
+  request<SeasonHighlights>(`/leagues/${leagueId}/seasons/${season}/highlights`);

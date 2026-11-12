@@ -1,8 +1,14 @@
 import { SportLeague } from '@/common/types/sport-league.type';
 import { shuffle } from '@/common/util';
-import { EventGroup } from '@/events/entities/event-group.entity';
+import { EventGroup, EventGroupWithDatesAndStatusDto } from '@/events/entities/event-group.entity';
 import { EventsService } from '@/events/events.service';
 import { ILeagueSettings } from '@/leagues/entities/league-settings.entity';
+import {
+  ISeasonHighlights,
+  ISeasonLineupHighlight,
+  ISeasonPlayerHighlight,
+  ISeasonUserStats,
+} from '@/leagues/entities/season-highlights.entity';
 import { LeaguesService } from '@/leagues/leagues.service';
 import {
   IPlayerProjection,
@@ -656,5 +662,126 @@ export class TeamsService {
     }
 
     this.logger.log(`Scores persisted for event group "${eventGroup.name}" (${teams.length} teams)`);
+  }
+
+  /**
+   * Season-wide highlights for a league: best lineup, best score per position
+   * and per-user participation/win counts.
+   *
+   * Scores are persisted lazily (only when a finished week is requested), so
+   * every finished week in the season is scored here first. A lineup counts
+   * toward scores only when every league position is filled and scored — the
+   * same rule the week view uses before showing a final. Everyone tied for a
+   * week's top score is credited with the win.
+   */
+  async getSeasonHighlights(leagueId: string, seasonYear: number): Promise<ISeasonHighlights> {
+    await this.leaguesService.findOne(leagueId);
+
+    const [positions, members, initialTeams] = await Promise.all([
+      this.leaguesService.getPositionsForLeague(leagueId),
+      this.leaguesService.findLeagueUsers(leagueId),
+      this.leaguesService.getLeagueTeams(leagueId, seasonYear),
+    ]);
+
+    const eventGroupIds = [...new Set(initialTeams.map((team) => team.eventGroupId))];
+    const eventGroups = new Map<string, EventGroupWithDatesAndStatusDto>();
+    for (const eventGroupId of eventGroupIds) {
+      eventGroups.set(eventGroupId, await this.eventsService.getEventGroupWithDates(eventGroupId));
+    }
+
+    const finishedIds = eventGroupIds.filter((id) => eventGroups.get(id)!.status === 'FINISHED');
+    for (const eventGroupId of finishedIds) {
+      await this.calculateAndPersistScores(eventGroupId);
+    }
+
+    const teams = finishedIds.length
+      ? await this.leaguesService.getLeagueTeams(leagueId, seasonYear)
+      : initialTeams;
+
+    const round = (value: number) => Math.round(value * 100) / 100;
+    const leaguePositions = positions.map((p) => p.position);
+    const lineupFor = (team: ITeam) =>
+      leaguePositions.map((position) => team.players.find((p) => p.position === position));
+    const isComplete = (team: ITeam) => lineupFor(team).every((player) => player != null);
+
+    const scored = teams.flatMap((team) => {
+      if (!finishedIds.includes(team.eventGroupId)) return [];
+      const lineup = lineupFor(team);
+      if (!lineup.every((player) => player?.actualPoints != null)) return [];
+      const total = round(lineup.reduce((sum, player) => sum + player!.actualPoints!, 0));
+      return [{ team, lineup: lineup as ITeamPlayer[], total }];
+    });
+
+    const eventGroupRef = (eventGroupId: string) => ({
+      eventGroupId,
+      eventGroupName: eventGroups.get(eventGroupId)!.name,
+    });
+
+    const best = scored.reduce<(typeof scored)[number] | null>(
+      (top, entry) => (top == null || entry.total > top.total ? entry : top),
+      null,
+    );
+    const topLineup: ISeasonLineupHighlight | null = best && {
+      teamId: best.team.teamId,
+      userId: best.team.userId,
+      ...eventGroupRef(best.team.eventGroupId),
+      totalPoints: best.total,
+      players: best.lineup.map(({ position, playerId, playerName, actualPoints }) => ({
+        position,
+        playerId,
+        playerName,
+        actualPoints,
+      })),
+    };
+
+    const topByPosition: ISeasonPlayerHighlight[] = leaguePositions.flatMap((position) => {
+      let top: ISeasonPlayerHighlight | null = null;
+      for (const team of teams) {
+        if (!finishedIds.includes(team.eventGroupId)) continue;
+        const player = team.players.find((p) => p.position === position);
+        if (player?.actualPoints == null) continue;
+        if (top == null || player.actualPoints > top.actualPoints) {
+          top = {
+            position,
+            playerId: player.playerId,
+            playerName: player.playerName,
+            userId: team.userId,
+            ...eventGroupRef(team.eventGroupId),
+            actualPoints: player.actualPoints,
+          };
+        }
+      }
+      return top ? [top] : [];
+    });
+
+    const weekTopScore = new Map<string, number>();
+    for (const { team, total } of scored) {
+      weekTopScore.set(team.eventGroupId, Math.max(weekTopScore.get(team.eventGroupId) ?? -Infinity, total));
+    }
+
+    const userIds = [...new Set([...members.map((m) => m.userId), ...teams.map((t) => t.userId)])];
+    const userStats: ISeasonUserStats[] = userIds
+      .map((userId) => {
+        const userScores = scored.filter(({ team }) => team.userId === userId);
+        const totalPoints = round(userScores.reduce((sum, { total }) => sum + total, 0));
+        return {
+          userId,
+          weeksPlayed: teams.filter((team) => team.userId === userId && isComplete(team)).length,
+          wins: userScores.filter(({ team, total }) => weekTopScore.get(team.eventGroupId) === total)
+            .length,
+          totalPoints,
+          averagePoints: userScores.length ? round(totalPoints / userScores.length) : null,
+          bestScore: userScores.length ? Math.max(...userScores.map(({ total }) => total)) : null,
+        };
+      })
+      .sort((a, b) => b.wins - a.wins || b.totalPoints - a.totalPoints);
+
+    return {
+      seasonYear,
+      finishedEventGroups: finishedIds.length,
+      topLineup,
+      topByPosition,
+      userStats,
+    };
   }
 }

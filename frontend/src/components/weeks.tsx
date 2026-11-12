@@ -6,6 +6,7 @@ import { getLeagueTeams } from '../api/leagues';
 import { useLeague } from '../contexts/LeagueContext';
 import type { EventOption } from '../sports/types';
 import EventAccordion, { type EventGroupInfo } from './accordion';
+import SeasonHighlights from './league/SeasonHighlights';
 import {
   Badge,
   Button,
@@ -167,6 +168,8 @@ const Weeks: React.FC = () => {
         breadcrumbs={breadcrumbs}
         meta={sportConfig && <Badge variant="brand">{sportConfig.displayName}</Badge>}
       />
+
+      <SeasonHighlights leagueId={leagueId!} season={season!} />
 
       {eventGroups.length === 0 ? (
         <EmptyState
